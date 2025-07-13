@@ -39,7 +39,7 @@ A modern, responsive, and fully configurable documentation template for REST API
 ### 1. Download and Setup
 ```bash
 # Clone or download the repository
-git clone https://github.com/yourusername/capidocs.git
+git clone https://github.com/cool-drummer/capidocs.git
 cd capidocs
 
 # Or download as ZIP and extract
