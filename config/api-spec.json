@@ -4,6 +4,10 @@
     "brand": "capidocs",
     "brand_icon": "fas fa-file-alt",
     "use_logos": true,
+    "license": {
+      "text": "This project is open source and available under the GNU GPL v3.",
+      "link": "LICENSE"
+    },
     "logos": {
       "navbar_light": "logos/logo-light.svg",
       "navbar_dark": "logos/logo-dark.svg",

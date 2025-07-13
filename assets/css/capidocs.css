@@ -2149,6 +2149,23 @@ code {
     font-weight: 300;
 }
 
+.footer-license {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
+    font-weight: 300;
+}
+
+.footer-license a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.footer-license a:hover {
+    color: var(--text-accent);
+}
+
 .footer-bottom {
     border-top: 1px solid var(--border-primary);
     padding-top: var(--space-8);

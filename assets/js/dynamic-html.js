@@ -231,13 +231,20 @@ class DynamicHTMLGenerator {
             `<img src="${siteConfig.logos.footer}" alt="${siteConfig.brand || 'Logo'}" class="footer-logo">` : 
             '';
 
+        const licenseHtml = siteConfig.license ? 
+            `<p class="footer-license">${siteConfig.license.link ? 
+                `<a href="${siteConfig.license.link}" target="_blank" rel="noopener noreferrer">${siteConfig.license.text}</a>` : 
+                siteConfig.license.text}</p>` : 
+            '';
+
         footer.innerHTML = `
             <div class="footer-content">
                 ${logoHtml}
                 <h3 class="footer-title">${api.name || 'API Documentation'}</h3>
                 <p class="footer-subtitle">${api.description || 'Official API documentation'}</p>
+                ${licenseHtml}
                 <div class="footer-bottom">
-                    <p>&copy; ${new Date().getFullYear()} ${siteConfig.brand || 'API Services'}. All rights reserved. This documentation contains confidential and proprietary information intended solely for authorized clients and technical personnel. Any unauthorized access, reproduction, distribution, or disclosure is strictly prohibited.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${siteConfig.brand || 'API Services'}. All rights reserved.</p>
                 </div>
             </div>
         `;
@@ -278,6 +285,11 @@ class DynamicHTMLGenerator {
                 <div class="footer-content">
                     <h3 class="footer-title">API Documentation</h3>
                     <p class="footer-subtitle">Loading configuration...</p>
+                    <p class="footer-license">
+                        <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">
+                            This project is open source and available under the MIT License.
+                        </a>
+                    </p>
                     <div class="footer-bottom">
                         <p>&copy; ${new Date().getFullYear()} API Services. All rights reserved.</p>
                     </div>
