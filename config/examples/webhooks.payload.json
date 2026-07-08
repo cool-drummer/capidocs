@@ -1,0 +1,9 @@
+{
+  "event": "user.created",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "id": "usr_12345",
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}

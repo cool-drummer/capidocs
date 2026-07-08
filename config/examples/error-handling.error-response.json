@@ -1,0 +1,12 @@
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid email format",
+    "details": {
+      "field": "email",
+      "value": "invalid-email"
+    }
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
