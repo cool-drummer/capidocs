@@ -12,7 +12,7 @@ A modern, responsive, and fully configurable documentation template for REST API
 ## ✨ Key Features
 
 ### 🔧 100% Configurable
-- **Single JSON Configuration**: Everything controlled through `config/api-spec.json`
+- **JSON Configuration + plain code files**: Structure lives in `config/api-spec.json`; multi-line code samples live as real files under `config/examples/` (referenced with `file`), so you never escape `\n` or `\"` by hand
 - **No Code Changes Required**: Customize content, branding, and structure without touching code
 - **Multiple Page Types**: Hero pages, content pages, and API endpoint documentation
 
@@ -369,15 +369,58 @@ Upload to any static hosting service:
 ```
 
 #### Code Blocks
+
+There are three ways to provide code, from most to least recommended. All of them
+support `language` (for syntax highlighting) and an optional `title`.
+
+**1. External file (recommended for anything multi-line).** Keep the code as a real
+file under `config/examples/` and reference it with `file`. No escaping, editor
+highlighting, and the sample stays runnable/testable on its own.
+
 ```json
 {
   "code": {
     "language": "javascript",
     "title": "Example Code",
-    "content": "const api = new ApiClient();\napi.authenticate('your-key');"
+    "file": "config/examples/quick-start.js"
   }
 }
 ```
+
+If you omit `language`, it is inferred from the file extension
+(`.sh`/`.curl` → bash, `.py` → python, `.js` → javascript, `.json`, `.http`, `.yaml`, `.txt`).
+
+**2. Array of lines (handy for short inline snippets).** Each array item is one line;
+they are joined with newlines automatically, so you never write `\n`.
+
+```json
+{
+  "code": {
+    "language": "bash",
+    "content": [
+      "curl -X GET https://api.example.com/v2/users \\",
+      "  -H 'Authorization: Bearer YOUR_API_KEY'"
+    ]
+  }
+}
+```
+
+**3. Inline string (single line or legacy).** Still fully supported.
+
+```json
+{
+  "code": {
+    "language": "javascript",
+    "title": "Example Code",
+    "content": "const api = new ApiClient();"
+  }
+}
+```
+
+> **Precedence:** if `file` is present it wins over inline `content`/`code`. Endpoint
+> `code_examples[]` use the same rules, but the code field is named `code` instead of
+> `content`. If a referenced file fails to load, that single block shows a placeholder and
+> the rest of the page keeps working.
 
 #### Lists
 ```json
