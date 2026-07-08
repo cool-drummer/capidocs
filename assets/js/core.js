@@ -1,16 +1,36 @@
 class CapiDocsCore {
     constructor() {
-        this.currentTheme = localStorage.getItem('theme') || 'dark';
+        this.userSetTheme = !!localStorage.getItem('theme_user_set');
+        this.currentTheme = this.userSetTheme
+            ? (localStorage.getItem('theme') || this.systemTheme())
+            : this.systemTheme();
         this.copyAnimationQueue = new Map();
         this.init();
     }
 
     init() {
-        this.applyTheme(this.currentTheme);
+        this.applyTheme(this.currentTheme, this.userSetTheme);
+        this.watchSystemTheme();
         this.initializeCopyButtons();
         this.setupThemeObserver();
         this.setupCodeBlockObserver();
         this.setupEventListeners();
+    }
+
+    systemTheme() {
+        return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+
+    watchSystemTheme() {
+        if (!window.matchMedia) return;
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const handler = (e) => {
+            if (!localStorage.getItem('theme_user_set')) {
+                this.applyTheme(e.matches ? 'dark' : 'light', false);
+            }
+        };
+        if (mq.addEventListener) mq.addEventListener('change', handler);
+        else if (mq.addListener) mq.addListener(handler);
     }
 
     setupEventListeners() {
@@ -80,11 +100,13 @@ class CapiDocsCore {
         return element;
     }
 
-    applyTheme(theme) {
+    applyTheme(theme, persist = true) {
         document.documentElement.setAttribute('data-theme', theme);
         this.currentTheme = theme;
-        localStorage.setItem('theme', theme);
-        
+        if (persist) {
+            localStorage.setItem('theme', theme);
+            localStorage.setItem('theme_user_set', '1');
+        }
         this.updateThemeButton();
     }
 
@@ -132,88 +154,6 @@ class CapiDocsCore {
         if (navbarNav) {
             navbarNav.classList.toggle('active');
         }
-    }
-
-    highlightCodeBlock(block) {
-        if (!block || !block.querySelector) return block.textContent || '';
-
-        const code = block.querySelector('code');
-        if (!code) return block.textContent || '';
-
-        const text = code.textContent || '';
-        const language = this.detectLanguage(code);
-
-        let highlighted = this.escapeHtml(text);
-
-        switch (language) {
-            case 'javascript':
-            case 'js':
-                highlighted = this.highlightJavaScript(highlighted);
-                break;
-            case 'json':
-                highlighted = this.highlightJSON(highlighted);
-                break;
-            case 'bash':
-            case 'shell':
-                highlighted = this.highlightBash(highlighted);
-                break;
-            case 'http':
-                highlighted = this.highlightHTTP(highlighted);
-                break;
-            default:
-                highlighted = this.highlightGeneric(highlighted);
-        }
-
-        return highlighted;
-    }
-
-    detectLanguage(codeElement) {
-        const className = codeElement.className || '';
-        const match = className.match(/language-(\w+)/);
-        return match ? match[1] : 'text';
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    highlightJavaScript(code) {
-        return code
-            .replace(/\b(const|let|var|function|return|if|else|for|while|class|import|export|async|await)\b/g, 
-                '<span class="token keyword">$1</span>')
-            .replace(/(['"`])((?:(?!\1)[^\\]|\\.)*)(\1)/g, 
-                '<span class="token string">$1$2$3</span>')
-            .replace(/\/\/.*$/gm, '<span class="token comment">$&</span>')
-            .replace(/\b\d+\b/g, '<span class="token number">$&</span>');
-    }
-
-    highlightJSON(code) {
-        return code
-            .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="token property">$1</span>:')
-            .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span class="token string">$1</span>')
-            .replace(/:\s*\b(true|false|null)\b/g, ': <span class="token boolean">$1</span>')
-            .replace(/:\s*\b(\d+(?:\.\d+)?)\b/g, ': <span class="token number">$1</span>');
-    }
-
-    highlightBash(code) {
-        return code
-            .replace(/^\s*#.*$/gm, '<span class="token comment">$&</span>')
-            .replace(/\$\w+/g, '<span class="token variable">$&</span>')
-            .replace(/\b(curl|echo|cd|ls|mkdir|rm|cp|mv|grep|find)\b/g, '<span class="token keyword">$1</span>');
-    }
-
-    highlightHTTP(code) {
-        return code
-            .replace(/^([A-Z-]+):\s*(.*)$/gm, '<span class="token header-name">$1</span>: <span class="token header-value">$2</span>')
-            .replace(/^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\b/gm, '<span class="token method">$1</span>');
-    }
-
-    highlightGeneric(code) {
-        return code
-            .replace(/\/\/.*$/gm, '<span class="token comment">$&</span>')
-            .replace(/\/\*[\s\S]*?\*\//g, '<span class="token comment">$&</span>');
     }
 
     initializeCopyButtons() {

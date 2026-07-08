@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://capidocs-demo.pages.dev/sitemap.xml
+# LLM-friendly docs
+# https://capidocs-demo.pages.dev/llms.txt
+# https://capidocs-demo.pages.dev/llms-full.txt

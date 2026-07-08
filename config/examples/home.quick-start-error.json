@@ -1,0 +1,7 @@
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid API key provided"
+  }
+}

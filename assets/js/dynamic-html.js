@@ -14,13 +14,13 @@ class DynamicHTMLGenerator {
     }
 
     async loadConfig() {
-        const response = await fetch('config/api-spec.json');
-        this.config = await response.json();
+        this.config = await window.configLoader.load();
     }
 
     async generateDynamicContent() {
         if (!this.config) return;
 
+        document.documentElement.lang = (this.config.site_config && this.config.site_config.lang) || 'es';
         this.generateMetaTags();
         this.generateNavbar();
         this.generateFooter();
@@ -227,49 +227,59 @@ class DynamicHTMLGenerator {
         const api = this.config.api || {};
         const siteConfig = this.config.site_config || {};
         
-        const logoHtml = (siteConfig.use_logos && siteConfig.logos?.footer) ? 
-            `<img src="${siteConfig.logos.footer}" alt="${siteConfig.brand || 'Logo'}" class="footer-logo">` : 
+        const logoHtml = (siteConfig.use_logos && siteConfig.logos?.footer) ?
+            `<img src="${this.escapeAttr(siteConfig.logos.footer)}" alt="${this.escapeAttr(siteConfig.brand || 'Logo')}" class="footer-logo">` :
             '';
 
-        const licenseHtml = siteConfig.license ? 
-            `<p class="footer-license">${siteConfig.license.link ? 
-                `<a href="${siteConfig.license.link}" target="_blank" rel="noopener noreferrer">${siteConfig.license.text}</a>` : 
-                siteConfig.license.text}</p>` : 
+        const licenseHtml = siteConfig.license ?
+            `<p class="footer-license">${siteConfig.license.link ?
+                `<a href="${this.escapeAttr(siteConfig.license.link)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(siteConfig.license.text)}</a>` :
+                this.escapeHtml(siteConfig.license.text)}</p>` :
             '';
 
         footer.innerHTML = `
             <div class="footer-content">
                 ${logoHtml}
-                <h3 class="footer-title">${api.name || 'API Documentation'}</h3>
-                <p class="footer-subtitle">${api.description || 'Official API documentation'}</p>
+                <h3 class="footer-title">${this.escapeHtml(api.name || 'API Documentation')}</h3>
+                <p class="footer-subtitle">${this.escapeHtml(api.description || 'Official API documentation')}</p>
                 ${licenseHtml}
                 <div class="footer-bottom">
-                    <p>&copy; ${new Date().getFullYear()} ${siteConfig.brand || 'API Services'}. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${this.escapeHtml(siteConfig.brand || 'API Services')}. All rights reserved.</p>
                 </div>
             </div>
         `;
     }
 
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : text;
+        return div.innerHTML;
+    }
+
+    escapeAttr(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     applyTheme() {
         const siteConfig = this.config.site_config || {};
-        
-        if (siteConfig.default_theme) {
-            const currentTheme = localStorage.getItem('theme');
-            if (!currentTheme) {
-                document.documentElement.setAttribute('data-theme', siteConfig.default_theme);
-                localStorage.setItem('theme', siteConfig.default_theme);
-                
-                const themeIcon = document.getElementById('theme-icon');
-                const themeText = document.getElementById('theme-text');
-                
-                if (siteConfig.default_theme === 'dark') {
-                    if (themeIcon) themeIcon.className = 'fas fa-sun';
-                    if (themeText) themeText.textContent = 'Light';
-                } else {
-                    if (themeIcon) themeIcon.className = 'fas fa-moon';
-                    if (themeText) themeText.textContent = 'Dark';
-                }
-            }
+        const def = siteConfig.default_theme;
+
+        // Respect an explicit user choice.
+        if (localStorage.getItem('theme_user_set')) return;
+
+        // 'system' (or unset) → follow the OS preference (core.js already resolved it).
+        if (!def || def === 'system' || def === 'auto') return;
+
+        // Explicit 'light'/'dark' default: apply without marking it as a user choice.
+        if (window.capiDocsCore && typeof window.capiDocsCore.applyTheme === 'function') {
+            window.capiDocsCore.applyTheme(def, false);
+        } else {
+            document.documentElement.setAttribute('data-theme', def);
         }
     }
 
