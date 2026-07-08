@@ -27,8 +27,7 @@ class CapidocsRouter {
 
     async loadSiteConfig() {
         try {
-            const response = await fetch('config/api-spec.json');
-            const config = await response.json();
+            const config = await window.configLoader.load();
             this.siteConfig = config.site_config || {};
         } catch (error) {
             console.error('Failed to load site config:', error);
@@ -51,14 +50,13 @@ class CapidocsRouter {
         this.routes.clear();
         
         try {
-            const response = await fetch('config/api-spec.json');
-            const config = await response.json();
-            
-            this.routes.set('inicio', () => this.generatePageContent('inicio'));
+            const config = await window.configLoader.load();
+
+            this.routes.set('home', () => this.generatePageContent('home'));
             
             if (config.navigation) {
                 config.navigation.forEach(navItem => {
-                    if (navItem.type === 'page' && navItem.id !== 'inicio') {
+                    if (navItem.type === 'page' && navItem.id !== 'home') {
                         this.routes.set(navItem.id, () => this.generatePageContent(navItem.id));
                     }
                 });
@@ -81,7 +79,7 @@ class CapidocsRouter {
             }
             
         } catch (error) {
-            this.routes.set('inicio', () => this.generatePageContent('inicio'));
+            this.routes.set('home', () => this.generatePageContent('home'));
         }
     }
 
@@ -130,7 +128,7 @@ class CapidocsRouter {
 
     handleInitialRoute() {
         const hash = window.location.hash.substring(1);
-        const route = hash || 'inicio';
+        const route = hash || 'home';
         this.navigate(route, true);
     }
 
@@ -217,6 +215,9 @@ class CapidocsRouter {
 
     scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (this.mainContent && typeof this.mainContent.scrollTo === 'function') {
+            this.mainContent.scrollTo({ top: 0, behavior: 'auto' });
+        }
     }
 
     updateActiveNavigation(route) {
@@ -283,7 +284,7 @@ class CapidocsRouter {
                 <div class="error-content">
                     <h2>Page Not Found</h2>
                     <p>The page "${route}" could not be found.</p>
-                    <a href="#inicio" class="btn btn-primary">Go to Home</a>
+                    <a href="#home" class="btn btn-primary">Go to Home</a>
                 </div>
             </div>
         `;
@@ -307,7 +308,7 @@ class CapidocsRouter {
                     ${errorDetails}
                     <div style="margin-top: 1rem;">
                         <button onclick="location.reload()" class="btn btn-primary">Reload Page</button>
-                        <button onclick="window.capiDocsRouter?.navigate('inicio')" class="btn btn-outline" style="margin-left: 0.5rem;">Go to Home</button>
+                        <button onclick="window.capiDocsRouter?.navigate('home')" class="btn btn-outline" style="margin-left: 0.5rem;">Go to Home</button>
                     </div>
                 </div>
             </div>
@@ -334,7 +335,7 @@ class CapidocsRouter {
 
     handleRouteChange() {
         const hash = window.location.hash.substring(1);
-        const route = hash || 'inicio';
+        const route = hash || 'home';
 
         if (hash && document.getElementById(hash)) {
             return;

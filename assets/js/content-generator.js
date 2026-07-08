@@ -7,10 +7,8 @@ class ContentGenerator {
     }
 
     async loadConfig() {
-            try {
-        const response = await fetch('config/api-spec.json');
-            const configText = await response.text();
-            this.config = JSON.parse(configText);
+        try {
+            this.config = await window.configLoader.load();
             return this.config;
         } catch (error) {
             console.error('Failed to load configuration:', error);
@@ -31,11 +29,13 @@ class ContentGenerator {
                             <i class="fas fa-laptop-code"></i>
                         </div>
                         <div>
-                            <h2 class="section-title">${title}</h2>
-                            <p class="section-subtitle">${description}</p>
+                            <h2 class="section-title">${this.escapeHtml(title)}</h2>
+                            <p class="section-subtitle">${this.escapeHtml(description)}</p>
                         </div>
                     </div>
-                    
+
+                    ${this.generatePlayground(endpoint)}
+
                     <div class="endpoint-card">
                         ${request ? this.generateRequestSection(request) : ''}
                         ${responses ? this.generateResponseSection(responses) : ''}
@@ -49,41 +49,41 @@ class ContentGenerator {
             const { hero, features, steps, quick_start, testimonials } = page.content;
             const siteConfig = this.config?.site_config || {};
             
-            const heroLogoHtml = (siteConfig.use_logos && siteConfig.logos?.hero) ? 
+            const heroLogoHtml = (siteConfig.use_logos && siteConfig.logos?.hero) ?
                 `<div class="hero-logo">
-                    <img src="${siteConfig.logos.hero}" alt="${siteConfig.brand || 'Logo'}" class="hero-logo-img">
+                    <img src="${this.escapeAttr(siteConfig.logos.hero)}" alt="${this.escapeAttr(siteConfig.brand || 'Logo')}" class="hero-logo-img">
                 </div>` : '';
-            
+
             return `
                 <div class="hero-section">
                     <div class="hero-content">
                         ${heroLogoHtml}
-                        <h1 class="hero-title">${hero.title}</h1>
-                        <p class="hero-subtitle">${hero.subtitle}</p>
-                        
-                        ${hero.description ? `<p class="hero-description">${hero.description}</p>` : ''}
-                        ${hero.base_url ? `<div class="url-base"><strong>URL Base:</strong> <code>${hero.base_url}</code></div>` : ''}
-                        ${hero.note ? `<div class="note-box">${hero.note}</div>` : ''}
-                        ${hero.audience ? `<div class="audience-box"><strong>Audiencia:</strong> ${hero.audience}</div>` : ''}
-                        ${hero.confidentiality ? `<div class="warning-box"><strong>Confidencialidad:</strong> ${hero.confidentiality}</div>` : ''}
-                        
+                        <h1 class="hero-title">${this.escapeHtml(hero.title)}</h1>
+                        <p class="hero-subtitle">${this.escapeHtml(hero.subtitle)}</p>
+
+                        ${hero.description ? `<p class="hero-description">${this.escapeHtml(hero.description)}</p>` : ''}
+                        ${hero.base_url ? `<div class="url-base"><strong>URL Base:</strong> <code>${this.escapeHtml(hero.base_url)}</code></div>` : ''}
+                        ${hero.note ? `<div class="note-box">${this.escapeHtml(hero.note)}</div>` : ''}
+                        ${hero.audience ? `<div class="audience-box"><strong>Audiencia:</strong> ${this.escapeHtml(hero.audience)}</div>` : ''}
+                        ${hero.confidentiality ? `<div class="warning-box"><strong>Confidencialidad:</strong> ${this.escapeHtml(hero.confidentiality)}</div>` : ''}
+
                         ${hero.stats ? `
                             <div class="hero-stats">
                                 ${hero.stats.map(stat => `
                                     <div class="stat-item">
-                                        <span class="stat-number">${stat.number}</span>
-                                        <span class="stat-label">${stat.label}</span>
+                                        <span class="stat-number">${this.escapeHtml(stat.number)}</span>
+                                        <span class="stat-label">${this.escapeHtml(stat.label)}</span>
                                     </div>
                                 `).join('')}
                             </div>
                         ` : ''}
-                        
+
                         ${hero.buttons ? `
                             <div class="hero-buttons">
                                 ${hero.buttons.map(btn => `
-                                    <a href="${btn.href}" class="btn btn-${btn.type} btn-large">
-                                        <i class="${btn.icon}"></i>
-                                        ${btn.text}
+                                    <a href="${this.escapeAttr(btn.href)}" class="btn btn-${this.escapeAttr(btn.type)} btn-large">
+                                        <i class="${this.escapeAttr(btn.icon)}"></i>
+                                        ${this.escapeHtml(btn.text)}
                                     </a>
                                 `).join('')}
                             </div>
@@ -104,8 +104,8 @@ class ContentGenerator {
             return `
                 <div class="content-page">
                     <div class="page-header">
-                        <h1 class="page-title">${title}</h1>
-                        ${description ? `<p class="page-description">${description}</p>` : ''}
+                        <h1 class="page-title">${this.escapeHtml(title)}</h1>
+                        ${description ? `<p class="page-description">${this.escapeHtml(description)}</p>` : ''}
                     </div>
                     
                     <div class="page-content">
@@ -124,57 +124,220 @@ class ContentGenerator {
                         <i class="fas fa-info-circle"></i>
                     </div>
                     <div>
-                        <h2 class="section-title">${section.title}</h2>
+                        <h2 class="section-title">${this.escapeHtml(section.title)}</h2>
                     </div>
                 </div>
-                
-                ${section.content ? `<div class="section-content">${section.content}</div>` : ''}
-                ${section.note ? `<div class="note-box">${section.note}</div>` : ''}
-                ${section.warning ? `<div class="warning-box">${section.warning}</div>` : ''}
-                
+
+                ${section.content ? `<div class="section-content">${this.escapeHtml(section.content)}</div>` : ''}
+                ${section.note ? `<div class="note-box">${this.escapeHtml(section.note)}</div>` : ''}
+                ${section.warning ? `<div class="warning-box">${this.escapeHtml(section.warning)}</div>` : ''}
+
                 ${section.list ? `
                     <ul class="content-list">
-                        ${section.list.map(item => `<li>${item}</li>`).join('')}
+                        ${section.list.map(item => `<li>${this.escapeHtml(item)}</li>`).join('')}
                     </ul>
                 ` : ''}
-                
+
                 ${section.table ? `
                     <div class="table-container">
                         <table class="table">
                             <thead>
                                 <tr>
-                                    ${section.table.headers.map(header => `<th>${header}</th>`).join('')}
+                                    ${section.table.headers.map(header => `<th>${this.escapeHtml(header)}</th>`).join('')}
                                 </tr>
                             </thead>
                             <tbody>
                                 ${section.table.rows.map(row => `
                                     <tr>
-                                        ${row.map(cell => `<td>${cell}</td>`).join('')}
+                                        ${row.map(cell => `<td>${this.escapeHtml(cell)}</td>`).join('')}
                                     </tr>
                                 `).join('')}
                             </tbody>
                         </table>
                     </div>
                 ` : ''}
-                
+
                 ${section.code ? this.generateCodeBlock(section.code) : ''}
-                
+
                 ${section.steps ? `
                     <div class="steps-list">
                         ${section.steps.map(step => `
                             <div class="step-item">
-                                <div class="step-number">${step.number}</div>
+                                <div class="step-number">${this.escapeHtml(step.number)}</div>
                                 <div class="step-content">
-                                    <h4>${step.title}</h4>
-                                    <p>${step.description}</p>
-                                    ${step.link ? `<a href="${step.link}" class="step-link">Ver más →</a>` : ''}
+                                    <h4>${this.escapeHtml(step.title)}</h4>
+                                    <p>${this.escapeHtml(step.description)}</p>
+                                    ${step.link ? `<a href="${this.escapeAttr(step.link)}" class="step-link">Ver más →</a>` : ''}
                                 </div>
                             </div>
                         `).join('')}
                     </div>
                 ` : ''}
+
+                ${section.callout ? this.generateCallout(section.callout) : ''}
+                ${section.cards ? this.generateCards(section.cards) : ''}
+                ${section.tabs ? this.generateTabs(section.tabs) : ''}
+                ${section.accordion ? this.generateAccordion(section.accordion) : ''}
+                ${section.code_group ? this.generateCodeGroup(section.code_group) : ''}
+                ${section.fields ? this.generateFields(section.fields) : ''}
             </div>
         `;
+    }
+
+    generateCallout(callout) {
+        const types = {
+            note:    { icon: 'fa-circle-info',          cls: 'callout-note' },
+            info:    { icon: 'fa-circle-info',          cls: 'callout-info' },
+            tip:     { icon: 'fa-lightbulb',            cls: 'callout-tip' },
+            success: { icon: 'fa-circle-check',         cls: 'callout-success' },
+            check:   { icon: 'fa-circle-check',         cls: 'callout-success' },
+            warning: { icon: 'fa-triangle-exclamation', cls: 'callout-warning' },
+            danger:  { icon: 'fa-circle-exclamation',   cls: 'callout-danger' },
+            error:   { icon: 'fa-circle-exclamation',   cls: 'callout-danger' }
+        };
+        const t = types[String(callout.type || 'note').toLowerCase()] || types.note;
+        return `
+            <div class="callout ${t.cls}">
+                <i class="fas ${t.icon} callout-icon"></i>
+                <div class="callout-body">
+                    ${callout.title ? `<div class="callout-title">${this.escapeHtml(callout.title)}</div>` : ''}
+                    <div class="callout-content">${this.escapeHtml(callout.content || '')}</div>
+                </div>
+            </div>`;
+    }
+
+    generateCards(cards) {
+        return `
+            <div class="cards-grid">
+                ${cards.map(card => {
+                    const inner = `
+                        ${card.icon ? `<div class="card-icon"><i class="${this.escapeAttr(card.icon)}"></i></div>` : ''}
+                        <div class="card-title">${this.escapeHtml(card.title)}</div>
+                        ${card.description ? `<div class="card-desc">${this.escapeHtml(card.description)}</div>` : ''}`;
+                    return card.link
+                        ? `<a class="doc-card doc-card-link" href="${this.escapeAttr(card.link)}">${inner}</a>`
+                        : `<div class="doc-card">${inner}</div>`;
+                }).join('')}
+            </div>`;
+    }
+
+    generateTabs(tabs) {
+        const id = 'dtabs-' + (this.tabSeq = (this.tabSeq || 0) + 1);
+        return `
+            <div class="doc-tabs">
+                <div class="doc-tabs-nav" role="tablist">
+                    ${tabs.map((tab, i) => `
+                        <button class="doc-tab${i === 0 ? ' active' : ''}" data-tab-target="${id}-${i}" role="tab" aria-selected="${i === 0}">${this.escapeHtml(tab.label)}</button>
+                    `).join('')}
+                </div>
+                ${tabs.map((tab, i) => `
+                    <div class="doc-tab-panel${i === 0 ? ' active' : ''}" id="${id}-${i}" role="tabpanel">
+                        ${tab.content ? `<div class="section-content">${this.escapeHtml(tab.content)}</div>` : ''}
+                        ${tab.code ? this.generateCodeBlock(tab.code) : ''}
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    generateAccordion(items) {
+        return `
+            <div class="accordion">
+                ${items.map(item => `
+                    <div class="accordion-item">
+                        <button class="accordion-head" data-accordion aria-expanded="false">
+                            <span>${this.escapeHtml(item.title)}</span>
+                            <i class="fas fa-chevron-down accordion-chevron"></i>
+                        </button>
+                        <div class="accordion-panel">
+                            <div class="accordion-panel-inner">${this.escapeHtml(item.content || '')}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    generateCodeGroup(items) {
+        const id = 'cg-' + (this.cgSeq = (this.cgSeq || 0) + 1);
+        return `
+            <div class="multi-tech-examples code-group">
+                <div class="tech-tabs">
+                    ${items.map((it, i) => `
+                        <button class="tech-tab${i === 0 ? ' active' : ''}" data-target="${id}-${i}">${this.escapeHtml(it.label || it.language || ('Tab ' + (i + 1)))}</button>
+                    `).join('')}
+                </div>
+                <div class="tech-examples-content">
+                    ${items.map((it, i) => `
+                        <div class="tech-example${i === 0 ? ' active' : ''}" id="${id}-${i}">
+                            <pre class="line-numbers"><code class="language-${this.escapeAttr(it.language || 'text')}">${this.escapeHtml(it.code || it.content || '')}</code></pre>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    generateFields(fields) {
+        return `
+            <div class="fields-list">
+                ${fields.map(f => `
+                    <div class="field-item">
+                        <div class="field-head">
+                            <code class="field-name">${this.escapeHtml(f.name)}</code>
+                            ${f.type ? `<span class="field-type">${this.escapeHtml(f.type)}</span>` : ''}
+                            ${f.required ? `<span class="field-required">required</span>` : `<span class="field-optional">optional</span>`}
+                            ${f.default !== undefined ? `<span class="field-default">default: ${this.escapeHtml(f.default)}</span>` : ''}
+                        </div>
+                        ${f.description ? `<div class="field-desc">${this.escapeHtml(f.description)}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    generatePlayground(endpoint) {
+        const baseUrl = (this.config.api && this.config.api.base_url) || '';
+        const method = String(endpoint.method || 'GET').toUpperCase();
+        const req = endpoint.request || {};
+        const headers = req.headers || [];
+        const params = req.query_params || [];
+        const bodySchema = req.body && req.body.schema;
+        const bodyExample = bodySchema ? this.generateSchemaExample(bodySchema) : '';
+        const fullUrl = baseUrl + (endpoint.path || '');
+
+        return `
+            <div class="playground" data-method="${this.escapeAttr(method)}" data-base="${this.escapeAttr(baseUrl)}" data-path="${this.escapeAttr(endpoint.path || '')}">
+                <div class="playground-head">
+                    <span class="method-badge method-${this.escapeAttr(method.toLowerCase())}">${this.escapeHtml(method)}</span>
+                    <code class="playground-url">${this.escapeHtml(fullUrl)}</code>
+                    <button class="playground-send" type="button">Enviar <i class="fas fa-paper-plane"></i></button>
+                </div>
+                ${headers.length ? `<div class="playground-group">
+                    <div class="playground-group-title">Headers</div>
+                    ${headers.map(h => `
+                        <div class="playground-field">
+                            <label>${this.escapeHtml(h.name)}</label>
+                            <input class="playground-input" data-kind="header" data-name="${this.escapeAttr(h.name)}" value="${this.escapeAttr(h.value || '')}" placeholder="${this.escapeAttr(h.description || '')}" spellcheck="false">
+                        </div>`).join('')}
+                </div>` : ''}
+                ${params.length ? `<div class="playground-group">
+                    <div class="playground-group-title">Query params</div>
+                    ${params.map(p => `
+                        <div class="playground-field">
+                            <label>${this.escapeHtml(p.name)}${p.required ? ' <span class="playground-req">*</span>' : ''}</label>
+                            <input class="playground-input" data-kind="query" data-name="${this.escapeAttr(p.name)}" value="${this.escapeAttr(p.example || '')}" placeholder="${this.escapeAttr(p.type || '')}" spellcheck="false">
+                        </div>`).join('')}
+                </div>` : ''}
+                ${bodySchema ? `<div class="playground-group">
+                    <div class="playground-group-title">Body</div>
+                    <textarea class="playground-body" data-kind="body" rows="7" spellcheck="false">${this.escapeHtml(bodyExample)}</textarea>
+                </div>` : ''}
+                <div class="playground-response" hidden>
+                    <div class="playground-response-head">
+                        <span class="playground-status"></span>
+                        <span class="playground-time"></span>
+                    </div>
+                    <pre class="playground-response-pre"><code class="language-json playground-response-body"></code></pre>
+                </div>
+                <div class="playground-note"><i class="fas fa-circle-info"></i> El navegador ejecuta la petición real. El servidor debe permitir CORS para responder desde el navegador.</div>
+            </div>`;
     }
 
     generateCodeBlock(code) {
@@ -184,55 +347,8 @@ class ContentGenerator {
         
         return `
             <div class="code-block">
-                ${title ? `<div class="code-title">${title}</div>` : ''}
-                <pre class="line-numbers"><code class="language-${language}">${this.escapeHtml(content)}</code></pre>
-                ${!title ? `<button class="copy-button" onclick="copyToClipboard(this)"><i class="fas fa-copy"></i></button>` : ''}
-            </div>
-        `;
-    }
-
-    generateMultiTechExamples(examples) {
-        if (!examples || !Array.isArray(examples)) return '';
-        
-        const tabsHtml = examples.map((example, index) => `
-            <button class="tech-tab ${index === 0 ? 'active' : ''}" 
-                    onclick="showTechExample('${example.id}', '${example.tech}')" 
-                    data-tech="${example.tech}">
-                <i class="${this.getTechIcon(example.tech)}"></i>
-                ${example.name}
-            </button>
-        `).join('');
-        
-        const contentHtml = examples.map((example, index) => `
-            <div class="tech-example ${index === 0 ? 'active' : ''}" 
-                 id="example-${example.id}" 
-                 data-tech="${example.tech}">
-                <div class="example-header">
-                    <h4>${example.title}</h4>
-                    <p>${example.description}</p>
-                </div>
-                <div class="code-block">
-                    <pre class="line-numbers"><code class="language-${example.language}">${this.escapeHtml(example.code)}</code></pre>
-                </div>
-                ${example.response ? `
-                    <div class="response-example">
-                        <h5>Response</h5>
-                        <div class="code-block">
-                            <pre class="line-numbers"><code class="language-json">${this.escapeHtml(example.response)}</code></pre>
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `).join('');
-        
-        return `
-            <div class="multi-tech-examples">
-                <div class="tech-tabs">
-                    ${tabsHtml}
-                </div>
-                <div class="tech-content">
-                    ${contentHtml}
-                </div>
+                ${title ? `<div class="code-title">${this.escapeHtml(title)}</div>` : ''}
+                <pre class="line-numbers"><code class="language-${this.escapeAttr(language)}">${this.escapeHtml(content)}</code></pre>
             </div>
         `;
     }
@@ -284,8 +400,22 @@ class ContentGenerator {
 
     escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text == null ? '' : text;
         return div.innerHTML;
+    }
+
+    t(key, fallback) {
+        const ui = (this.config && this.config.site_config && this.config.site_config.ui) || {};
+        return ui[key] != null ? ui[key] : fallback;
+    }
+
+    escapeAttr(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     generateRequestSection(request) {
@@ -308,8 +438,8 @@ class ContentGenerator {
                         <tbody>
                             ${request.headers.map(header => `
                                 <tr>
-                                    <td><code>${header.name}</code></td>
-                                    <td><code>${header.value}</code></td>
+                                    <td><code>${this.escapeHtml(header.name)}</code></td>
+                                    <td><code>${this.escapeHtml(header.value)}</code></td>
                                     <td>${header.required ? '<span class="required-badge">Required</span>' : '<span class="optional-badge">Optional</span>'}</td>
                                 </tr>
                             `).join('')}
@@ -334,22 +464,22 @@ class ContentGenerator {
         return `
             <h3>Responses</h3>
             ${Object.entries(responses).map(([status, response]) => `
-                <h4>HTTP ${status} - ${response.description}</h4>
-                
+                <h4>HTTP ${this.escapeHtml(status)} - ${this.escapeHtml(response.description)}</h4>
+
                 ${response.examples ? `
                     <div class="response-examples">
                         <div class="example-tabs">
                             ${Object.entries(response.examples).map(([key, example]) => `
-                                <button class="example-tab" onclick="showExample('${status}', '${key}')" data-example="${key}">
-                                    ${example.summary}
+                                <button class="example-tab" data-status="${this.escapeAttr(status)}" data-example="${this.escapeAttr(key)}">
+                                    ${this.escapeHtml(example.summary)}
                                 </button>
                             `).join('')}
                         </div>
-                        
+
                         ${Object.entries(response.examples).map(([key, example]) => `
-                            <div class="example-content" id="example-${status}-${key}" style="display: ${key === 'success' ? 'block' : 'none'}">
+                            <div class="example-content" id="example-${this.escapeAttr(status)}-${this.escapeAttr(key)}" style="display: ${key === 'success' ? 'block' : 'none'}">
                                 <div class="code-block ${key === 'error' ? 'error-example' : ''}">
-                                    <pre><code class="json-code">${JSON.stringify(example.value, null, 2)}</code></pre>
+                                    <pre><code class="json-code">${this.escapeHtml(JSON.stringify(example.value, null, 2))}</code></pre>
 
                                 </div>
                             </div>
@@ -405,19 +535,19 @@ class ContentGenerator {
         return `
             <div class="steps-section">
                 <div class="steps-header">
-                    <h2 class="steps-title">${steps.title}</h2>
-                    <p class="steps-subtitle">${steps.subtitle}</p>
+                    <h2 class="steps-title">${this.escapeHtml(steps.title)}</h2>
+                    <p class="steps-subtitle">${this.escapeHtml(steps.subtitle)}</p>
                 </div>
-                
+
                 <div class="steps-list">
                     ${steps.items.map(step => `
                         <div class="step-item">
-                            <div class="step-number">${step.number}</div>
+                            <div class="step-number">${this.escapeHtml(step.number)}</div>
                             <div class="step-content">
-                                <h4>${step.title}</h4>
-                                <p>${step.description}</p>
-                                ${step.duration ? `<span class="step-duration">⏱️ ${step.duration}</span>` : ''}
-                                ${step.link ? `<a href="${step.link}" class="step-link">Ver más →</a>` : ''}
+                                <h4>${this.escapeHtml(step.title)}</h4>
+                                <p>${this.escapeHtml(step.description)}</p>
+                                ${step.duration ? `<span class="step-duration">⏱️ ${this.escapeHtml(step.duration)}</span>` : ''}
+                                ${step.link ? `<a href="${this.escapeAttr(step.link)}" class="step-link">Ver más →</a>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -430,20 +560,20 @@ class ContentGenerator {
         return `
             <div class="features-section">
                 <div class="features-header">
-                    <h2 class="features-title">${features.title}</h2>
-                    <p class="features-subtitle">${features.subtitle}</p>
+                    <h2 class="features-title">${this.escapeHtml(features.title)}</h2>
+                    <p class="features-subtitle">${this.escapeHtml(features.subtitle)}</p>
                 </div>
-                
+
                 <div class="features-grid">
                     ${features.items.map(feature => `
                         <div class="feature-item">
                             <div class="feature-icon">
-                                <i class="${feature.icon}"></i>
+                                <i class="${this.escapeAttr(feature.icon)}"></i>
                             </div>
                             <div class="feature-content">
-                                <h4 class="feature-title">${feature.title}</h4>
-                                <p class="feature-description">${feature.description}</p>
-                                ${feature.link ? `<a href="${feature.link}" class="feature-link">Explorar →</a>` : ''}
+                                <h4 class="feature-title">${this.escapeHtml(feature.title)}</h4>
+                                <p class="feature-description">${this.escapeHtml(feature.description)}</p>
+                                ${feature.link ? `<a href="${this.escapeAttr(feature.link)}" class="feature-link">Explorar →</a>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -456,8 +586,8 @@ class ContentGenerator {
         return `
             <div class="quick-start-section">
                 <div class="quick-start-header">
-                    <h2 class="quick-start-title">${quickStart.title}</h2>
-                    <p class="quick-start-subtitle">${quickStart.subtitle}</p>
+                    <h2 class="quick-start-title">${this.escapeHtml(quickStart.title)}</h2>
+                    <p class="quick-start-subtitle">${this.escapeHtml(quickStart.subtitle)}</p>
                 </div>
                 
                 <div class="quick-start-content">
@@ -509,14 +639,14 @@ class ContentGenerator {
         if (this.config.navigation) {
             sidebarHTML += `
                 <div class="sidebar-section">
-                    <h6 class="sidebar-title">Guías</h6>
+                    <h6 class="sidebar-title">${this.escapeHtml(this.t('nav_guides', 'Guías'))}</h6>
                     <nav class="sidebar-nav">
                         <ul>
                             ${this.config.navigation.map(item => `
                                 <li class="sidebar-nav-item">
-                                    <a href="#${item.id}" class="sidebar-nav-link">
-                                        <i class="${item.icon}"></i>
-                                        ${item.title}
+                                    <a href="#${this.escapeAttr(item.id)}" class="sidebar-nav-link">
+                                        <i class="${this.escapeAttr(item.icon)}"></i>
+                                        ${this.escapeHtml(item.title)}
                                     </a>
                                 </li>
                             `).join('')}
@@ -532,14 +662,14 @@ class ContentGenerator {
                 if (section.endpoints) {
                     sidebarHTML += `
                         <div class="sidebar-section">
-                            <h6 class="sidebar-title">${section.title}</h6>
+                            <h6 class="sidebar-title">${this.escapeHtml(section.title)}</h6>
                             <nav class="sidebar-nav">
                                 <ul>
                                     ${section.endpoints.map(endpoint => `
                                         <li class="sidebar-nav-item">
-                                            <a href="#${endpoint.id}" class="sidebar-nav-link">
-                                                ${endpoint.method ? `<span class="method-badge method-${endpoint.method.toLowerCase()}">${endpoint.method}</span>` : `<i class="${endpoint.icon}"></i>`}
-                                                ${endpoint.title}
+                                            <a href="#${this.escapeAttr(endpoint.id)}" class="sidebar-nav-link">
+                                                ${endpoint.method ? `<span class="method-badge method-${this.escapeAttr(endpoint.method.toLowerCase())}">${this.escapeHtml(endpoint.method)}</span>` : `<i class="${this.escapeAttr(endpoint.icon)}"></i>`}
+                                                ${this.escapeHtml(endpoint.title)}
                                             </a>
                                         </li>
                                     `).join('')}
@@ -570,13 +700,13 @@ class ContentGenerator {
                     </div>
                     <div class="endpoint-banner-info">
                         <div class="endpoint-banner-url">
-                            <span class="endpoint-label">${envLabel}:</span>
-                            <code class="endpoint-url-text">${baseUrl}</code>
-                           
+                            <span class="endpoint-label">${this.escapeHtml(envLabel)}:</span>
+                            <code class="endpoint-url-text">${this.escapeHtml(baseUrl)}</code>
+
                         </div>
                         <div class="endpoint-banner-note">
                             <i class="fas fa-info-circle"></i>
-                            <span>${envNote}</span>
+                            <span>${this.escapeHtml(envNote)}</span>
                         </div>
                     </div>
                 </div>
@@ -625,8 +755,8 @@ class ContentGenerator {
                     content = `
                         <div class="content-section">
                             <div class="section-header">
-                                <h2 class="section-title">${foundEndpoint.title}</h2>
-                                <p class="section-subtitle">Endpoint: ${foundEndpoint.method} ${foundEndpoint.path}</p>
+                                <h2 class="section-title">${this.escapeHtml(foundEndpoint.title)}</h2>
+                                <p class="section-subtitle">Endpoint: ${this.escapeHtml(foundEndpoint.method)} ${this.escapeHtml(foundEndpoint.path)}</p>
                             </div>
                             <div class="note-box">
                                 Detailed documentation for this endpoint is coming soon.
@@ -641,20 +771,96 @@ class ContentGenerator {
             content = this.generateNotFoundPage(pageId);
         }
         
-        if (pageId !== 'inicio') {
-            content = endpointCard + content;
+        if (pageId !== 'home') {
+            content = endpointCard + this.generateBreadcrumb(pageId) + content + this.generateFeedback(pageId) + this.generatePrevNext(pageId);
         }
-        
+
         this.cache.set(pageId, content);
         return content;
+    }
+
+    generateFeedback(pageId) {
+        return `
+            <div class="feedback" data-route="${this.escapeAttr(pageId)}">
+                <span class="feedback-q">${this.escapeHtml(this.t('feedback_q', '¿Te resultó útil esta página?'))}</span>
+                <div class="feedback-actions">
+                    <button class="feedback-btn" type="button" data-feedback="up" aria-label="Sí, útil"><i class="fas fa-thumbs-up"></i></button>
+                    <button class="feedback-btn" type="button" data-feedback="down" aria-label="No útil"><i class="fas fa-thumbs-down"></i></button>
+                    <button class="feedback-btn feedback-link" type="button" data-feedback="link"><i class="fas fa-link"></i> ${this.escapeHtml(this.t('copy_link', 'Copiar enlace'))}</button>
+                </div>
+            </div>`;
+    }
+
+    getOrderedRoutes() {
+        const out = [];
+        const seen = new Set();
+        const push = (id, title) => {
+            if (id && !seen.has(id)) { seen.add(id); out.push({ id: id, title: title || id }); }
+        };
+        (this.config.navigation || []).forEach(n => { if (n.type === 'page' || !n.type) push(n.id, n.title); });
+        (this.config.sections || []).forEach(s => {
+            (s.pages || []).forEach(p => push(p.id, p.title));
+            (s.endpoints || []).forEach(e => push(e.id, e.title));
+        });
+        return out;
+    }
+
+    generateBreadcrumb(pageId) {
+        let group = 'Guías';
+        (this.config.sections || []).forEach(s => {
+            const inPages = (s.pages || []).some(p => p.id === pageId);
+            const inEnds = (s.endpoints || []).some(e => e.id === pageId);
+            if (inPages || inEnds) group = s.title;
+        });
+        const cur = this.getOrderedRoutes().find(r => r.id === pageId);
+        const title = cur ? cur.title : pageId;
+        return `
+            <div class="page-topbar">
+                <nav class="breadcrumb" aria-label="Breadcrumb">
+                    <span class="breadcrumb-item">${this.escapeHtml(group)}</span>
+                    <i class="fas fa-chevron-right breadcrumb-sep"></i>
+                    <span class="breadcrumb-current">${this.escapeHtml(title)}</span>
+                </nav>
+                <div class="page-actions" data-route="${this.escapeAttr(pageId)}">
+                    <button class="page-actions-btn" type="button" data-page-actions aria-label="Acciones de página">
+                        <i class="fas fa-ellipsis"></i>
+                    </button>
+                    <div class="page-actions-menu">
+                        <button type="button" data-action="copy-md"><i class="fas fa-copy"></i> Copiar como Markdown</button>
+                        <button type="button" data-action="view-md"><i class="fas fa-file-lines"></i> Ver Markdown</button>
+                        <button type="button" data-action="open-claude"><i class="fas fa-robot"></i> Abrir en Claude</button>
+                        <button type="button" data-action="open-chatgpt"><i class="fas fa-comment-dots"></i> Abrir en ChatGPT</button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    generatePrevNext(pageId) {
+        const routes = this.getOrderedRoutes();
+        const i = routes.findIndex(r => r.id === pageId);
+        if (i === -1) return '';
+        const prev = routes[i - 1];
+        const next = routes[i + 1];
+        if (!prev && !next) return '';
+        return `
+            <nav class="page-nav" aria-label="Páginas">
+                ${prev ? `<a class="page-nav-link page-nav-prev" href="#${this.escapeAttr(prev.id)}">
+                    <span class="page-nav-dir"><i class="fas fa-arrow-left"></i> ${this.escapeHtml(this.t('prev', 'Anterior'))}</span>
+                    <span class="page-nav-title">${this.escapeHtml(prev.title)}</span>
+                </a>` : '<span class="page-nav-spacer"></span>'}
+                ${next ? `<a class="page-nav-link page-nav-next" href="#${this.escapeAttr(next.id)}">
+                    <span class="page-nav-dir">${this.escapeHtml(this.t('next', 'Siguiente'))} <i class="fas fa-arrow-right"></i></span>
+                    <span class="page-nav-title">${this.escapeHtml(next.title)}</span>
+                </a>` : '<span class="page-nav-spacer"></span>'}
+            </nav>`;
     }
 
     generateNotFoundPage(pageId) {
         return `
             <div class="error-page">
                 <h2>Page Not Found</h2>
-                <p>The page "${pageId}" could not be found in the configuration.</p>
-                <a href="#inicio" class="btn btn-primary">Go to Home</a>
+                <p>The page "${this.escapeHtml(pageId)}" could not be found in the configuration.</p>
+                <a href="#home" class="btn btn-primary">Go to Home</a>
             </div>
         `;
     }
@@ -666,7 +872,7 @@ class ContentGenerator {
                 version: "1.0.0"
             },
             pages: {
-                inicio: {
+                home: {
                     template: "hero",
                     content: {
                         hero: {
@@ -718,28 +924,28 @@ class ContentGenerator {
         if (!examples || !Array.isArray(examples)) return '';
         
         const tabsHtml = examples.map((example, index) => `
-            <button class="tech-tab ${index === 0 ? 'active' : ''}" 
-                    onclick="showTechExample('${example.id}', this)" 
-                    data-tech="${example.tech}">
-                <i class="fas ${this.getTechIcon(example.tech)}"></i>
-                ${example.name}
+            <button class="tech-tab ${index === 0 ? 'active' : ''}"
+                    data-target="${this.escapeAttr(example.id)}"
+                    data-tech="${this.escapeAttr(example.tech)}">
+                <i class="fas ${this.escapeAttr(this.getTechIcon(example.tech))}"></i>
+                ${this.escapeHtml(example.name)}
             </button>
         `).join('');
-        
+
         const examplesHtml = examples.map((example, index) => `
-            <div class="tech-example ${index === 0 ? 'active' : ''}" 
-                 id="${example.id}"
-                 data-tech="${example.tech}">
+            <div class="tech-example ${index === 0 ? 'active' : ''}"
+                 id="${this.escapeAttr(example.id)}"
+                 data-tech="${this.escapeAttr(example.tech)}">
                 <div class="example-header">
-                    <h4>${example.title}</h4>
-                    <p>${example.description}</p>
+                    <h4>${this.escapeHtml(example.title)}</h4>
+                    <p>${this.escapeHtml(example.description)}</p>
                 </div>
-                <pre class="line-numbers"><code class="language-${example.language}">${this.escapeHtml(example.code)}</code></pre>
+                <pre class="line-numbers"><code class="language-${this.escapeAttr(example.language)}">${this.escapeHtml(example.code)}</code></pre>
             </div>
         `).join('');
         
         return `
-                <h3>Ejemplos de Implementación</h3>
+                <h3>${this.escapeHtml(this.t('code_examples_title', 'Ejemplos de Implementación'))}</h3>
                 <div class="multi-tech-examples">
                     <div class="tech-tabs">
                         ${tabsHtml}
@@ -939,11 +1145,54 @@ window.showTechExample = function(exampleId, tabElement) {
     const targetExample = document.getElementById(exampleId);
     if (targetExample) {
         targetExample.classList.add('active');
-        
+
         if (typeof Prism !== 'undefined') {
             Prism.highlightAllUnder(targetExample);
         }
     }
 };
 
-window.ContentGenerator = ContentGenerator; 
+document.addEventListener('click', function(event) {
+    const techTab = event.target.closest('.tech-tab[data-target]');
+    if (techTab) {
+        window.showTechExample(techTab.getAttribute('data-target'), techTab);
+        return;
+    }
+
+    const exampleTab = event.target.closest('.example-tab[data-status]');
+    if (exampleTab) {
+        window.showExample(exampleTab.getAttribute('data-status'), exampleTab.getAttribute('data-example'));
+        return;
+    }
+
+    const docTab = event.target.closest('.doc-tab[data-tab-target]');
+    if (docTab) {
+        const wrap = docTab.closest('.doc-tabs');
+        if (wrap) {
+            wrap.querySelectorAll('.doc-tab').forEach(function (t) {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            wrap.querySelectorAll('.doc-tab-panel').forEach(function (p) { p.classList.remove('active'); });
+            docTab.classList.add('active');
+            docTab.setAttribute('aria-selected', 'true');
+            const panel = document.getElementById(docTab.getAttribute('data-tab-target'));
+            if (panel) {
+                panel.classList.add('active');
+                if (typeof Prism !== 'undefined') Prism.highlightAllUnder(panel);
+            }
+        }
+        return;
+    }
+
+    const accHead = event.target.closest('.accordion-head[data-accordion]');
+    if (accHead) {
+        const item = accHead.closest('.accordion-item');
+        if (item) {
+            const open = item.classList.toggle('open');
+            accHead.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+    }
+});
+
+window.ContentGenerator = ContentGenerator;

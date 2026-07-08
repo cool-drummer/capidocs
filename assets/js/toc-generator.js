@@ -34,8 +34,7 @@ class TocGenerator {
 
     async loadConfig() {
         try {
-            const response = await fetch('config/api-spec.json');
-            const config = await response.json();
+            const config = await window.configLoader.load();
             this.config = config.site_config?.toc || {};
         } catch (error) {
             this.config = {};
@@ -123,13 +122,17 @@ class TocGenerator {
         
         const excludeClasses = [
             'hero-title',
-            'hero-subtitle', 
+            'hero-subtitle',
             'footer-title',
             'footer-subtitle',
             'navbar-brand',
             'loading-title',
             'error-title',
-            'alert-title'
+            'alert-title',
+            'page-title',
+            'section-subtitle',
+            'breadcrumb-current',
+            'breadcrumb-item'
         ];
         
         for (const className of excludeClasses) {
@@ -146,16 +149,6 @@ class TocGenerator {
             '404',
             'not found',
             'página no encontrada',
-            'risk evaluation with curl',
-            'risk evaluation with javascript (fetch api)',
-            'risk evaluation with python (requests)',
-            'risk evaluation with node.js (axios)',
-            'risk evaluation with go',
-            'risk evaluation with ruby',
-            'risk evaluation with java',
-            'risk evaluation with c#',
-            'risk evaluation with php (curl)',
-            'risk evaluation with typescript'
         ];
         
         if (excludeTexts.includes(headingText) || headingText.length < 2) {
@@ -183,7 +176,7 @@ class TocGenerator {
     }
 
     isTocDisabledForCurrentPage() {
-        const currentRoute = window.location.hash.slice(1) || 'inicio';
+        const currentRoute = window.location.hash.slice(1) || 'home';
         
         if (this.config.enabled === false) {
             return true;
