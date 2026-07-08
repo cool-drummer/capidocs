@@ -2,6 +2,7 @@
 .DS_Store?
 ._*
 .Spotlight-V100
+.wrangler/
 .Trashes
 ehthumbs.db
 Thumbs.db
