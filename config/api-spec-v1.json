@@ -58,8 +58,7 @@
         "authentication": "Authentication",
         "endpoints": "API Endpoints",
         "webhooks": "Webhooks",
-        "error-handling": "Error Handling",
-        "components": "Components"
+        "error-handling": "Error Handling"
       }
     },
     "navbar": {
@@ -93,8 +92,8 @@
   },
   "api": {
     "name": "capidocs API",
-    "version": "2.1.0",
-    "description": "Documentation platform API for technical content management. Provides content operations, user management, and real-time collaboration features.",
+    "version": "1.0.0",
+    "description": "Legacy v1 of the capidocs API. Upgrade to v2 for the latest features.",
     "base_url": "https://api.capidocs.dev/v2"
   },
   "navigation": [
@@ -114,12 +113,6 @@
       "id": "authentication",
       "title": "Authentication",
       "icon": "fas fa-key",
-      "type": "page"
-    },
-    {
-      "id": "components",
-      "title": "Components",
-      "icon": "fas fa-shapes",
       "type": "page"
     },
     {
@@ -171,7 +164,7 @@
       "content": {
         "hero": {
           "title": "capidocs API",
-          "subtitle": "Technical Documentation Platform & API",
+          "subtitle": "Technical Documentation Platform (v1 legacy)",
           "stats": [
             {
               "number": "99.8%",
@@ -606,135 +599,6 @@
                 ]
               ]
             }
-          }
-        ]
-      }
-    },
-    "components": {
-      "template": "content",
-      "content": {
-        "title": "Components",
-        "description": "Rich building blocks for beautiful, readable documentation.",
-        "sections": [
-          {
-            "title": "Callouts",
-            "content": "Highlight important information with callouts in several styles: note, info, tip, warning and danger.",
-            "callout": {
-              "type": "tip",
-              "title": "Pro tip",
-              "content": "Use callouts to draw attention to key steps or warnings without breaking the reading flow."
-            }
-          },
-          {
-            "title": "Warning callout",
-            "content": "Different types carry different colors and icons.",
-            "callout": {
-              "type": "warning",
-              "title": "Heads up",
-              "content": "This endpoint is rate limited. Cache responses where possible."
-            }
-          },
-          {
-            "title": "Cards",
-            "content": "Group related links or highlights into a responsive card grid.",
-            "cards": [
-              {
-                "icon": "fas fa-bolt",
-                "title": "Quickstart",
-                "description": "Get up and running in under five minutes.",
-                "link": "#getting-started"
-              },
-              {
-                "icon": "fas fa-key",
-                "title": "Authentication",
-                "description": "Secure your requests with API keys.",
-                "link": "#authentication"
-              },
-              {
-                "icon": "fas fa-code",
-                "title": "API Reference",
-                "description": "Browse every endpoint with examples.",
-                "link": "#endpoints"
-              }
-            ]
-          },
-          {
-            "title": "Tabs",
-            "content": "Show alternative content side by side.",
-            "tabs": [
-              {
-                "label": "Overview",
-                "content": "Tabs let readers switch between related content without leaving the page."
-              },
-              {
-                "label": "Install",
-                "code": {
-                  "language": "bash",
-                  "content": "npm install capidocs"
-                }
-              }
-            ]
-          },
-          {
-            "title": "Code groups",
-            "content": "Present the same request in multiple languages with switchable tabs.",
-            "code_group": [
-              {
-                "label": "cURL",
-                "language": "bash",
-                "content": "curl https://api.capidocs.dev/v2/users \\\n  -H 'Authorization: Bearer YOUR_API_KEY'"
-              },
-              {
-                "label": "JavaScript",
-                "language": "javascript",
-                "content": "await fetch('https://api.capidocs.dev/v2/users', {\n  headers: { Authorization: 'Bearer YOUR_API_KEY' }\n});"
-              },
-              {
-                "label": "Python",
-                "language": "python",
-                "content": "import requests\nrequests.get('https://api.capidocs.dev/v2/users',\n  headers={'Authorization': 'Bearer YOUR_API_KEY'})"
-              }
-            ]
-          },
-          {
-            "title": "Accordions",
-            "content": "Tuck away supplementary details until the reader wants them.",
-            "accordion": [
-              {
-                "title": "How is rate limiting applied?",
-                "content": "Requests are limited per API key. Limits vary by plan and reset every hour."
-              },
-              {
-                "title": "Do you support pagination?",
-                "content": "Yes. Use the page and limit query parameters on any list endpoint."
-              }
-            ]
-          },
-          {
-            "title": "Parameter fields",
-            "content": "Document parameters with types, defaults and requirements.",
-            "fields": [
-              {
-                "name": "page",
-                "type": "integer",
-                "required": false,
-                "default": "1",
-                "description": "Page number for pagination."
-              },
-              {
-                "name": "limit",
-                "type": "integer",
-                "required": false,
-                "default": "20",
-                "description": "Number of items per page (max 100)."
-              },
-              {
-                "name": "query",
-                "type": "string",
-                "required": true,
-                "description": "Full-text search term to filter results."
-              }
-            ]
           }
         ]
       }

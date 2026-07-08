@@ -1,0 +1,5 @@
+{
+  "url": "https://your-app.com/webhooks",
+  "events": ["user.created", "data.updated"],
+  "secret": "your_webhook_secret"
+}
