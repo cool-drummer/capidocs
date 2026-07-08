@@ -1,0 +1,16 @@
+# capidocs API
+
+> Documentation platform API for technical content management. Provides content operations, user management, and real-time collaboration features.
+
+Base URL: https://api.capidocs.dev/v2
+
+## Pages
+- [Home](#home): Technical Documentation Platform & API
+- [Getting Started](#getting-started): Overview
+- [Authentication](#authentication): API Key Authentication
+- [Components](#components): Callouts
+- [API Endpoints](#endpoints): User Management
+- [User Management](#users-endpoint): Retrieve a list of users with optional filtering and pagination. Supports various query parameters for customizing the results.
+- [Data Operations](#data-endpoint): Create a new data item in the system. Supports various data types and custom metadata.
+- [Webhooks](#webhooks): Webhook Events
+- [Error Handling](#error-handling): HTTP Status Codes
