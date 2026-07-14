@@ -19,6 +19,7 @@
     };
 
     let pending = null;
+    let loadedConfig = null;
 
     function isPlainObject(value) {
         return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -121,6 +122,7 @@
         const tasks = [];
         resolveNode(config, tasks);
         await Promise.all(tasks);
+        loadedConfig = config;
         return config;
     }
 
@@ -137,6 +139,10 @@
         reload() {
             pending = null;
             return this.load();
+        },
+        ui(key, fallback) {
+            const ui = (loadedConfig && loadedConfig.site_config && loadedConfig.site_config.ui) || {};
+            return ui[key] != null ? ui[key] : fallback;
         }
     };
 })();

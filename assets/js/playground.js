@@ -1,4 +1,8 @@
 (function () {
+    function ui(key, fallback) {
+        return (window.configLoader && window.configLoader.ui) ? window.configLoader.ui(key, fallback) : fallback;
+    }
+
     async function send(pg) {
         const method = (pg.getAttribute('data-method') || 'GET').toUpperCase();
         const base = pg.getAttribute('data-base') || '';
@@ -34,7 +38,7 @@
         const btn = pg.querySelector('.playground-send');
 
         respBox.hidden = false;
-        statusEl.textContent = 'Enviando…';
+        statusEl.textContent = ui('sending', 'Enviando…');
         statusEl.className = 'playground-status';
         timeEl.textContent = '';
         bodyOut.textContent = '';
@@ -54,9 +58,9 @@
             if (typeof Prism !== 'undefined') Prism.highlightElement(bodyOut);
         } catch (err) {
             console.error('Playground request failed:', err);
-            statusEl.textContent = 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.';
+            statusEl.textContent = ui('playground_error_status', 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.');
             statusEl.className = 'playground-status err';
-            bodyOut.textContent = 'No se pudo completar la petición. Vuelve a intentarlo en un momento.';
+            bodyOut.textContent = ui('playground_error_body', 'No se pudo completar la petición. Vuelve a intentarlo en un momento.');
         } finally {
             if (btn) btn.disabled = false;
         }

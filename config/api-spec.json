@@ -1,11 +1,11 @@
 {
   "site_config": {
-    "name": "Technical Documentation",
+    "name": "Documentación técnica",
     "brand": "capidocs",
     "brand_icon": "fas fa-file-alt",
     "use_logos": true,
     "license": {
-      "text": "This project is open source and available under the GNU GPL v3.",
+      "text": "Este proyecto es de código abierto y está disponible bajo la licencia GNU GPL v3.",
       "link": "LICENSE"
     },
     "logos": {
@@ -23,8 +23,8 @@
       "getting-started"
     ],
     "warning_message": {
-      "title": "Development Environment",
-      "content": "This is a development environment for testing purposes. Production endpoints will be configured during deployment.",
+      "title": "Entorno de desarrollo",
+      "content": "Este es un entorno de desarrollo para pruebas. Los endpoints de producción se configurarán durante el despliegue.",
       "type": "info"
     },
     "toc": {
@@ -50,15 +50,15 @@
       }
     },
     "page_titles": {
-      "base_title": "capidocs - Technical Documentation Portal",
+      "base_title": "capidocs - Portal de documentación técnica",
       "separator": " | ",
       "routes": {
-        "home": "Home",
-        "getting-started": "Getting Started",
-        "authentication": "Authentication",
-        "endpoints": "API Endpoints",
+        "home": "Inicio",
+        "getting-started": "Primeros pasos",
+        "authentication": "Autenticación",
+        "endpoints": "Endpoints de la API",
         "webhooks": "Webhooks",
-        "error-handling": "Error Handling",
+        "error-handling": "Manejo de errores",
         "components": "Componentes",
         "configuration": "Configuración",
         "code-blocks": "Bloques de código",
@@ -87,11 +87,11 @@
       ],
       "links": [
         {
-          "text": "Authentication",
+          "text": "Autenticación",
           "href": "#authentication"
         },
         {
-          "text": "API Endpoints",
+          "text": "Endpoints",
           "href": "#endpoints"
         },
         {
@@ -115,36 +115,94 @@
         "spec": "config/api-spec-v1.json"
       }
     ],
-    "site_url": "https://capidocs-demo.pages.dev"
+    "site_url": "https://capidocs-demo.pages.dev",
+    "ui": {
+      "nav_guides": "Guías",
+      "try_it": "Pruébalo",
+      "send": "Enviar",
+      "sending": "Enviando…",
+      "playground_note": "El navegador ejecuta la petición real. El servidor debe permitir CORS para responder desde el navegador.",
+      "playground_error_status": "No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.",
+      "playground_error_body": "No se pudo completar la petición. Vuelve a intentarlo en un momento.",
+      "authorizations_title": "Autorización",
+      "query_params_title": "Parámetros de consulta",
+      "body_title": "Cuerpo",
+      "responses_title": "Respuestas",
+      "required": "requerido",
+      "optional": "opcional",
+      "example": "Ejemplo",
+      "copy_code": "Copiar código",
+      "code_examples_title": "Ejemplos de implementación",
+      "feedback_q": "¿Te resultó útil esta página?",
+      "copy_link": "Copiar enlace",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "on_this_page": "En esta página",
+      "search_label": "Buscar",
+      "search_placeholder": "Buscar documentación...",
+      "search_aria": "Buscar en la documentación",
+      "search_empty_title": "Nada para",
+      "search_empty_hint": "Revisa la ortografía o prueba con otro término.",
+      "search_hint_navigate": "navegar",
+      "search_hint_open": "abrir",
+      "search_hint_close": "cerrar",
+      "page_actions": "Acciones de página",
+      "copy_md": "Copiar como Markdown",
+      "view_md": "Ver Markdown",
+      "open_claude": "Abrir en Claude",
+      "open_chatgpt": "Abrir en ChatGPT",
+      "see_more": "Ver más",
+      "explore": "Explorar",
+      "rights": "Todos los derechos reservados.",
+      "base_url_label": "URL base",
+      "audience_label": "Audiencia",
+      "confidentiality_label": "Confidencialidad",
+      "not_found_title": "No encontramos esta página",
+      "not_found_desc": "Puede que el enlace haya cambiado o ya no exista. Prueba desde el inicio o busca lo que necesitas.",
+      "back_home": "Volver al inicio",
+      "error_hint": "Los detalles técnicos se registraron en la consola."
+    },
+    "languages": [
+      {
+        "code": "es",
+        "label": "Español",
+        "spec": "config/api-spec.json"
+      },
+      {
+        "code": "en",
+        "label": "English",
+        "spec": "config/api-spec.en.json"
+      }
+    ]
   },
   "api": {
     "name": "capidocs API",
     "version": "2.1.0",
-    "description": "Documentation platform API for technical content management. Provides content operations, user management, and real-time collaboration features.",
+    "description": "API de la plataforma de documentación para gestión de contenido técnico. Ofrece operaciones de contenido, gestión de usuarios y colaboración en tiempo real.",
     "base_url": "https://api.capidocs.dev/v2"
   },
   "navigation": [
     {
       "id": "home",
-      "title": "Home",
+      "title": "Inicio",
       "icon": "fas fa-home",
       "type": "page"
     },
     {
       "id": "getting-started",
-      "title": "Getting Started",
+      "title": "Primeros pasos",
       "icon": "fas fa-play-circle",
       "type": "page"
     },
     {
       "id": "authentication",
-      "title": "Authentication",
+      "title": "Autenticación",
       "icon": "fas fa-key",
       "type": "page"
     },
     {
       "id": "endpoints",
-      "title": "API Endpoints",
+      "title": "Endpoints de la API",
       "icon": "fas fa-code",
       "type": "page"
     }
@@ -188,13 +246,13 @@
           "id": "users-endpoint",
           "method": "GET",
           "path": "/users",
-          "title": "User Management"
+          "title": "Gestión de usuarios"
         },
         {
           "id": "data-endpoint",
           "method": "POST",
           "path": "/data",
-          "title": "Data Operations"
+          "title": "Operaciones de datos"
         }
       ]
     },
@@ -209,7 +267,7 @@
         },
         {
           "id": "error-handling",
-          "title": "Error Handling",
+          "title": "Manejo de errores",
           "icon": "fas fa-triangle-exclamation"
         }
       ]
@@ -221,30 +279,30 @@
       "content": {
         "hero": {
           "title": "capidocs API",
-          "subtitle": "Technical Documentation Platform & API",
+          "subtitle": "Plataforma de documentación técnica y API",
           "stats": [
             {
               "number": "99.8%",
-              "label": "Uptime"
+              "label": "Disponibilidad"
             },
             {
               "number": "50ms",
-              "label": "Avg Response"
+              "label": "Respuesta media"
             },
             {
               "number": "24/7",
-              "label": "Support"
+              "label": "Soporte"
             }
           ],
           "buttons": [
             {
-              "text": "Start Building",
+              "text": "Comienza a construir",
               "href": "#getting-started",
               "type": "primary",
               "icon": "fas fa-rocket"
             },
             {
-              "text": "View Endpoints",
+              "text": "Ver endpoints",
               "href": "#endpoints",
               "type": "outline",
               "icon": "fas fa-list"
@@ -252,87 +310,87 @@
           ]
         },
         "features": {
-          "title": "Core Features",
-          "subtitle": "Everything you need for technical documentation",
+          "title": "Funciones principales",
+          "subtitle": "Todo lo que necesitas para documentación técnica",
           "items": [
             {
               "icon": "fas fa-file-alt",
-              "title": "Content Management",
-              "description": "Create, edit, and organize technical documentation with version control.",
+              "title": "Gestión de contenido",
+              "description": "Crea, edita y organiza documentación técnica con control de versiones.",
               "link": "#users-endpoint"
             },
             {
               "icon": "fas fa-users",
-              "title": "Team Collaboration",
-              "description": "Multi-user editing with permissions, comments, and review workflows.",
+              "title": "Colaboración en equipo",
+              "description": "Edición multiusuario con permisos, comentarios y flujos de revisión.",
               "link": "#data-endpoint"
             },
             {
               "icon": "fas fa-lock",
-              "title": "Secure Access",
-              "description": "Role-based access control with API keys and authentication tokens.",
+              "title": "Acceso seguro",
+              "description": "Control de acceso por roles con claves de API y tokens de autenticación.",
               "link": "#authentication"
             },
             {
               "icon": "fas fa-sync-alt",
-              "title": "Real-time Sync",
-              "description": "Live updates and notifications for document changes and comments.",
+              "title": "Sincronización en tiempo real",
+              "description": "Actualizaciones y notificaciones en vivo ante cambios y comentarios.",
               "link": "#webhooks"
             },
             {
               "icon": "fas fa-search",
-              "title": "Advanced Search",
-              "description": "Full-text search across all documentation with filtering and faceting.",
+              "title": "Búsqueda avanzada",
+              "description": "Búsqueda de texto completo en toda la documentación con filtros y facetas.",
               "link": "#endpoints"
             },
             {
               "icon": "fas fa-code",
-              "title": "Developer Friendly",
-              "description": "API-first design with comprehensive REST endpoints and SDKs.",
+              "title": "Pensada para desarrolladores",
+              "description": "Diseño API-first con endpoints REST completos y SDK.",
               "link": "#authentication"
             }
           ]
         },
         "steps": {
-          "title": "Quick Integration",
-          "subtitle": "Get started in three simple steps",
+          "title": "Integración rápida",
+          "subtitle": "Empieza en tres pasos sencillos",
           "items": [
             {
               "number": 1,
-              "title": "Get API Key",
-              "description": "Sign up and obtain your API credentials from the developer dashboard.",
+              "title": "Obtén tu clave de API",
+              "description": "Regístrate y consigue tus credenciales en el panel de desarrollador.",
               "link": "#authentication"
             },
             {
               "number": 2,
-              "title": "Make First Call",
-              "description": "Test your integration with our sandbox environment and sample code.",
+              "title": "Haz tu primera llamada",
+              "description": "Prueba tu integración con nuestro entorno de pruebas y código de ejemplo.",
               "link": "#getting-started"
             },
             {
               "number": 3,
-              "title": "Go Live",
-              "description": "Deploy to production with confidence using our monitoring tools.",
+              "title": "Sal a producción",
+              "description": "Despliega con confianza usando nuestras herramientas de monitoreo.",
               "link": "#endpoints"
             }
           ]
         },
         "quick_start": {
-          "title": "Quick Start",
-          "subtitle": "Try the API with this example request",
+          "title": "Inicio rápido",
+          "subtitle": "Prueba la API con esta petición de ejemplo",
           "code": {
             "language": "curl",
-            "title": "Get Documents",
+            "title": "Obtener documentos",
             "file": "config/examples/home.quick-start.sh"
           },
           "response": {
             "language": "json",
-            "title": "Success Response",
+            "title": "Respuesta correcta",
             "file": "config/examples/home.quick-start-response.json"
           },
           "error_response": {
             "language": "json",
-            "title": "Error Response",
+            "title": "Respuesta de error",
             "file": "config/examples/home.quick-start-error.json"
           }
         }
@@ -341,36 +399,36 @@
     "getting-started": {
       "template": "content",
       "content": {
-        "title": "Getting Started",
-        "description": "Learn how to integrate our API into your application quickly and efficiently.",
+        "title": "Primeros pasos",
+        "description": "Aprende a integrar nuestra API en tu aplicación de forma rápida y eficiente.",
         "sections": [
           {
-            "title": "Overview",
-            "content": "Our REST API provides a comprehensive set of endpoints for building modern web applications. The API follows RESTful principles and uses standard HTTP methods and status codes for consistent interaction patterns."
+            "title": "Resumen",
+            "content": "Nuestra API REST ofrece un conjunto completo de endpoints para construir aplicaciones web modernas. Sigue los principios RESTful y usa métodos HTTP y códigos de estado estándar para una interacción consistente."
           },
           {
-            "title": "Base URL",
-            "content": "All API requests should be made to our base URL with the appropriate endpoint path:",
+            "title": "URL base",
+            "content": "Todas las peticiones deben dirigirse a nuestra URL base con la ruta del endpoint correspondiente:",
             "code": {
               "language": "text",
               "content": "https://api.capidocs.dev/v2"
             }
           },
           {
-            "title": "Request Format",
-            "content": "The API accepts and returns JSON data. Always include the Content-Type header in your requests:",
+            "title": "Formato de petición",
+            "content": "La API acepta y devuelve JSON. Incluye siempre el header Content-Type en tus peticiones:",
             "code": {
               "language": "http",
-              "title": "Required Headers",
+              "title": "Headers obligatorios",
               "file": "config/examples/getting-started.headers.http"
             }
           },
           {
-            "title": "Response Format",
-            "content": "All responses follow a consistent structure with success indicators and appropriate HTTP status codes:",
+            "title": "Formato de respuesta",
+            "content": "Todas las respuestas siguen una estructura consistente con indicadores de éxito y códigos de estado HTTP apropiados:",
             "code": {
               "language": "json",
-              "title": "Standard Response Format",
+              "title": "Formato de respuesta estándar",
               "file": "config/examples/getting-started.response-format.json"
             }
           }
@@ -380,57 +438,57 @@
     "authentication": {
       "template": "content",
       "content": {
-        "title": "Authentication",
-        "description": "Secure your API requests using our authentication methods. We support multiple authentication schemes for different use cases.",
+        "title": "Autenticación",
+        "description": "Protege tus peticiones con nuestros métodos de autenticación. Soportamos varios esquemas para distintos casos de uso.",
         "sections": [
           {
-            "title": "API Key Authentication",
-            "content": "The simplest authentication method using API keys. Include your API key in the Authorization header with Bearer scheme.",
+            "title": "Autenticación con clave de API",
+            "content": "El método más simple. Incluye tu clave de API en el header Authorization con el esquema Bearer.",
             "code": {
               "language": "http",
-              "title": "API Key Authentication",
+              "title": "Autenticación con clave de API",
               "file": "config/examples/authentication.api-key.http"
             }
           },
           {
             "title": "OAuth 2.0",
-            "content": "For applications that need to access user data on behalf of users, we support OAuth 2.0 with authorization code flow.",
+            "content": "Para aplicaciones que necesitan acceder a datos en nombre de los usuarios, soportamos OAuth 2.0 con flujo de código de autorización.",
             "list": [
-              "Redirect users to our authorization endpoint",
-              "Receive authorization code after user consent",
-              "Exchange code for access token",
-              "Use access token for API requests"
+              "Redirige al usuario a nuestro endpoint de autorización",
+              "Recibe el código de autorización tras el consentimiento",
+              "Intercambia el código por un token de acceso",
+              "Usa el token de acceso en las peticiones a la API"
             ]
           },
           {
-            "title": "JWT Tokens",
-            "content": "JSON Web Tokens provide a stateless authentication method ideal for microservices and distributed systems.",
-            "note": "JWT tokens expire after 24 hours. Implement token refresh logic in your application."
+            "title": "Tokens JWT",
+            "content": "Los JSON Web Tokens ofrecen autenticación sin estado, ideal para microservicios y sistemas distribuidos.",
+            "note": "Los tokens JWT expiran a las 24 horas. Implementa lógica de renovación en tu aplicación."
           },
           {
-            "title": "Rate Limiting",
-            "content": "API requests are rate limited to ensure fair usage and system stability:",
+            "title": "Límite de peticiones",
+            "content": "Las peticiones están limitadas para garantizar un uso justo y la estabilidad del sistema:",
             "table": {
               "headers": [
                 "Plan",
-                "Requests/Hour",
-                "Burst Limit"
+                "Peticiones por hora",
+                "Límite de ráfaga"
               ],
               "rows": [
                 [
-                  "Free",
-                  "1,000",
+                  "Gratuito",
+                  "1 000",
                   "100/min"
                 ],
                 [
-                  "Professional",
-                  "10,000",
+                  "Profesional",
+                  "10 000",
                   "500/min"
                 ],
                 [
-                  "Enterprise",
-                  "100,000",
-                  "2,000/min"
+                  "Empresa",
+                  "100 000",
+                  "2 000/min"
                 ]
               ]
             }
@@ -441,76 +499,76 @@
     "endpoints": {
       "template": "content",
       "content": {
-        "title": "API Endpoints",
-        "description": "Complete reference for all available API endpoints with request/response examples.",
+        "title": "Endpoints de la API",
+        "description": "Referencia completa de todos los endpoints disponibles con ejemplos de petición y respuesta.",
         "sections": [
           {
-            "title": "User Management",
-            "content": "Endpoints for managing user accounts, profiles, and authentication.",
+            "title": "Gestión de usuarios",
+            "content": "Endpoints para administrar cuentas de usuario, perfiles y autenticación.",
             "table": {
               "headers": [
-                "Method",
+                "Método",
                 "Endpoint",
-                "Description"
+                "Descripción"
               ],
               "rows": [
                 [
                   "GET",
                   "/users",
-                  "List all users"
+                  "Listar todos los usuarios"
                 ],
                 [
                   "GET",
                   "/users/{id}",
-                  "Get user by ID"
+                  "Obtener usuario por id"
                 ],
                 [
                   "POST",
                   "/users",
-                  "Create new user"
+                  "Crear usuario"
                 ],
                 [
                   "PUT",
                   "/users/{id}",
-                  "Update user"
+                  "Actualizar usuario"
                 ],
                 [
                   "DELETE",
                   "/users/{id}",
-                  "Delete user"
+                  "Eliminar usuario"
                 ]
               ]
             }
           },
           {
-            "title": "Data Operations",
-            "content": "CRUD operations for your application data with advanced querying capabilities.",
+            "title": "Operaciones de datos",
+            "content": "Operaciones CRUD sobre los datos de tu aplicación con capacidades avanzadas de consulta.",
             "table": {
               "headers": [
-                "Method",
+                "Método",
                 "Endpoint",
-                "Description"
+                "Descripción"
               ],
               "rows": [
                 [
                   "GET",
                   "/data",
-                  "List data items"
+                  "Listar elementos"
                 ],
                 [
                   "POST",
                   "/data",
-                  "Create data item"
+                  "Crear elemento"
                 ],
                 [
                   "PUT",
                   "/data/{id}",
-                  "Update data item"
+                  "Actualizar elemento"
                 ],
                 [
                   "DELETE",
                   "/data/{id}",
-                  "Delete data item"
+                  "Eliminar elemento"
                 ]
               ]
             }
@@ -522,34 +580,34 @@
       "template": "content",
       "content": {
         "title": "Webhooks",
-        "description": "Configure real-time notifications for events in your application using webhooks.",
+        "description": "Configura notificaciones en tiempo real para los eventos de tu aplicación mediante webhooks.",
         "sections": [
           {
-            "title": "Webhook Events",
-            "content": "Available webhook events that you can subscribe to:",
+            "title": "Eventos disponibles",
+            "content": "Eventos de webhook a los que te puedes suscribir:",
             "list": [
-              "user.created - New user registration",
-              "user.updated - User profile changes",
-              "data.created - New data item created",
-              "data.updated - Data item modified",
-              "system.error - System error occurred"
+              "user.created - registro de un nuevo usuario",
+              "user.updated - cambios en el perfil del usuario",
+              "data.created - nuevo elemento de datos creado",
+              "data.updated - elemento de datos modificado",
+              "system.error - ocurrió un error del sistema"
             ]
           },
           {
-            "title": "Webhook Configuration",
-            "content": "Configure webhook endpoints in your developer dashboard or via API:",
+            "title": "Configuración del webhook",
+            "content": "Configura los endpoints de webhook en tu panel de desarrollador o vía API:",
             "code": {
               "language": "json",
-              "title": "Webhook Configuration",
+              "title": "Configuración del webhook",
               "file": "config/examples/webhooks.config.json"
             }
           },
           {
-            "title": "Webhook Payload",
-            "content": "Example webhook payload structure:",
+            "title": "Payload del webhook",
+            "content": "Estructura de ejemplo del payload de un webhook:",
             "code": {
               "language": "json",
-              "title": "Webhook Payload",
+              "title": "Payload del webhook",
               "file": "config/examples/webhooks.payload.json"
             }
           }
@@ -559,100 +617,100 @@
     "error-handling": {
       "template": "content",
       "content": {
-        "title": "Error Handling",
-        "description": "Understanding API error responses and how to handle them in your application.",
+        "title": "Manejo de errores",
+        "description": "Entiende las respuestas de error de la API y cómo manejarlas en tu aplicación.",
         "sections": [
           {
-            "title": "HTTP Status Codes",
-            "content": "Standard HTTP status codes used by the API:",
+            "title": "Códigos de estado HTTP",
+            "content": "Códigos de estado HTTP estándar que usa la API:",
             "table": {
               "headers": [
-                "Status Code",
-                "Meaning",
-                "Description"
+                "Código",
+                "Significado",
+                "Descripción"
               ],
               "rows": [
                 [
                   "200",
                   "OK",
-                  "Request successful"
+                  "Petición exitosa"
                 ],
                 [
                   "201",
                   "Created",
-                  "Resource created successfully"
+                  "Recurso creado correctamente"
                 ],
                 [
                   "400",
                   "Bad Request",
-                  "Invalid request parameters"
+                  "Parámetros de petición inválidos"
                 ],
                 [
                   "401",
                   "Unauthorized",
-                  "Authentication required"
+                  "Se requiere autenticación"
                 ],
                 [
                   "403",
                   "Forbidden",
-                  "Access denied"
+                  "Acceso denegado"
                 ],
                 [
                   "404",
                   "Not Found",
-                  "Resource not found"
+                  "Recurso no encontrado"
                 ],
                 [
                   "429",
                   "Too Many Requests",
-                  "Rate limit exceeded"
+                  "Límite de peticiones excedido"
                 ],
                 [
                   "500",
                   "Internal Server Error",
-                  "Server error occurred"
+                  "Error del servidor"
                 ]
               ]
             }
           },
           {
-            "title": "Error Response Format",
-            "content": "All error responses follow a consistent structure:",
+            "title": "Formato de respuesta de error",
+            "content": "Todas las respuestas de error siguen una estructura consistente:",
             "code": {
               "language": "json",
-              "title": "Error Response",
+              "title": "Respuesta de error",
               "file": "config/examples/error-handling.error-response.json"
             }
           },
           {
-            "title": "Common Error Codes",
-            "content": "Application-specific error codes you may encounter:",
+            "title": "Códigos de error comunes",
+            "content": "Códigos de error propios de la aplicación que puedes encontrar:",
             "table": {
               "headers": [
-                "Error Code",
-                "Description",
-                "Resolution"
+                "Código de error",
+                "Descripción",
+                "Solución"
               ],
               "rows": [
                 [
                   "INVALID_API_KEY",
-                  "API key is invalid or expired",
-                  "Check your API key"
+                  "La clave de API es inválida o expiró",
+                  "Revisa tu clave de API"
                 ],
                 [
                   "VALIDATION_ERROR",
-                  "Request data validation failed",
-                  "Fix request parameters"
+                  "La validación de los datos falló",
+                  "Corrige los parámetros de la petición"
                 ],
                 [
                   "RESOURCE_NOT_FOUND",
-                  "Requested resource doesn't exist",
-                  "Verify resource ID"
+                  "El recurso solicitado no existe",
+                  "Verifica el id del recurso"
                 ],
                 [
                   "RATE_LIMIT_EXCEEDED",
-                  "Too many requests",
-                  "Wait before retrying"
+                  "Demasiadas peticiones",
+                  "Espera antes de reintentar"
                 ]
               ]
             }
@@ -1379,8 +1437,8 @@
     "users-endpoint": {
       "method": "GET",
       "path": "/users",
-      "title": "List Users",
-      "description": "Retrieve a list of users with optional filtering and pagination. Supports various query parameters for customizing the results.",
+      "title": "Listar usuarios",
+      "description": "Obtén una lista de usuarios con filtrado y paginación opcionales. Admite varios parámetros de consulta para personalizar los resultados.",
       "authentication": true,
       "request": {
         "headers": [
@@ -1388,36 +1446,36 @@
             "name": "Authorization",
             "value": "Bearer YOUR_API_KEY",
             "required": true,
-            "description": "API key for authentication"
+            "description": "Clave de API para autenticación"
           }
         ],
         "query_params": [
           {
             "name": "page",
             "type": "integer",
-            "description": "Page number for pagination",
+            "description": "Número de página para la paginación",
             "example": "1"
           },
           {
             "name": "limit",
             "type": "integer",
-            "description": "Number of items per page",
+            "description": "Elementos por página",
             "example": "20"
           },
           {
             "name": "search",
             "type": "string",
-            "description": "Search term for filtering users",
+            "description": "Término de búsqueda para filtrar usuarios",
             "example": "john"
           }
         ]
       },
       "responses": {
         "200": {
-          "description": "Success",
+          "description": "Correcto",
           "examples": {
             "success": {
-              "summary": "Users retrieved successfully",
+              "summary": "Usuarios obtenidos correctamente",
               "value": {
                 "success": true,
                 "data": [
@@ -1444,8 +1502,8 @@
           "tech": "curl",
           "name": "cURL",
           "language": "bash",
-          "title": "Get Users with cURL",
-          "description": "Retrieve users using cURL command",
+          "title": "Listar usuarios con cURL",
+          "description": "Obtén usuarios con un comando cURL",
           "file": "config/examples/users-endpoint.curl.sh"
         },
         {
@@ -1453,8 +1511,8 @@
           "tech": "javascript",
           "name": "JavaScript",
           "language": "javascript",
-          "title": "Fetch Users with JavaScript",
-          "description": "Get users using JavaScript fetch API",
+          "title": "Listar usuarios con JavaScript",
+          "description": "Obtén usuarios con la API fetch de JavaScript",
           "file": "config/examples/users-endpoint.fetch.js"
         },
         {
@@ -1462,8 +1520,8 @@
           "tech": "python",
           "name": "Python",
           "language": "python",
-          "title": "Get Users with Python",
-          "description": "Retrieve users using Python requests",
+          "title": "Listar usuarios con Python",
+          "description": "Obtén usuarios con la librería requests de Python",
           "file": "config/examples/users-endpoint.requests.py"
         }
       ]
@@ -1471,8 +1529,8 @@
     "data-endpoint": {
       "method": "POST",
       "path": "/data",
-      "title": "Create Data Item",
-      "description": "Create a new data item in the system. Supports various data types and custom metadata.",
+      "title": "Crear elemento de datos",
+      "description": "Crea un nuevo elemento de datos en el sistema. Admite varios tipos de datos y metadatos personalizados.",
       "authentication": true,
       "request": {
         "headers": [
@@ -1480,7 +1538,7 @@
             "name": "Authorization",
             "value": "Bearer YOUR_API_KEY",
             "required": true,
-            "description": "API key for authentication"
+            "description": "Clave de API para autenticación"
           }
         ],
         "body": {
@@ -1490,22 +1548,22 @@
             "properties": {
               "title": {
                 "type": "string",
-                "description": "Title of the data item",
+                "description": "Título del elemento de datos",
                 "example": "Sample Data Item"
               },
               "content": {
                 "type": "string",
-                "description": "Content or description",
+                "description": "Contenido o descripción",
                 "example": "This is sample content for the data item"
               },
               "category": {
                 "type": "string",
-                "description": "Category classification",
+                "description": "Clasificación por categoría",
                 "example": "general"
               },
               "metadata": {
                 "type": "object",
-                "description": "Additional metadata",
+                "description": "Metadatos adicionales",
                 "example": {
                   "priority": "high",
                   "tags": [
@@ -1524,10 +1582,10 @@
       },
       "responses": {
         "201": {
-          "description": "Created",
+          "description": "Creado",
           "examples": {
             "success": {
-              "summary": "Data item created successfully",
+              "summary": "Elemento de datos creado correctamente",
               "value": {
                 "success": true,
                 "data": {
@@ -1541,7 +1599,7 @@
               }
             },
             "error": {
-              "summary": "Validation error",
+              "summary": "Error de validación",
               "value": {
                 "success": false,
                 "error": {
@@ -1559,8 +1617,8 @@
           "tech": "curl",
           "name": "cURL",
           "language": "bash",
-          "title": "Create Data with cURL",
-          "description": "Create a new data item using cURL",
+          "title": "Crear datos con cURL",
+          "description": "Crea un elemento de datos con cURL",
           "file": "config/examples/data-endpoint.curl.sh"
         },
         {
@@ -1568,8 +1626,8 @@
           "tech": "javascript",
           "name": "JavaScript",
           "language": "javascript",
-          "title": "Create Data with JavaScript",
-          "description": "Create data item using JavaScript",
+          "title": "Crear datos con JavaScript",
+          "description": "Crea un elemento de datos con JavaScript",
           "file": "config/examples/data-endpoint.fetch.js"
         }
       ]

@@ -24,7 +24,20 @@ class DynamicHTMLGenerator {
         this.generateMetaTags();
         this.generateNavbar();
         this.generateFooter();
+        this.updateTocHeader();
         this.applyTheme();
+    }
+
+    ui(key, fallback) {
+        const ui = (this.config && this.config.site_config && this.config.site_config.ui) || {};
+        return ui[key] != null ? ui[key] : fallback;
+    }
+
+    updateTocHeader() {
+        const tocHeading = document.querySelector('.toc-header h6');
+        if (tocHeading) {
+            tocHeading.textContent = this.ui('on_this_page', 'En esta página');
+        }
     }
 
     generateMetaTags() {
@@ -263,7 +276,7 @@ class DynamicHTMLGenerator {
                 <p class="footer-subtitle">${this.escapeHtml(api.description || 'Documentación oficial de la API')}</p>
                 ${licenseHtml}
                 <div class="footer-bottom">
-                    <p>&copy; ${new Date().getFullYear()} ${this.escapeHtml(siteConfig.brand || 'API Services')}. Todos los derechos reservados.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${this.escapeHtml(siteConfig.brand || 'API Services')}. ${this.escapeHtml(this.ui('rights', 'Todos los derechos reservados.'))}</p>
                 </div>
             </div>
         `;

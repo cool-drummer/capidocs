@@ -61,10 +61,10 @@ class ContentGenerator {
                         <p class="hero-subtitle">${this.escapeHtml(hero.subtitle)}</p>
 
                         ${hero.description ? `<p class="hero-description">${this.escapeHtml(hero.description)}</p>` : ''}
-                        ${hero.base_url ? `<div class="url-base"><strong>URL Base:</strong> <code>${this.escapeHtml(hero.base_url)}</code></div>` : ''}
+                        ${hero.base_url ? `<div class="url-base"><strong>${this.escapeHtml(this.t('base_url_label', 'URL base'))}:</strong> <code>${this.escapeHtml(hero.base_url)}</code></div>` : ''}
                         ${hero.note ? `<div class="note-box">${this.escapeHtml(hero.note)}</div>` : ''}
-                        ${hero.audience ? `<div class="audience-box"><strong>Audiencia:</strong> ${this.escapeHtml(hero.audience)}</div>` : ''}
-                        ${hero.confidentiality ? `<div class="warning-box"><strong>Confidencialidad:</strong> ${this.escapeHtml(hero.confidentiality)}</div>` : ''}
+                        ${hero.audience ? `<div class="audience-box"><strong>${this.escapeHtml(this.t('audience_label', 'Audiencia'))}:</strong> ${this.escapeHtml(hero.audience)}</div>` : ''}
+                        ${hero.confidentiality ? `<div class="warning-box"><strong>${this.escapeHtml(this.t('confidentiality_label', 'Confidencialidad'))}:</strong> ${this.escapeHtml(hero.confidentiality)}</div>` : ''}
 
                         ${hero.stats ? `
                             <div class="hero-stats">
@@ -166,7 +166,7 @@ class ContentGenerator {
                                 <div class="step-content">
                                     <h4>${this.escapeHtml(step.title)}</h4>
                                     <p>${this.escapeHtml(step.description)}</p>
-                                    ${step.link ? `<a href="${this.escapeAttr(step.link)}" class="step-link">Ver más →</a>` : ''}
+                                    ${step.link ? `<a href="${this.escapeAttr(step.link)}" class="step-link">${this.escapeHtml(this.t('see_more', 'Ver más'))} →</a>` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -409,7 +409,7 @@ class ContentGenerator {
             <div class="playground" hidden data-method="${this.escapeAttr(method)}" data-base="${this.escapeAttr(baseUrl)}" data-path="${this.escapeAttr(endpoint.path || '')}">
                 <div class="playground-head">
                     <code class="playground-url">${this.escapeHtml(fullUrl)}</code>
-                    <button class="playground-send" type="button">Enviar <i class="fas fa-paper-plane"></i></button>
+                    <button class="playground-send" type="button">${this.escapeHtml(this.t('send', 'Enviar'))} <i class="fas fa-paper-plane"></i></button>
                 </div>
                 ${headers.length ? `<div class="playground-group">
                     <div class="playground-group-title">Headers</div>
@@ -438,7 +438,7 @@ class ContentGenerator {
                     </div>
                     <pre class="playground-response-pre"><code class="language-json playground-response-body"></code></pre>
                 </div>
-                <div class="playground-note"><i class="fas fa-circle-info"></i> El navegador ejecuta la petición real. El servidor debe permitir CORS para responder desde el navegador.</div>
+                <div class="playground-note"><i class="fas fa-circle-info"></i> ${this.escapeHtml(this.t('playground_note', 'El navegador ejecuta la petición real. El servidor debe permitir CORS para responder desde el navegador.'))}</div>
             </div>`;
     }
 
@@ -686,7 +686,7 @@ class ContentGenerator {
                                 <h4>${this.escapeHtml(step.title)}</h4>
                                 <p>${this.escapeHtml(step.description)}</p>
                                 ${step.duration ? `<span class="step-duration">⏱️ ${this.escapeHtml(step.duration)}</span>` : ''}
-                                ${step.link ? `<a href="${this.escapeAttr(step.link)}" class="step-link">Ver más →</a>` : ''}
+                                ${step.link ? `<a href="${this.escapeAttr(step.link)}" class="step-link">${this.escapeHtml(this.t('see_more', 'Ver más'))} →</a>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -712,7 +712,7 @@ class ContentGenerator {
                             <div class="feature-content">
                                 <h4 class="feature-title">${this.escapeHtml(feature.title)}</h4>
                                 <p class="feature-description">${this.escapeHtml(feature.description)}</p>
-                                ${feature.link ? `<a href="${this.escapeAttr(feature.link)}" class="feature-link">Explorar →</a>` : ''}
+                                ${feature.link ? `<a href="${this.escapeAttr(feature.link)}" class="feature-link">${this.escapeHtml(this.t('explore', 'Explorar'))} →</a>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -1042,14 +1042,14 @@ class ContentGenerator {
                     <span class="breadcrumb-current">${this.escapeHtml(title)}</span>
                 </nav>
                 <div class="page-actions" data-route="${this.escapeAttr(pageId)}">
-                    <button class="page-actions-btn" type="button" data-page-actions aria-label="Acciones de página">
+                    <button class="page-actions-btn" type="button" data-page-actions aria-label="${this.escapeAttr(this.t('page_actions', 'Acciones de página'))}">
                         <i class="fas fa-ellipsis"></i>
                     </button>
                     <div class="page-actions-menu">
-                        <button type="button" data-action="copy-md"><i class="fas fa-copy"></i> Copiar como Markdown</button>
-                        <button type="button" data-action="view-md"><i class="fas fa-file-lines"></i> Ver Markdown</button>
-                        <button type="button" data-action="open-claude"><i class="fas fa-robot"></i> Abrir en Claude</button>
-                        <button type="button" data-action="open-chatgpt"><i class="fas fa-comment-dots"></i> Abrir en ChatGPT</button>
+                        <button type="button" data-action="copy-md"><i class="fas fa-copy"></i> ${this.escapeHtml(this.t('copy_md', 'Copiar como Markdown'))}</button>
+                        <button type="button" data-action="view-md"><i class="fas fa-file-lines"></i> ${this.escapeHtml(this.t('view_md', 'Ver Markdown'))}</button>
+                        <button type="button" data-action="open-claude"><i class="fas fa-robot"></i> ${this.escapeHtml(this.t('open_claude', 'Abrir en Claude'))}</button>
+                        <button type="button" data-action="open-chatgpt"><i class="fas fa-comment-dots"></i> ${this.escapeHtml(this.t('open_chatgpt', 'Abrir en ChatGPT'))}</button>
                     </div>
                 </div>
             </div>`;
@@ -1081,13 +1081,13 @@ class ContentGenerator {
             <div class="error-page">
                 <div class="error-content">
                     <div class="error-badge"><i class="fas fa-compass"></i></div>
-                    <h2 class="error-title">No encontramos esta página</h2>
-                    <p class="error-desc">Puede que el enlace haya cambiado o ya no exista. Prueba desde el inicio o busca lo que necesitas.</p>
+                    <h2 class="error-title">${this.escapeHtml(this.t('not_found_title', 'No encontramos esta página'))}</h2>
+                    <p class="error-desc">${this.escapeHtml(this.t('not_found_desc', 'Puede que el enlace haya cambiado o ya no exista. Prueba desde el inicio o busca lo que necesitas.'))}</p>
                     <div class="error-actions">
-                        <a class="btn btn-primary" href="#home">Volver al inicio</a>
-                        <button class="btn btn-outline" data-action="open-search">Buscar en la documentación</button>
+                        <a class="btn btn-primary" href="#home">${this.escapeHtml(this.t('back_home', 'Volver al inicio'))}</a>
+                        <button class="btn btn-outline" data-action="open-search">${this.escapeHtml(this.t('search_aria', 'Buscar en la documentación'))}</button>
                     </div>
-                    <p class="error-hint">Los detalles técnicos se registraron en la consola.</p>
+                    <p class="error-hint">${this.escapeHtml(this.t('error_hint', 'Los detalles técnicos se registraron en la consola.'))}</p>
                 </div>
             </div>
         `;
