@@ -1,8 +1,22 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Favicon - documentation icon -->
-  <rect x="4" y="4" width="24" height="24" rx="5" fill="#000000"/>
-  <rect x="8" y="8" width="16" height="16" rx="4" fill="#ffffff"/>
-  <rect x="11" y="12" width="10" height="1.5" fill="#000000"/>
-  <rect x="11" y="15" width="10" height="1.5" fill="#000000"/>
-  <rect x="11" y="18" width="6" height="1.5" fill="#000000"/>
-</svg> 
+  <defs>
+    <linearGradient id="meadowFav" gradientUnits="userSpaceOnUse" x1="8" y1="12" x2="44" y2="36">
+      <stop offset="0" stop-color="#cfe07f"/>
+      <stop offset=".38" stop-color="#6cc191"/>
+      <stop offset=".7" stop-color="#3f9fa0"/>
+      <stop offset="1" stop-color="#316f97"/>
+    </linearGradient>
+  </defs>
+  <svg x="1" y="5" width="30" height="21" viewBox="5 9.5 42 29">
+    <g fill="url(#meadowFav)">
+      <rect x="6.5" y="19" width="31" height="15" rx="7.5"/>
+      <rect x="29" y="14.5" width="14" height="13.5" rx="6.2"/>
+      <rect x="39.4" y="19.6" width="6.6" height="6.6" rx="3.3"/>
+      <circle cx="33.4" cy="13.4" r="3.1"/>
+      <rect x="12" y="31" width="5" height="6.6" rx="2.5"/>
+      <rect x="27" y="31" width="5" height="6.6" rx="2.5"/>
+    </g>
+    <circle cx="37.4" cy="20" r="1.5" fill="#0e3a3c"/>
+    <circle cx="44.2" cy="24" r="1" fill="#0e3a3c"/>
+  </svg>
+</svg>
