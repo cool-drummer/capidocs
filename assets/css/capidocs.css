@@ -631,7 +631,7 @@ body.has-tabs .toc-sidebar {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
 }
 
 
@@ -643,8 +643,6 @@ body.has-tabs .toc-sidebar {
 .main-content > * {
     width: 100%;
     max-width: 1024px;
-    margin-left: auto;
-    margin-right: auto;
     min-width: 0;
 }
 
@@ -3016,11 +3014,8 @@ body.has-tabs .toc-sidebar {
 }
 
 .toc-link.active {
-    color: var(--brand-primary);
-    background-color: var(--bg-secondary);
-    border-left-color: var(--brand-primary);
-    font-weight: 400;
-    transform: translateX(2px);
+    color: var(--brand-accent);
+    font-weight: 500;
 }
 
 
@@ -3891,11 +3886,6 @@ body.has-tabs .toc-sidebar {
     border-left: 1px solid var(--border-primary);
 }
 
-[data-theme="light"] .hero-section {
-    background-color: var(--bg-primary);
-    border-color: var(--border-primary);
-}
-
 [data-theme="light"] .content-section {
     background-color: transparent;
     border-color: transparent;
@@ -4111,11 +4101,6 @@ body.has-tabs .toc-sidebar {
 [data-theme="light"] .content-section:hover {
     border-color: transparent;
     box-shadow: none;
-}
-
-[data-theme="light"] .hero-section:hover {
-    border-color: var(--brand-accent);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="light"] .alert:hover {
