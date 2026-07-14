@@ -5572,3 +5572,16 @@ body.search-open { overflow: hidden; }
         padding-top: var(--space-8);
     }
 }
+
+/* core.js marks inner pres with .code-block (copy-button bookkeeping);
+   inside a framed container the pre must not paint its own box. */
+.code-block pre.code-block,
+.multi-tech-examples pre.code-block,
+.playground-response pre.code-block,
+.code-panel pre.code-block {
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    background: transparent;
+    overflow-x: auto;
+}

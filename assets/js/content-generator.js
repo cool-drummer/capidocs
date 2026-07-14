@@ -445,11 +445,12 @@ class ContentGenerator {
     generateCodeBlock(code) {
         const language = code.language || 'text';
         const content = code.content || '';
-        const title = code.title || this.languageLabel(language);
+        const isPlainText = String(language).toLowerCase() === 'text';
+        const title = code.title || (isPlainText ? '' : this.languageLabel(language));
 
         return `
             <div class="code-block">
-                <div class="code-title"><span>${this.escapeHtml(title)}</span></div>
+                ${title ? `<div class="code-title"><span>${this.escapeHtml(title)}</span></div>` : ''}
                 <pre><code class="language-${this.escapeAttr(language)}">${this.escapeHtml(content)}</code></pre>
             </div>
         `;
