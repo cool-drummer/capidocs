@@ -112,16 +112,19 @@ class CapiDocsCore {
 
     updateThemeButton() {
         const themeIcon = document.getElementById('theme-icon');
+        const themeToggle = document.getElementById('theme-toggle');
         const themeText = document.getElementById('theme-text');
-        
-        if (themeIcon && themeText) {
-            if (this.currentTheme === 'dark') {
-                themeIcon.className = 'fas fa-sun';
-                themeText.textContent = 'Claro';
-            } else {
-                themeIcon.className = 'fas fa-moon';
-                themeText.textContent = 'Oscuro';
-            }
+
+        if (themeIcon) {
+            themeIcon.className = this.currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+        if (themeToggle) {
+            const label = this.currentTheme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+            themeToggle.setAttribute('aria-label', label);
+            themeToggle.setAttribute('title', label);
+        }
+        if (themeText) {
+            themeText.textContent = this.currentTheme === 'dark' ? 'Claro' : 'Oscuro';
         }
     }
 
@@ -173,14 +176,20 @@ class CapiDocsCore {
     addCopyButtonToCodeBlock(block) {
         if (!block || block.querySelector('.copy-button')) return;
 
+        const wrapper = block.parentElement;
+        const header = wrapper && wrapper.classList.contains('code-block')
+            ? wrapper.querySelector(':scope > .code-title')
+            : null;
+        if (header && header.querySelector('.copy-button')) return;
+
         const copyButton = this.createElement('button', {
             className: 'copy-button',
             attributes: {
-                'aria-label': 'Copy code',
-                'title': 'Copy to clipboard'
+                'aria-label': 'Copiar código',
+                'title': 'Copiar al portapapeles'
             }
         });
-        
+
         const icon = this.createElement('i', {
             className: 'fas fa-copy'
         });
@@ -191,8 +200,13 @@ class CapiDocsCore {
             this.copyCodeToClipboard(block, copyButton);
         });
 
-        block.style.position = 'relative';
-        block.appendChild(copyButton);
+        if (header) {
+            copyButton.classList.add('in-header');
+            header.appendChild(copyButton);
+        } else {
+            block.style.position = 'relative';
+            block.appendChild(copyButton);
+        }
     }
 
     async copyCodeToClipboard(block, button) {

@@ -228,6 +228,15 @@ class DynamicHTMLGenerator {
         if (themeToggle) {
             navbarNav.appendChild(themeToggle);
         }
+
+        if (siteConfig.navbar?.cta) {
+            const cta = siteConfig.navbar.cta;
+            const ctaElement = document.createElement('a');
+            ctaElement.href = cta.href || '#getting-started';
+            ctaElement.className = 'navbar-cta';
+            ctaElement.textContent = cta.text || 'Comenzar';
+            navbarNav.appendChild(ctaElement);
+        }
     }
 
     generateFooter() {

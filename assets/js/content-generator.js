@@ -20,26 +20,25 @@ class ContentGenerator {
     initializeTemplates() {
         
         this.templates.set('endpoint', (endpoint) => {
-            const { method, path, title, description, request, responses, code_examples } = endpoint;
-            
+            const { title, description, request, responses } = endpoint;
+
             return `
-                <div class="content-section">
-                    <div class="section-header">
-                        <div class="feature-icon">
-                            <i class="fas fa-laptop-code"></i>
+                <div class="endpoint-page" data-toc-exclude="true">
+                    <header class="endpoint-head">
+                        <h1 class="endpoint-title">${this.escapeHtml(title)}</h1>
+                        ${description ? `<p class="endpoint-summary">${this.escapeHtml(description)}</p>` : ''}
+                        ${this.generateApiBar(endpoint)}
+                        ${this.generatePlayground(endpoint)}
+                    </header>
+                    <div class="endpoint-grid">
+                        <div class="endpoint-prose">
+                            ${request ? this.generateRequestSection(request) : ''}
+                            ${responses ? this.generateResponseSection(responses) : ''}
                         </div>
-                        <div>
-                            <h2 class="section-title">${this.escapeHtml(title)}</h2>
-                            <p class="section-subtitle">${this.escapeHtml(description)}</p>
-                        </div>
-                    </div>
-
-                    ${this.generatePlayground(endpoint)}
-
-                    <div class="endpoint-card">
-                        ${request ? this.generateRequestSection(request) : ''}
-                        ${responses ? this.generateResponseSection(responses) : ''}
-                        ${code_examples ? this.generateCodeExamplesSection(code_examples) : ''}
+                        <aside class="endpoint-examples">
+                            ${this.generateRequestExamplePanel(endpoint)}
+                            ${this.generateResponseExamplePanel(endpoint)}
+                        </aside>
                     </div>
                 </div>
             `;
@@ -268,7 +267,7 @@ class ContentGenerator {
                 <div class="tech-examples-content">
                     ${items.map((it, i) => `
                         <div class="tech-example${i === 0 ? ' active' : ''}" id="${id}-${i}">
-                            <pre class="line-numbers"><code class="language-${this.escapeAttr(it.language || 'text')}">${this.escapeHtml(it.code || it.content || '')}</code></pre>
+                            <pre><code class="language-${this.escapeAttr(it.language || 'text')}">${this.escapeHtml(it.code || it.content || '')}</code></pre>
                         </div>
                     `).join('')}
                 </div>
@@ -292,6 +291,110 @@ class ContentGenerator {
             </div>`;
     }
 
+    generateApiBar(endpoint) {
+        const method = String(endpoint.method || 'GET').toUpperCase();
+        const path = endpoint.path || '';
+        const segments = path.split('/').filter(Boolean).map(seg => {
+            const isParam = /^\{.+\}$/.test(seg);
+            return `<span class="api-path-sep">/</span><span class="api-path-seg${isParam ? ' api-path-param' : ''}">${this.escapeHtml(seg)}</span>`;
+        }).join('');
+
+        return `
+            <div class="api-bar">
+                <span class="method-badge method-${this.escapeAttr(method.toLowerCase())}">${this.escapeHtml(method)}</span>
+                <div class="api-path">${segments || '<span class="api-path-seg">/</span>'}</div>
+                <button class="api-try" type="button" data-playground-toggle>
+                    ${this.escapeHtml(this.t('try_it', 'Pruébalo'))}
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>`;
+    }
+
+    generateRequestExamplePanel(endpoint) {
+        const baseUrl = (this.config && this.config.api && this.config.api.base_url) || '';
+        const raw = (endpoint.code_examples || []).filter(ex => ex.code || ex.content);
+        const examples = raw.length
+            ? raw.map(ex => ({
+                label: ex.name || ex.tech || ex.language || 'Código',
+                language: ex.language || 'text',
+                code: ex.code || ex.content || ''
+            }))
+            : [{ label: 'cURL', language: 'bash', code: this.buildCurlExample(endpoint, baseUrl) }];
+
+        const id = 'reqx-' + (this.panelSeq = (this.panelSeq || 0) + 1);
+        return `
+            <div class="code-panel">
+                <div class="code-panel-head">
+                    <div class="code-panel-tabs">
+                        ${examples.map((ex, i) => `
+                            <button class="code-panel-tab${i === 0 ? ' active' : ''}" type="button" data-panel-target="${id}-${i}">${this.escapeHtml(ex.label)}</button>
+                        `).join('')}
+                    </div>
+                    <button class="code-panel-copy" type="button" aria-label="${this.escapeAttr(this.t('copy_code', 'Copiar código'))}"><i class="fas fa-copy"></i></button>
+                </div>
+                ${examples.map((ex, i) => `
+                    <div class="code-panel-body${i === 0 ? ' active' : ''}" id="${id}-${i}">
+                        <pre class="code-block code-panel-pre"><code class="language-${this.escapeAttr(ex.language)}">${this.escapeHtml(ex.code)}</code></pre>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    generateResponseExamplePanel(endpoint) {
+        const responses = endpoint.responses;
+        if (!responses) return '';
+
+        const entries = Object.entries(responses).map(([status, response]) => {
+            let value = null;
+            if (response.examples) {
+                const first = response.examples.success || Object.values(response.examples)[0];
+                if (first) value = first.value;
+            }
+            const code = value != null
+                ? JSON.stringify(value, null, 2)
+                : (response.schema ? this.generateSchemaExample(response.schema) : '{}');
+            return { status, code };
+        });
+        if (!entries.length) return '';
+
+        const id = 'resx-' + (this.panelSeq = (this.panelSeq || 0) + 1);
+        return `
+            <div class="code-panel">
+                <div class="code-panel-head">
+                    <div class="code-panel-tabs">
+                        ${entries.map((en, i) => `
+                            <button class="code-panel-tab code-panel-status ${this.statusClass(en.status)}${i === 0 ? ' active' : ''}" type="button" data-panel-target="${id}-${i}">${this.escapeHtml(en.status)}</button>
+                        `).join('')}
+                    </div>
+                    <button class="code-panel-copy" type="button" aria-label="${this.escapeAttr(this.t('copy_code', 'Copiar código'))}"><i class="fas fa-copy"></i></button>
+                </div>
+                ${entries.map((en, i) => `
+                    <div class="code-panel-body${i === 0 ? ' active' : ''}" id="${id}-${i}">
+                        <pre class="code-block code-panel-pre"><code class="language-json">${this.escapeHtml(en.code)}</code></pre>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    buildCurlExample(endpoint, baseUrl) {
+        const method = String(endpoint.method || 'GET').toUpperCase();
+        const req = endpoint.request || {};
+        const lines = [`curl -X ${method} ${baseUrl}${endpoint.path || ''}`];
+        (req.headers || []).forEach(h => lines.push(`  -H "${h.name}: ${h.value || ''}"`));
+        if (req.body && req.body.schema) {
+            lines.push(`  -d '${this.generateSchemaExample(req.body.schema)}'`);
+        }
+        return lines.join(' \\\n');
+    }
+
+    statusClass(status) {
+        const n = parseInt(status, 10);
+        if (n >= 500) return 'status-5xx';
+        if (n >= 400) return 'status-4xx';
+        if (n >= 300) return 'status-3xx';
+        return 'status-2xx';
+    }
+
     generatePlayground(endpoint) {
         const baseUrl = (this.config.api && this.config.api.base_url) || '';
         const method = String(endpoint.method || 'GET').toUpperCase();
@@ -303,9 +406,8 @@ class ContentGenerator {
         const fullUrl = baseUrl + (endpoint.path || '');
 
         return `
-            <div class="playground" data-method="${this.escapeAttr(method)}" data-base="${this.escapeAttr(baseUrl)}" data-path="${this.escapeAttr(endpoint.path || '')}">
+            <div class="playground" hidden data-method="${this.escapeAttr(method)}" data-base="${this.escapeAttr(baseUrl)}" data-path="${this.escapeAttr(endpoint.path || '')}">
                 <div class="playground-head">
-                    <span class="method-badge method-${this.escapeAttr(method.toLowerCase())}">${this.escapeHtml(method)}</span>
                     <code class="playground-url">${this.escapeHtml(fullUrl)}</code>
                     <button class="playground-send" type="button">Enviar <i class="fas fa-paper-plane"></i></button>
                 </div>
@@ -343,14 +445,38 @@ class ContentGenerator {
     generateCodeBlock(code) {
         const language = code.language || 'text';
         const content = code.content || '';
-        const title = code.title || '';
-        
+        const title = code.title || this.languageLabel(language);
+
         return `
             <div class="code-block">
-                ${title ? `<div class="code-title">${this.escapeHtml(title)}</div>` : ''}
-                <pre class="line-numbers"><code class="language-${this.escapeAttr(language)}">${this.escapeHtml(content)}</code></pre>
+                <div class="code-title"><span>${this.escapeHtml(title)}</span></div>
+                <pre><code class="language-${this.escapeAttr(language)}">${this.escapeHtml(content)}</code></pre>
             </div>
         `;
+    }
+
+    languageLabel(language) {
+        const labels = {
+            bash: 'Terminal',
+            sh: 'Terminal',
+            shell: 'Terminal',
+            curl: 'cURL',
+            javascript: 'JavaScript',
+            js: 'JavaScript',
+            typescript: 'TypeScript',
+            ts: 'TypeScript',
+            python: 'Python',
+            json: 'JSON',
+            yaml: 'YAML',
+            html: 'HTML',
+            css: 'CSS',
+            php: 'PHP',
+            go: 'Go',
+            ruby: 'Ruby',
+            java: 'Java',
+            text: 'Texto'
+        };
+        return labels[String(language).toLowerCase()] || language;
     }
 
     getTechIcon(tech) {
@@ -420,79 +546,91 @@ class ContentGenerator {
 
     generateRequestSection(request) {
         if (!request) return '';
-        
-        return `
-            <h3 class="request-title">Request</h3>
-            
-            ${request.headers ? `
-                <h4>Headers</h4>
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Header</th>
-                                <th>Value</th>
-                                <th>Required</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${request.headers.map(header => `
-                                <tr>
-                                    <td><code>${this.escapeHtml(header.name)}</code></td>
-                                    <td><code>${this.escapeHtml(header.value)}</code></td>
-                                    <td>${header.required ? '<span class="required-badge">Required</span>' : '<span class="optional-badge">Optional</span>'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            ` : ''}
-            
-            ${request.body ? `
-                <h4>Body</h4>
-                <div class="code-block">
-                    <pre><code class="json-code">${this.generateSchemaExample(request.body.schema)}</code></pre>
+        let out = '';
 
-                </div>
-            ` : ''}
-        `;
+        if (Array.isArray(request.headers) && request.headers.length) {
+            const fields = request.headers.map(h => ({
+                name: h.name,
+                type: 'string',
+                badge: 'header',
+                required: !!h.required,
+                description: h.description || '',
+                example: h.value
+            }));
+            out += this.generateProseBlock(this.t('authorizations_title', 'Autorización'), this.generateFieldRows(fields));
+        }
+
+        if (Array.isArray(request.query_params) && request.query_params.length) {
+            const fields = request.query_params.map(p => ({
+                name: p.name,
+                type: p.type || 'string',
+                badge: 'query',
+                required: !!p.required,
+                description: p.description || '',
+                example: p.example,
+                default: p.default
+            }));
+            out += this.generateProseBlock(this.t('query_params_title', 'Parámetros de consulta'), this.generateFieldRows(fields));
+        }
+
+        const schema = request.body && request.body.schema;
+        if (schema && schema.properties) {
+            const requiredList = schema.required || [];
+            const fields = Object.entries(schema.properties).map(([name, prop]) => ({
+                name,
+                type: prop.type || 'string',
+                required: requiredList.includes(name),
+                description: prop.description || '',
+                example: prop.example
+            }));
+            out += this.generateProseBlock(
+                this.t('body_title', 'Cuerpo'),
+                this.generateFieldRows(fields),
+                '<span class="prose-heading-chip">application/json</span>'
+            );
+        }
+
+        return out;
+    }
+
+    generateProseBlock(title, inner, headExtra) {
+        return `
+            <section class="prose-block">
+                <h2 class="prose-heading">${this.escapeHtml(title)}${headExtra || ''}</h2>
+                ${inner}
+            </section>`;
+    }
+
+    generateFieldRows(fields) {
+        return `
+            <div class="fields-list fields-plain">
+                ${fields.map(f => `
+                    <div class="field-item">
+                        <div class="field-head">
+                            <code class="field-name">${this.escapeHtml(f.name)}</code>
+                            ${f.type ? `<span class="field-chip">${this.escapeHtml(f.type)}</span>` : ''}
+                            ${f.badge ? `<span class="field-chip">${this.escapeHtml(f.badge)}</span>` : ''}
+                            ${f.default !== undefined ? `<span class="field-chip">default: ${this.escapeHtml(f.default)}</span>` : ''}
+                            ${f.required ? `<span class="field-chip field-chip-required">${this.escapeHtml(this.t('required', 'requerido'))}</span>` : ''}
+                        </div>
+                        ${f.description ? `<div class="field-desc">${this.escapeHtml(f.description)}</div>` : ''}
+                        ${f.example !== undefined && f.example !== '' ? `
+                            <div class="field-example">${this.escapeHtml(this.t('example', 'Ejemplo'))}: <code>${this.escapeHtml(typeof f.example === 'object' ? JSON.stringify(f.example) : f.example)}</code></div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>`;
     }
 
     generateResponseSection(responses) {
         if (!responses) return '';
-        
-        return `
-            <h3>Responses</h3>
-            ${Object.entries(responses).map(([status, response]) => `
-                <h4>HTTP ${this.escapeHtml(status)} - ${this.escapeHtml(response.description)}</h4>
-
-                ${response.examples ? `
-                    <div class="response-examples">
-                        <div class="example-tabs">
-                            ${Object.entries(response.examples).map(([key, example]) => `
-                                <button class="example-tab" data-status="${this.escapeAttr(status)}" data-example="${this.escapeAttr(key)}">
-                                    ${this.escapeHtml(example.summary)}
-                                </button>
-                            `).join('')}
-                        </div>
-
-                        ${Object.entries(response.examples).map(([key, example]) => `
-                            <div class="example-content" id="example-${this.escapeAttr(status)}-${this.escapeAttr(key)}" style="display: ${key === 'success' ? 'block' : 'none'}">
-                                <div class="code-block ${key === 'error' ? 'error-example' : ''}">
-                                    <pre><code class="json-code">${this.escapeHtml(JSON.stringify(example.value, null, 2))}</code></pre>
-
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : `
-                    <div class="code-block">
-                        <pre><code class="json-code">${this.generateSchemaExample(response.schema)}</code></pre>
-
-                    </div>
-                `}
-            `).join('')}
-        `;
+        const rows = Object.entries(responses).map(([status, response]) => `
+            <div class="response-row">
+                <span class="status-chip ${this.statusClass(status)}">${this.escapeHtml(status)}</span>
+                <span class="response-desc">${this.escapeHtml(response.description || '')}</span>
+            </div>
+        `).join('');
+        return this.generateProseBlock(this.t('responses_title', 'Respuestas'), `<div class="response-list">${rows}</div>`);
     }
 
     generateSchemaExample(schema) {
@@ -837,7 +975,8 @@ class ContentGenerator {
         }
         
         if (pageId !== 'home') {
-            content = endpointCard + this.generateBreadcrumb(pageId) + content + this.generateFeedback(pageId) + this.generatePrevNext(pageId);
+            const isEndpointPage = !!(this.config.endpoints && this.config.endpoints[pageId]);
+            content = (isEndpointPage ? '' : endpointCard) + this.generateBreadcrumb(pageId) + content + this.generateFeedback(pageId) + this.generatePrevNext(pageId);
         }
 
         this.cache.set(pageId, content);
@@ -1015,7 +1154,7 @@ class ContentGenerator {
                     <h4>${this.escapeHtml(example.title)}</h4>
                     <p>${this.escapeHtml(example.description)}</p>
                 </div>
-                <pre class="line-numbers"><code class="language-${this.escapeAttr(example.language)}">${this.escapeHtml(example.code)}</code></pre>
+                <pre><code class="language-${this.escapeAttr(example.language)}">${this.escapeHtml(example.code)}</code></pre>
             </div>
         `).join('');
         
@@ -1228,6 +1367,53 @@ window.showTechExample = function(exampleId, tabElement) {
 };
 
 document.addEventListener('click', function(event) {
+    const tryBtn = event.target.closest('[data-playground-toggle]');
+    if (tryBtn) {
+        const head = tryBtn.closest('.endpoint-head');
+        const pg = head ? head.querySelector('.playground') : null;
+        if (pg) {
+            pg.hidden = !pg.hidden;
+            tryBtn.classList.toggle('open', !pg.hidden);
+        }
+        return;
+    }
+
+    const panelTab = event.target.closest('.code-panel-tab[data-panel-target]');
+    if (panelTab) {
+        const panel = panelTab.closest('.code-panel');
+        if (panel) {
+            panel.querySelectorAll('.code-panel-tab').forEach(function (t) { t.classList.remove('active'); });
+            panel.querySelectorAll('.code-panel-body').forEach(function (b) { b.classList.remove('active'); });
+            panelTab.classList.add('active');
+            const body = document.getElementById(panelTab.getAttribute('data-panel-target'));
+            if (body) {
+                body.classList.add('active');
+                if (typeof Prism !== 'undefined') Prism.highlightAllUnder(body);
+            }
+        }
+        return;
+    }
+
+    const panelCopy = event.target.closest('.code-panel-copy');
+    if (panelCopy) {
+        const panel = panelCopy.closest('.code-panel');
+        const activeCode = panel ? panel.querySelector('.code-panel-body.active code') : null;
+        if (activeCode && navigator.clipboard) {
+            navigator.clipboard.writeText(activeCode.textContent).then(function () {
+                const icon = panelCopy.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-check';
+                    panelCopy.classList.add('copied');
+                    setTimeout(function () {
+                        icon.className = 'fas fa-copy';
+                        panelCopy.classList.remove('copied');
+                    }, 1600);
+                }
+            }).catch(function () { /* clipboard unavailable */ });
+        }
+        return;
+    }
+
     const techTab = event.target.closest('.tech-tab[data-target]');
     if (techTab) {
         window.showTechExample(techTab.getAttribute('data-target'), techTab);
