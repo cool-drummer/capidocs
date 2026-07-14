@@ -59,7 +59,11 @@
         "endpoints": "API Endpoints",
         "webhooks": "Webhooks",
         "error-handling": "Error Handling",
-        "components": "Components"
+        "components": "Componentes",
+        "configuration": "Configuración",
+        "code-blocks": "Bloques de código",
+        "document-api": "Documenta tu API",
+        "features": "Funciones de la plataforma"
       }
     },
     "navbar": {
@@ -69,14 +73,15 @@
           "icon": "fas fa-book-open",
           "groups": [
             "nav_guides",
-            "Advanced Features"
+            "Plataforma",
+            "Funciones avanzadas"
           ]
         },
         {
           "text": "Referencia API",
           "icon": "fas fa-code",
           "groups": [
-            "Core Endpoints"
+            "Endpoints principales"
           ]
         }
       ],
@@ -138,12 +143,6 @@
       "type": "page"
     },
     {
-      "id": "components",
-      "title": "Components",
-      "icon": "fas fa-shapes",
-      "type": "page"
-    },
-    {
       "id": "endpoints",
       "title": "API Endpoints",
       "icon": "fas fa-code",
@@ -152,7 +151,37 @@
   ],
   "sections": [
     {
-      "title": "Core Endpoints",
+      "title": "Plataforma",
+      "pages": [
+        {
+          "id": "components",
+          "title": "Componentes",
+          "icon": "fas fa-shapes"
+        },
+        {
+          "id": "code-blocks",
+          "title": "Bloques de código",
+          "icon": "fas fa-code"
+        },
+        {
+          "id": "configuration",
+          "title": "Configuración",
+          "icon": "fas fa-sliders"
+        },
+        {
+          "id": "document-api",
+          "title": "Documenta tu API",
+          "icon": "fas fa-book"
+        },
+        {
+          "id": "features",
+          "title": "Funciones de la plataforma",
+          "icon": "fas fa-wand-magic-sparkles"
+        }
+      ]
+    },
+    {
+      "title": "Endpoints principales",
       "icon": "fas fa-server",
       "endpoints": [
         {
@@ -170,18 +199,18 @@
       ]
     },
     {
-      "title": "Advanced Features",
+      "title": "Funciones avanzadas",
       "icon": "fas fa-rocket",
       "pages": [
         {
           "id": "webhooks",
           "title": "Webhooks",
-          "icon": "fas fa-webhook"
+          "icon": "fas fa-bolt"
         },
         {
           "id": "error-handling",
           "title": "Error Handling",
-          "icon": "fas fa-exclamation-triangle"
+          "icon": "fas fa-triangle-exclamation"
         }
       ]
     }
@@ -634,71 +663,204 @@
     "components": {
       "template": "content",
       "content": {
-        "title": "Components",
-        "description": "Rich building blocks for beautiful, readable documentation.",
+        "title": "Componentes",
+        "description": "Bloques de construcción para una documentación clara y agradable de leer. Cada componente se declara en JSON dentro de una sección; no se escribe HTML.",
         "sections": [
           {
+            "title": "Qué puede llevar una sección",
+            "content": "Las páginas de tipo content se componen de secciones. Cada sección admite estos campos y puede combinar varios; capidocs los renderiza en un orden fijo y accesible.",
+            "fields": [
+              {
+                "name": "title",
+                "type": "string",
+                "required": true,
+                "description": "Encabezado de la sección. Aparece en la tabla de contenido."
+              },
+              {
+                "name": "content",
+                "type": "string",
+                "required": false,
+                "description": "Párrafo de texto plano. Se escapa siempre: no admite HTML."
+              },
+              {
+                "name": "callout",
+                "type": "object",
+                "required": false,
+                "description": "Aviso destacado con tipo, título y contenido."
+              },
+              {
+                "name": "cards",
+                "type": "array",
+                "required": false,
+                "description": "Rejilla de tarjetas con ícono, título, descripción y enlace."
+              },
+              {
+                "name": "tabs",
+                "type": "array",
+                "required": false,
+                "description": "Pestañas con contenido alternativo (texto o código)."
+              },
+              {
+                "name": "accordion",
+                "type": "array",
+                "required": false,
+                "description": "Elementos plegables de pregunta y respuesta."
+              },
+              {
+                "name": "code",
+                "type": "object",
+                "required": false,
+                "description": "Bloque de código con lenguaje y título opcional."
+              },
+              {
+                "name": "code_group",
+                "type": "array",
+                "required": false,
+                "description": "Grupo de bloques de código con pestañas por lenguaje."
+              },
+              {
+                "name": "fields",
+                "type": "array",
+                "required": false,
+                "description": "Lista de parámetros con tipo, requerido, default y descripción."
+              },
+              {
+                "name": "table",
+                "type": "object",
+                "required": false,
+                "description": "Tabla con headers y rows."
+              },
+              {
+                "name": "list",
+                "type": "array",
+                "required": false,
+                "description": "Lista de viñetas simple."
+              },
+              {
+                "name": "steps",
+                "type": "array",
+                "required": false,
+                "description": "Pasos numerados con título, descripción y enlace opcional."
+              },
+              {
+                "name": "note",
+                "type": "string",
+                "required": false,
+                "description": "Nota informativa en caja sutil."
+              },
+              {
+                "name": "warning",
+                "type": "string",
+                "required": false,
+                "description": "Advertencia en caja con borde de alerta."
+              }
+            ]
+          },
+          {
             "title": "Callouts",
-            "content": "Highlight important information with callouts in several styles: note, info, tip, warning and danger.",
+            "content": "Resaltan información importante sin romper el flujo de lectura. Hay cinco tipos: note, info, tip, warning y danger (success y check son alias de tip y error de danger). Así se declara el de abajo:",
+            "code": {
+              "language": "json",
+              "title": "Sección con callout",
+              "content": "{\n  \"title\": \"Mi sección\",\n  \"callout\": {\n    \"type\": \"tip\",\n    \"title\": \"Consejo\",\n    \"content\": \"Usa callouts para llamar la atención sobre pasos clave.\"\n  }\n}"
+            },
             "callout": {
               "type": "tip",
-              "title": "Pro tip",
-              "content": "Use callouts to draw attention to key steps or warnings without breaking the reading flow."
+              "title": "Consejo",
+              "content": "Usa callouts para llamar la atención sobre pasos clave o advertencias sin romper el flujo de lectura."
             }
           },
           {
-            "title": "Warning callout",
-            "content": "Different types carry different colors and icons.",
+            "title": "Callout de advertencia",
+            "content": "El tipo warning usa ámbar y un ícono de alerta.",
             "callout": {
               "type": "warning",
-              "title": "Heads up",
-              "content": "This endpoint is rate limited. Cache responses where possible."
+              "title": "Atención",
+              "content": "Este endpoint tiene límite de peticiones. Guarda las respuestas en caché cuando sea posible."
+            }
+          },
+          {
+            "title": "Callout de peligro",
+            "content": "El tipo danger se reserva para acciones destructivas o irreversibles.",
+            "callout": {
+              "type": "danger",
+              "title": "Irreversible",
+              "content": "Eliminar una clave de API revoca el acceso de inmediato y no se puede deshacer."
             }
           },
           {
             "title": "Cards",
-            "content": "Group related links or highlights into a responsive card grid.",
+            "content": "Agrupan enlaces o destacados en una rejilla adaptable. Cada tarjeta admite icon (clase de Font Awesome), title, description y link.",
+            "code": {
+              "language": "json",
+              "title": "Declaración de cards",
+              "content": "{\n  \"cards\": [\n    {\n      \"icon\": \"fas fa-bolt\",\n      \"title\": \"Inicio rápido\",\n      \"description\": \"Ponte en marcha en menos de cinco minutos.\",\n      \"link\": \"#getting-started\"\n    }\n  ]\n}"
+            },
             "cards": [
               {
                 "icon": "fas fa-bolt",
-                "title": "Quickstart",
-                "description": "Get up and running in under five minutes.",
+                "title": "Inicio rápido",
+                "description": "Ponte en marcha en menos de cinco minutos.",
                 "link": "#getting-started"
               },
               {
                 "icon": "fas fa-key",
-                "title": "Authentication",
-                "description": "Secure your requests with API keys.",
+                "title": "Autenticación",
+                "description": "Protege tus peticiones con claves de API.",
                 "link": "#authentication"
               },
               {
                 "icon": "fas fa-code",
-                "title": "API Reference",
-                "description": "Browse every endpoint with examples.",
+                "title": "Referencia de la API",
+                "description": "Explora cada endpoint con ejemplos.",
                 "link": "#endpoints"
               }
             ]
           },
           {
             "title": "Tabs",
-            "content": "Show alternative content side by side.",
+            "content": "Muestran contenido alternativo en el mismo espacio. Cada pestaña admite label y luego content o code.",
+            "code": {
+              "language": "json",
+              "title": "Declaración de tabs",
+              "content": "{\n  \"tabs\": [\n    { \"label\": \"Resumen\", \"content\": \"Texto de la primera pestaña.\" },\n    { \"label\": \"Instalación\", \"code\": { \"language\": \"bash\", \"content\": \"npm install capidocs\" } }\n  ]\n}"
+            },
             "tabs": [
               {
-                "label": "Overview",
-                "content": "Tabs let readers switch between related content without leaving the page."
+                "label": "Resumen",
+                "content": "Las pestañas permiten alternar entre contenidos relacionados sin salir de la página."
               },
               {
-                "label": "Install",
+                "label": "Instalación",
                 "code": {
                   "language": "bash",
-                  "content": "npm install capidocs"
+                  "content": "git clone https://github.com/tu-usuario/capidocs.git\ncd capidocs && python3 -m http.server 8080"
                 }
               }
             ]
           },
           {
-            "title": "Code groups",
-            "content": "Present the same request in multiple languages with switchable tabs.",
+            "title": "Acordeones",
+            "content": "Guardan detalles complementarios hasta que el lector los necesita. Ideales para preguntas frecuentes.",
+            "code": {
+              "language": "json",
+              "title": "Declaración de accordion",
+              "content": "{\n  \"accordion\": [\n    { \"title\": \"Pregunta\", \"content\": \"Respuesta que se muestra al desplegar.\" }\n  ]\n}"
+            },
+            "accordion": [
+              {
+                "title": "¿Cómo se aplica el límite de peticiones?",
+                "content": "Las peticiones se limitan por clave de API. Los límites varían según el plan y se reinician cada hora."
+              },
+              {
+                "title": "¿Hay paginación?",
+                "content": "Sí. Usa los parámetros de consulta page y limit en cualquier endpoint de listado."
+              }
+            ]
+          },
+          {
+            "title": "Grupos de código",
+            "content": "Presentan la misma operación en varios lenguajes con pestañas intercambiables. La declaración completa está en la página Bloques de código.",
             "code_group": [
               {
                 "label": "cURL",
@@ -713,49 +875,501 @@
               {
                 "label": "Python",
                 "language": "python",
-                "content": "import requests\nrequests.get('https://api.capidocs.dev/v2/users',\n  headers={'Authorization': 'Bearer YOUR_API_KEY'})"
+                "content": "import requests\nrequests.get('https://api.capidocs.dev/v2/users',\n    headers={'Authorization': 'Bearer YOUR_API_KEY'})"
               }
             ]
           },
           {
-            "title": "Accordions",
-            "content": "Tuck away supplementary details until the reader wants them.",
-            "accordion": [
-              {
-                "title": "How is rate limiting applied?",
-                "content": "Requests are limited per API key. Limits vary by plan and reset every hour."
-              },
-              {
-                "title": "Do you support pagination?",
-                "content": "Yes. Use the page and limit query parameters on any list endpoint."
-              }
-            ]
-          },
-          {
-            "title": "Parameter fields",
-            "content": "Document parameters with types, defaults and requirements.",
+            "title": "Campos de parámetros",
+            "content": "Documentan parámetros con nombre, tipo, obligatoriedad, valor por defecto y descripción. Es el mismo formato visual que usan las páginas de endpoint.",
+            "code": {
+              "language": "json",
+              "title": "Declaración de fields",
+              "content": "{\n  \"fields\": [\n    {\n      \"name\": \"page\",\n      \"type\": \"integer\",\n      \"required\": false,\n      \"default\": \"1\",\n      \"description\": \"Número de página para la paginación.\"\n    }\n  ]\n}"
+            },
             "fields": [
               {
                 "name": "page",
                 "type": "integer",
                 "required": false,
                 "default": "1",
-                "description": "Page number for pagination."
+                "description": "Número de página para la paginación."
               },
               {
                 "name": "limit",
                 "type": "integer",
                 "required": false,
                 "default": "20",
-                "description": "Number of items per page (max 100)."
+                "description": "Elementos por página (máximo 100)."
               },
               {
                 "name": "query",
                 "type": "string",
                 "required": true,
-                "description": "Full-text search term to filter results."
+                "description": "Término de búsqueda para filtrar resultados."
               }
             ]
+          },
+          {
+            "title": "Tablas",
+            "content": "Para datos tabulares simples: headers define las columnas y rows las filas.",
+            "table": {
+              "headers": [
+                "Plan",
+                "Peticiones por hora",
+                "Soporte"
+              ],
+              "rows": [
+                [
+                  "Gratuito",
+                  "1 000",
+                  "Comunidad"
+                ],
+                [
+                  "Pro",
+                  "50 000",
+                  "Correo"
+                ],
+                [
+                  "Empresa",
+                  "Ilimitadas",
+                  "Dedicado"
+                ]
+              ]
+            },
+            "code": {
+              "language": "json",
+              "title": "Declaración de table",
+              "content": "{\n  \"table\": {\n    \"headers\": [\"Plan\", \"Peticiones por hora\"],\n    \"rows\": [[\"Gratuito\", \"1 000\"], [\"Pro\", \"50 000\"]]\n  }\n}"
+            }
+          },
+          {
+            "title": "Listas, notas y advertencias",
+            "content": "Las listas son arreglos de cadenas; note y warning son cajas de texto con distinto énfasis.",
+            "note": "Esta es una nota informativa: útil para aclaraciones que no ameritan un callout.",
+            "warning": "Esta es una advertencia: el texto se muestra en una caja con borde de alerta.",
+            "list": [
+              "Los elementos se declaran como cadenas dentro de un arreglo.",
+              "Se renderizan como viñetas con el espaciado correcto.",
+              "Todo el texto se escapa: no se interpreta HTML."
+            ],
+            "code": {
+              "language": "json",
+              "title": "Declaración de list, note y warning",
+              "content": "{\n  \"list\": [\"Primer elemento\", \"Segundo elemento\"],\n  \"note\": \"Texto de la nota.\",\n  \"warning\": \"Texto de la advertencia.\"\n}"
+            }
+          },
+          {
+            "title": "Pasos",
+            "content": "Guían al lector por un proceso ordenado. Cada paso admite number, title, description y un link opcional.",
+            "code": {
+              "language": "json",
+              "title": "Declaración de steps",
+              "content": "{\n  \"steps\": [\n    {\n      \"number\": \"1\",\n      \"title\": \"Clona el repositorio\",\n      \"description\": \"Descarga capidocs desde GitHub.\"\n    }\n  ]\n}"
+            },
+            "steps": [
+              {
+                "number": "1",
+                "title": "Clona el repositorio",
+                "description": "Descarga capidocs y entra en el directorio del proyecto."
+              },
+              {
+                "number": "2",
+                "title": "Edita la configuración",
+                "description": "Describe tu API y tus páginas en config/api-spec.json."
+              },
+              {
+                "number": "3",
+                "title": "Publica",
+                "description": "Sube los archivos a cualquier hosting estático. No hay paso de compilación.",
+                "link": "#features"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "configuration": {
+      "template": "content",
+      "content": {
+        "title": "Configuración",
+        "description": "Todo capidocs se controla desde un solo archivo: config/api-spec.json. Sin compilación, sin dependencias.",
+        "sections": [
+          {
+            "title": "Un solo archivo",
+            "content": "El archivo config/api-spec.json define la marca, la navegación, las páginas y los endpoints. El sitio lo carga con un fetch al iniciar: editas, recargas y ves el cambio.",
+            "code": {
+              "language": "json",
+              "title": "Estructura general",
+              "content": "{\n  \"site_config\": { \"...\": \"marca, tema, navbar, TOC, versiones\" },\n  \"api\": { \"name\": \"Mi API\", \"version\": \"1.0.0\", \"base_url\": \"https://api.ejemplo.com/v1\" },\n  \"navigation\": [ { \"id\": \"home\", \"title\": \"Inicio\", \"icon\": \"fas fa-home\", \"type\": \"page\" } ],\n  \"sections\": [ { \"title\": \"Grupo del sidebar\", \"pages\": [], \"endpoints\": [] } ],\n  \"pages\": { \"home\": { \"template\": \"hero\", \"content\": {} } },\n  \"endpoints\": { \"users-endpoint\": { \"method\": \"GET\", \"path\": \"/users\" } }\n}"
+            },
+            "note": "Los cambios se aplican al recargar la página. No existe un paso de build obligatorio."
+          },
+          {
+            "title": "Marca y logotipos",
+            "content": "Con use_logos activo, el navbar usa el logo según el tema y se eliminan el nombre y la insignia de texto. Si está desactivado, se muestra brand_icon junto al nombre.",
+            "code": {
+              "language": "json",
+              "title": "site_config: marca",
+              "content": "{\n  \"site_config\": {\n    \"name\": \"Documentación técnica\",\n    \"brand\": \"capidocs\",\n    \"use_logos\": true,\n    \"logos\": {\n      \"navbar_light\": \"logos/logo-light.svg\",\n      \"navbar_dark\": \"logos/logo-dark.svg\",\n      \"hero\": \"logos/logo-hero.svg\",\n      \"icon\": \"logos/favicon.svg\",\n      \"footer\": \"logos/logo-footer.svg\"\n    }\n  }\n}"
+            }
+          },
+          {
+            "title": "Tema",
+            "content": "default_theme acepta system, light o dark. Con system, el sitio sigue la preferencia del sistema operativo y reacciona en vivo si cambia. Cuando el lector elige un tema con el botón del navbar, su preferencia se guarda y tiene prioridad.",
+            "code": {
+              "language": "json",
+              "title": "site_config: tema",
+              "content": "{\n  \"site_config\": {\n    \"default_theme\": \"system\"\n  }\n}"
+            },
+            "callout": {
+              "type": "tip",
+              "title": "Paridad clara y oscura",
+              "content": "Todos los componentes, incluidos los bloques de código, tienen paleta propia en ambos temas. No hay cajas oscuras en el tema claro."
+            }
+          },
+          {
+            "title": "Barra de navegación",
+            "content": "tabs crea pestañas de nivel superior en el centro del navbar; cada una muestra solo los grupos del sidebar listados en groups (el grupo de navigation se llama nav_guides y los demás usan el título de su sección). links agrega enlaces a la derecha y cta pinta un botón destacado.",
+            "code": {
+              "language": "json",
+              "title": "site_config: navbar",
+              "content": "{\n  \"site_config\": {\n    \"navbar\": {\n      \"tabs\": [\n        { \"text\": \"Guías\", \"icon\": \"fas fa-book-open\", \"groups\": [\"nav_guides\", \"Plataforma\"] },\n        { \"text\": \"Referencia API\", \"icon\": \"fas fa-code\", \"groups\": [\"Endpoints principales\"] }\n      ],\n      \"links\": [ { \"text\": \"Webhooks\", \"href\": \"#webhooks\" } ],\n      \"cta\": { \"text\": \"Comenzar\", \"href\": \"#getting-started\" }\n    }\n  }\n}"
+            },
+            "note": "Con menos de dos tabs la barra de pestañas no se muestra y el sidebar presenta todos los grupos."
+          },
+          {
+            "title": "Tabla de contenido",
+            "content": "La columna derecha se genera sola a partir de los encabezados de la página. Puedes desactivarla, exigir un mínimo de encabezados o excluir páginas y textos concretos.",
+            "code": {
+              "language": "json",
+              "title": "site_config: toc",
+              "content": "{\n  \"site_config\": {\n    \"toc\": {\n      \"enabled\": true,\n      \"min_headings\": 2,\n      \"exclude_pages\": [\"home\"],\n      \"exclude_headings\": { \"texts\": [\"Aviso\"], \"selectors\": [\".alert h4\"] }\n    }\n  }\n}"
+            },
+            "note": "Las páginas de endpoint no muestran TOC: esa columna la ocupan los paneles de ejemplos de petición y respuesta."
+          },
+          {
+            "title": "Títulos de página",
+            "content": "page_titles controla el título del documento por ruta, con un título base y un separador.",
+            "code": {
+              "language": "json",
+              "title": "site_config: page_titles",
+              "content": "{\n  \"site_config\": {\n    \"page_titles\": {\n      \"base_title\": \"capidocs - Portal de documentación\",\n      \"separator\": \" | \",\n      \"routes\": { \"home\": \"Inicio\", \"getting-started\": \"Primeros pasos\" }\n    }\n  }\n}"
+            }
+          },
+          {
+            "title": "Versiones",
+            "content": "versions publica varias especificaciones a la vez. El selector aparece junto al logo; al cambiar de versión se carga el spec correspondiente y la elección se recuerda en el navegador.",
+            "code": {
+              "language": "json",
+              "title": "site_config: versions",
+              "content": "{\n  \"site_config\": {\n    \"versions\": [\n      { \"label\": \"v2.1\", \"spec\": \"config/api-spec.json\" },\n      { \"label\": \"v1.0\", \"spec\": \"config/api-spec-v1.json\" }\n    ]\n  }\n}"
+            }
+          },
+          {
+            "title": "Textos de la interfaz",
+            "content": "lang define el idioma del documento y site_config.ui permite traducir o personalizar cualquier texto fijo de la interfaz. Si una clave no está definida, se usa el texto en español por defecto.",
+            "code": {
+              "language": "json",
+              "title": "site_config: ui",
+              "content": "{\n  \"site_config\": {\n    \"lang\": \"es\",\n    \"ui\": {\n      \"nav_guides\": \"Guías\",\n      \"try_it\": \"Pruébalo\",\n      \"responses_title\": \"Respuestas\"\n    }\n  }\n}"
+            },
+            "fields": [
+              {
+                "name": "nav_guides",
+                "type": "string",
+                "required": false,
+                "description": "Título del grupo de navegación principal del sidebar."
+              },
+              {
+                "name": "try_it",
+                "type": "string",
+                "required": false,
+                "description": "Texto del botón que abre el playground en las páginas de endpoint."
+              },
+              {
+                "name": "authorizations_title",
+                "type": "string",
+                "required": false,
+                "description": "Encabezado de la sección de autorización."
+              },
+              {
+                "name": "query_params_title",
+                "type": "string",
+                "required": false,
+                "description": "Encabezado de los parámetros de consulta."
+              },
+              {
+                "name": "body_title",
+                "type": "string",
+                "required": false,
+                "description": "Encabezado del cuerpo de la petición."
+              },
+              {
+                "name": "responses_title",
+                "type": "string",
+                "required": false,
+                "description": "Encabezado de la lista de respuestas."
+              },
+              {
+                "name": "required",
+                "type": "string",
+                "required": false,
+                "description": "Etiqueta del chip de campo obligatorio."
+              },
+              {
+                "name": "example",
+                "type": "string",
+                "required": false,
+                "description": "Prefijo de la línea de ejemplo de cada campo."
+              },
+              {
+                "name": "copy_code",
+                "type": "string",
+                "required": false,
+                "description": "Etiqueta accesible del botón de copiar en los paneles de código."
+              },
+              {
+                "name": "feedback_q",
+                "type": "string",
+                "required": false,
+                "description": "Pregunta del módulo de feedback al pie de cada página."
+              },
+              {
+                "name": "copy_link",
+                "type": "string",
+                "required": false,
+                "description": "Texto del botón para copiar el enlace de la página."
+              },
+              {
+                "name": "prev",
+                "type": "string",
+                "required": false,
+                "description": "Etiqueta del enlace a la página anterior."
+              },
+              {
+                "name": "next",
+                "type": "string",
+                "required": false,
+                "description": "Etiqueta del enlace a la página siguiente."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "code-blocks": {
+      "template": "content",
+      "content": {
+        "title": "Bloques de código",
+        "description": "Resaltado de sintaxis con tema propio en claro y oscuro, encabezado con título y botón de copiar en todos los bloques.",
+        "sections": [
+          {
+            "title": "Bloque básico",
+            "content": "Un bloque se declara con language, content y un title opcional. Si no defines título, el encabezado muestra el nombre del lenguaje; los bloques de texto plano sin título se muestran sin encabezado.",
+            "code": {
+              "language": "javascript",
+              "title": "Ejemplo con título",
+              "content": "const response = await fetch('https://api.capidocs.dev/v2/users', {\n  headers: { Authorization: 'Bearer YOUR_API_KEY' }\n});\n\nconst { data } = await response.json();"
+            }
+          },
+          {
+            "title": "Cómo se declara",
+            "content": "Dentro de cualquier sección, el campo code acepta este objeto:",
+            "code": {
+              "language": "json",
+              "title": "Declaración de code",
+              "content": "{\n  \"code\": {\n    \"language\": \"javascript\",\n    \"title\": \"Ejemplo con título\",\n    \"content\": \"const saludo = 'hola';\"\n  }\n}"
+            },
+            "note": "En los endpoints, los ejemplos largos pueden vivir en archivos reales dentro de config/examples y referenciarse con el campo file: se editan con resaltado en tu editor y se cargan al vuelo."
+          },
+          {
+            "title": "Lenguajes",
+            "content": "El resaltado usa Prism con carga automática de gramáticas: cualquier lenguaje soportado por Prism funciona con solo declararlo. Algunos habituales:",
+            "list": [
+              "bash y shell para terminal",
+              "javascript, typescript y json",
+              "python, php, ruby, go y java",
+              "yaml, html y css"
+            ]
+          },
+          {
+            "title": "Grupos de código",
+            "content": "code_group muestra la misma operación en varios lenguajes con pestañas. Cada elemento lleva label, language y content.",
+            "code": {
+              "language": "json",
+              "title": "Declaración de code_group",
+              "content": "{\n  \"code_group\": [\n    { \"label\": \"cURL\", \"language\": \"bash\", \"content\": \"curl https://api.ejemplo.com/v1/users\" },\n    { \"label\": \"Python\", \"language\": \"python\", \"content\": \"requests.get('https://api.ejemplo.com/v1/users')\" }\n  ]\n}"
+            },
+            "code_group": [
+              {
+                "label": "cURL",
+                "language": "bash",
+                "content": "curl https://api.capidocs.dev/v2/data \\\n  -X POST \\\n  -H 'Authorization: Bearer YOUR_API_KEY' \\\n  -d '{\"title\": \"Nuevo elemento\"}'"
+              },
+              {
+                "label": "JavaScript",
+                "language": "javascript",
+                "content": "await fetch('https://api.capidocs.dev/v2/data', {\n  method: 'POST',\n  headers: { Authorization: 'Bearer YOUR_API_KEY' },\n  body: JSON.stringify({ title: 'Nuevo elemento' })\n});"
+              },
+              {
+                "label": "Python",
+                "language": "python",
+                "content": "import requests\nrequests.post('https://api.capidocs.dev/v2/data',\n    headers={'Authorization': 'Bearer YOUR_API_KEY'},\n    json={'title': 'Nuevo elemento'})"
+              }
+            ]
+          },
+          {
+            "title": "Copiar al portapapeles",
+            "content": "Todos los bloques incluyen botón de copiar: en el encabezado cuando el bloque tiene título y flotante cuando no lo tiene. Los paneles de ejemplos de los endpoints copian siempre la pestaña activa.",
+            "callout": {
+              "type": "note",
+              "title": "Sin configuración",
+              "content": "El botón de copiar se agrega solo a cada bloque nuevo, incluso al contenido generado en tiempo de ejecución."
+            }
+          },
+          {
+            "title": "Personalizar la paleta",
+            "content": "Los colores de sintaxis viven en variables CSS con valores independientes para tema claro y oscuro. Para ajustar la paleta a tu marca basta con redefinirlas.",
+            "code": {
+              "language": "css",
+              "title": "Variables de la paleta",
+              "content": ":root {\n    --code-text: #e4e4e7;\n    --code-comment: #71717a;\n    --code-string: #86efac;\n    --code-number: #fdba74;\n    --code-keyword: #c4b5fd;\n    --code-function: #93c5fd;\n    --code-property: #7dd3fc;\n}\n\n[data-theme=\"light\"] {\n    --code-text: #27272a;\n    --code-string: #15803d;\n    --code-keyword: #7c3aed;\n}"
+            }
+          }
+        ]
+      }
+    },
+    "document-api": {
+      "template": "content",
+      "content": {
+        "title": "Documenta tu API",
+        "description": "Convierte tu especificación en una referencia interactiva: dos columnas, ejemplos por lenguaje, respuestas por código de estado y consola de pruebas.",
+        "sections": [
+          {
+            "title": "Anatomía de un endpoint",
+            "content": "Cada endpoint se define en el objeto endpoints con su método, ruta y detalles de petición y respuesta. Con eso capidocs pinta la página completa: barra del endpoint, parámetros como field rows y paneles de ejemplos fijos a la derecha.",
+            "code": {
+              "language": "json",
+              "title": "endpoints.create-item",
+              "content": "{\n  \"endpoints\": {\n    \"create-item\": {\n      \"method\": \"POST\",\n      \"path\": \"/items/{collectionId}\",\n      \"title\": \"Crear elemento\",\n      \"description\": \"Crea un elemento dentro de una colección.\",\n      \"request\": { \"headers\": [], \"query_params\": [], \"body\": {} },\n      \"responses\": { \"201\": {} },\n      \"code_examples\": []\n    }\n  }\n}"
+            },
+            "note": "Los segmentos con llaves, como {collectionId}, se resaltan como parámetros de ruta en la barra del endpoint."
+          },
+          {
+            "title": "Aparecer en el sidebar",
+            "content": "El endpoint se registra en una sección del sidebar con el mismo id. El método se muestra como chip de color: verde para GET, azul para POST, ámbar para PUT, rojo para DELETE y violeta para PATCH.",
+            "code": {
+              "language": "json",
+              "title": "sections",
+              "content": "{\n  \"sections\": [\n    {\n      \"title\": \"Endpoints principales\",\n      \"endpoints\": [\n        { \"id\": \"create-item\", \"method\": \"POST\", \"path\": \"/items/{collectionId}\", \"title\": \"Crear elemento\" }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          {
+            "title": "Parámetros y cuerpo",
+            "content": "Los headers, parámetros de consulta y propiedades del cuerpo se documentan una vez y se muestran como field rows con chips de tipo, origen y obligatoriedad, más una línea de ejemplo. El arreglo required del esquema marca qué propiedades llevan el chip rojo.",
+            "code": {
+              "language": "json",
+              "title": "request",
+              "content": "{\n  \"request\": {\n    \"headers\": [\n      { \"name\": \"Authorization\", \"value\": \"Bearer YOUR_API_KEY\", \"required\": true, \"description\": \"Clave de API.\" }\n    ],\n    \"query_params\": [\n      { \"name\": \"limit\", \"type\": \"integer\", \"required\": false, \"example\": \"20\", \"description\": \"Elementos por página.\" }\n    ],\n    \"body\": {\n      \"type\": \"json\",\n      \"schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"title\": { \"type\": \"string\", \"description\": \"Título del elemento.\", \"example\": \"Mi elemento\" }\n        },\n        \"required\": [\"title\"]\n      }\n    }\n  }\n}"
+            }
+          },
+          {
+            "title": "Respuestas",
+            "content": "Cada código de estado lleva descripción y, opcionalmente, ejemplos con valores reales. En la página se listan como filas con chip de color y alimentan el panel derecho: una pestaña por estado con su JSON de ejemplo.",
+            "code": {
+              "language": "json",
+              "title": "responses",
+              "content": "{\n  \"responses\": {\n    \"201\": {\n      \"description\": \"Creado\",\n      \"examples\": {\n        \"success\": {\n          \"summary\": \"Elemento creado\",\n          \"value\": { \"success\": true, \"data\": { \"id\": \"item_123\" } }\n        }\n      }\n    },\n    \"401\": { \"description\": \"Clave de API inválida\" }\n  }\n}"
+            }
+          },
+          {
+            "title": "Ejemplos por lenguaje",
+            "content": "code_examples define las pestañas del panel de petición. El código puede ir en línea o en un archivo real dentro de config/examples, que se edita con resaltado en tu editor y se carga al vuelo. Si no defines ninguno, capidocs genera el comando cURL automáticamente a partir del endpoint.",
+            "code": {
+              "language": "json",
+              "title": "code_examples",
+              "content": "{\n  \"code_examples\": [\n    {\n      \"id\": \"create-item-curl\",\n      \"tech\": \"curl\",\n      \"name\": \"cURL\",\n      \"language\": \"bash\",\n      \"file\": \"config/examples/create-item.curl.sh\"\n    },\n    {\n      \"id\": \"create-item-js\",\n      \"tech\": \"javascript\",\n      \"name\": \"JavaScript\",\n      \"language\": \"javascript\",\n      \"file\": \"config/examples/create-item.fetch.js\"\n    }\n  ]\n}"
+            }
+          },
+          {
+            "title": "Playground",
+            "content": "El botón Pruébalo de la barra del endpoint despliega una consola con los headers, parámetros y cuerpo ya precargados con los ejemplos. La petición se ejecuta de verdad desde el navegador y muestra el estado, el tiempo y el cuerpo de la respuesta.",
+            "callout": {
+              "type": "warning",
+              "title": "CORS",
+              "content": "Como la petición sale del navegador del lector, tu API debe permitir CORS desde el dominio de la documentación para que la consola reciba la respuesta."
+            }
+          },
+          {
+            "title": "Importar desde OpenAPI",
+            "content": "Si ya tienes una especificación OpenAPI 3.x en JSON, el conversor incluido genera el api-spec.json completo: endpoints, parámetros, esquemas, ejemplos de respuesta y comandos cURL.",
+            "code": {
+              "language": "bash",
+              "title": "Conversión",
+              "content": "node build/openapi-to-capidocs.mjs openapi.json config/api-spec.json"
+            },
+            "note": "El conversor no tiene dependencias. Si tu especificación está en YAML, conviértela antes a JSON."
+          }
+        ]
+      }
+    },
+    "features": {
+      "template": "content",
+      "content": {
+        "title": "Funciones de la plataforma",
+        "description": "Búsqueda, versiones, acciones de página y documentación lista para IA. Todo incluido sin configurar nada.",
+        "sections": [
+          {
+            "title": "Búsqueda instantánea",
+            "content": "El buscador se abre con el atajo de teclado o desde el navbar y encuentra páginas, secciones y endpoints con coincidencia difusa. El índice se construye en el navegador a partir de la configuración; si generaste search-index.json con el build ligero, se usa ese índice precalculado.",
+            "callout": {
+              "type": "tip",
+              "title": "Atajo",
+              "content": "Pulsa cmd+K en macOS o ctrl+K en Windows y Linux para buscar desde cualquier página."
+            }
+          },
+          {
+            "title": "Selector de versiones",
+            "content": "Si publicas varias versiones de tu API, el selector junto al logo permite cambiar entre especificaciones. La elección del lector se recuerda entre visitas. La configuración está descrita en la página de Configuración."
+          },
+          {
+            "title": "Acciones de página",
+            "content": "El menú de tres puntos junto al breadcrumb ofrece acciones pensadas para compartir y para trabajar con asistentes de IA:",
+            "list": [
+              "Copiar la página como Markdown",
+              "Ver el Markdown crudo de la página",
+              "Abrir la página en Claude con contexto",
+              "Abrir la página en ChatGPT con contexto"
+            ]
+          },
+          {
+            "title": "Feedback y navegación",
+            "content": "Cada página cierra con una pregunta de utilidad (pulgar arriba o abajo), un botón para copiar el enlace y la navegación automática a la página anterior y siguiente según el orden de la configuración."
+          },
+          {
+            "title": "Documentación lista para IA",
+            "content": "El build ligero genera llms.txt y llms-full.txt en la raíz del sitio: un resumen estructurado y el contenido completo en texto plano, pensados para que los modelos de lenguaje consuman tu documentación sin scraping."
+          },
+          {
+            "title": "Build ligero opcional",
+            "content": "El sitio funciona sin compilar nada. Si quieres los extras precalculados, un solo comando de Node sin dependencias genera el índice de búsqueda, los archivos para IA, el sitemap y el robots.txt.",
+            "code": {
+              "language": "bash",
+              "title": "Generar extras",
+              "content": "node build/build.mjs"
+            },
+            "note": "Ejecútalo cuando cambies el contenido si quieres mantener actualizados el índice precalculado y los archivos para IA."
+          },
+          {
+            "title": "Despliegue",
+            "content": "capidocs es un sitio estático puro: HTML, CSS y JavaScript sin servidor. Se publica en cualquier hosting estático, como Cloudflare Pages, Netlify, GitHub Pages o un nginx propio.",
+            "code": {
+              "language": "bash",
+              "title": "Ejemplo con Cloudflare Pages",
+              "content": "npx wrangler pages deploy . --project-name=mi-documentacion"
+            },
+            "note": "La navegación usa hash routing, así que no necesitas configurar redirecciones ni fallback de SPA."
           }
         ]
       }

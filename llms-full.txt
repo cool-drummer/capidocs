@@ -87,64 +87,6 @@ API requests are rate limited to ensure fair usage and system stability:
 
 ---
 
-# Components
-
-Rich building blocks for beautiful, readable documentation.
-
-## Callouts
-
-Highlight important information with callouts in several styles: note, info, tip, warning and danger.
-
-> Pro tip: Use callouts to draw attention to key steps or warnings without breaking the reading flow.
-
-## Warning callout
-
-Different types carry different colors and icons.
-
-> Heads up: This endpoint is rate limited. Cache responses where possible.
-
-## Cards
-
-Group related links or highlights into a responsive card grid.
-
-## Tabs
-
-Show alternative content side by side.
-
-## Code groups
-
-Present the same request in multiple languages with switchable tabs.
-
-```bash
-curl https://api.capidocs.dev/v2/users \
-  -H 'Authorization: Bearer YOUR_API_KEY'
-```
-
-```javascript
-await fetch('https://api.capidocs.dev/v2/users', {
-  headers: { Authorization: 'Bearer YOUR_API_KEY' }
-});
-```
-
-```python
-import requests
-requests.get('https://api.capidocs.dev/v2/users',
-  headers={'Authorization': 'Bearer YOUR_API_KEY'})
-```
-
-## Accordions
-
-Tuck away supplementary details until the reader wants them.
-
-## Parameter fields
-
-Document parameters with types, defaults and requirements.
-- `page` (integer) — Page number for pagination.
-- `limit` (integer) — Number of items per page (max 100).
-- `query` (string, required) — Full-text search term to filter results.
-
----
-
 # API Endpoints
 
 Complete reference for all available API endpoints with request/response examples.
@@ -171,6 +113,647 @@ CRUD operations for your application data with advanced querying capabilities.
 | POST | /data | Create data item |
 | PUT | /data/{id} | Update data item |
 | DELETE | /data/{id} | Delete data item |
+
+---
+
+# Componentes
+
+Bloques de construcción para una documentación clara y agradable de leer. Cada componente se declara en JSON dentro de una sección; no se escribe HTML.
+
+## Qué puede llevar una sección
+
+Las páginas de tipo content se componen de secciones. Cada sección admite estos campos y puede combinar varios; capidocs los renderiza en un orden fijo y accesible.
+- `title` (string, required) — Encabezado de la sección. Aparece en la tabla de contenido.
+- `content` (string) — Párrafo de texto plano. Se escapa siempre: no admite HTML.
+- `callout` (object) — Aviso destacado con tipo, título y contenido.
+- `cards` (array) — Rejilla de tarjetas con ícono, título, descripción y enlace.
+- `tabs` (array) — Pestañas con contenido alternativo (texto o código).
+- `accordion` (array) — Elementos plegables de pregunta y respuesta.
+- `code` (object) — Bloque de código con lenguaje y título opcional.
+- `code_group` (array) — Grupo de bloques de código con pestañas por lenguaje.
+- `fields` (array) — Lista de parámetros con tipo, requerido, default y descripción.
+- `table` (object) — Tabla con headers y rows.
+- `list` (array) — Lista de viñetas simple.
+- `steps` (array) — Pasos numerados con título, descripción y enlace opcional.
+- `note` (string) — Nota informativa en caja sutil.
+- `warning` (string) — Advertencia en caja con borde de alerta.
+
+## Callouts
+
+Resaltan información importante sin romper el flujo de lectura. Hay cinco tipos: note, info, tip, warning y danger (success y check son alias de tip y error de danger). Así se declara el de abajo:
+
+> Consejo: Usa callouts para llamar la atención sobre pasos clave o advertencias sin romper el flujo de lectura.
+
+```json
+{
+  "title": "Mi sección",
+  "callout": {
+    "type": "tip",
+    "title": "Consejo",
+    "content": "Usa callouts para llamar la atención sobre pasos clave."
+  }
+}
+```
+
+## Callout de advertencia
+
+El tipo warning usa ámbar y un ícono de alerta.
+
+> Atención: Este endpoint tiene límite de peticiones. Guarda las respuestas en caché cuando sea posible.
+
+## Callout de peligro
+
+El tipo danger se reserva para acciones destructivas o irreversibles.
+
+> Irreversible: Eliminar una clave de API revoca el acceso de inmediato y no se puede deshacer.
+
+## Cards
+
+Agrupan enlaces o destacados en una rejilla adaptable. Cada tarjeta admite icon (clase de Font Awesome), title, description y link.
+
+```json
+{
+  "cards": [
+    {
+      "icon": "fas fa-bolt",
+      "title": "Inicio rápido",
+      "description": "Ponte en marcha en menos de cinco minutos.",
+      "link": "#getting-started"
+    }
+  ]
+}
+```
+
+## Tabs
+
+Muestran contenido alternativo en el mismo espacio. Cada pestaña admite label y luego content o code.
+
+```json
+{
+  "tabs": [
+    { "label": "Resumen", "content": "Texto de la primera pestaña." },
+    { "label": "Instalación", "code": { "language": "bash", "content": "npm install capidocs" } }
+  ]
+}
+```
+
+## Acordeones
+
+Guardan detalles complementarios hasta que el lector los necesita. Ideales para preguntas frecuentes.
+
+```json
+{
+  "accordion": [
+    { "title": "Pregunta", "content": "Respuesta que se muestra al desplegar." }
+  ]
+}
+```
+
+## Grupos de código
+
+Presentan la misma operación en varios lenguajes con pestañas intercambiables. La declaración completa está en la página Bloques de código.
+
+```bash
+curl https://api.capidocs.dev/v2/users \
+  -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```javascript
+await fetch('https://api.capidocs.dev/v2/users', {
+  headers: { Authorization: 'Bearer YOUR_API_KEY' }
+});
+```
+
+```python
+import requests
+requests.get('https://api.capidocs.dev/v2/users',
+    headers={'Authorization': 'Bearer YOUR_API_KEY'})
+```
+
+## Campos de parámetros
+
+Documentan parámetros con nombre, tipo, obligatoriedad, valor por defecto y descripción. Es el mismo formato visual que usan las páginas de endpoint.
+
+```json
+{
+  "fields": [
+    {
+      "name": "page",
+      "type": "integer",
+      "required": false,
+      "default": "1",
+      "description": "Número de página para la paginación."
+    }
+  ]
+}
+```
+- `page` (integer) — Número de página para la paginación.
+- `limit` (integer) — Elementos por página (máximo 100).
+- `query` (string, required) — Término de búsqueda para filtrar resultados.
+
+## Tablas
+
+Para datos tabulares simples: headers define las columnas y rows las filas.
+
+| Plan | Peticiones por hora | Soporte |
+| --- | --- | --- |
+| Gratuito | 1 000 | Comunidad |
+| Pro | 50 000 | Correo |
+| Empresa | Ilimitadas | Dedicado |
+
+```json
+{
+  "table": {
+    "headers": ["Plan", "Peticiones por hora"],
+    "rows": [["Gratuito", "1 000"], ["Pro", "50 000"]]
+  }
+}
+```
+
+## Listas, notas y advertencias
+
+Las listas son arreglos de cadenas; note y warning son cajas de texto con distinto énfasis.
+
+> Note: Esta es una nota informativa: útil para aclaraciones que no ameritan un callout.
+
+> Warning: Esta es una advertencia: el texto se muestra en una caja con borde de alerta.
+- Los elementos se declaran como cadenas dentro de un arreglo.
+- Se renderizan como viñetas con el espaciado correcto.
+- Todo el texto se escapa: no se interpreta HTML.
+
+```json
+{
+  "list": ["Primer elemento", "Segundo elemento"],
+  "note": "Texto de la nota.",
+  "warning": "Texto de la advertencia."
+}
+```
+
+## Pasos
+
+Guían al lector por un proceso ordenado. Cada paso admite number, title, description y un link opcional.
+
+```json
+{
+  "steps": [
+    {
+      "number": "1",
+      "title": "Clona el repositorio",
+      "description": "Descarga capidocs desde GitHub."
+    }
+  ]
+}
+```
+
+---
+
+# Bloques de código
+
+Resaltado de sintaxis con tema propio en claro y oscuro, encabezado con título y botón de copiar en todos los bloques.
+
+## Bloque básico
+
+Un bloque se declara con language, content y un title opcional. Si no defines título, el encabezado muestra el nombre del lenguaje; los bloques de texto plano sin título se muestran sin encabezado.
+
+```javascript
+const response = await fetch('https://api.capidocs.dev/v2/users', {
+  headers: { Authorization: 'Bearer YOUR_API_KEY' }
+});
+
+const { data } = await response.json();
+```
+
+## Cómo se declara
+
+Dentro de cualquier sección, el campo code acepta este objeto:
+
+> Note: En los endpoints, los ejemplos largos pueden vivir en archivos reales dentro de config/examples y referenciarse con el campo file: se editan con resaltado en tu editor y se cargan al vuelo.
+
+```json
+{
+  "code": {
+    "language": "javascript",
+    "title": "Ejemplo con título",
+    "content": "const saludo = 'hola';"
+  }
+}
+```
+
+## Lenguajes
+
+El resaltado usa Prism con carga automática de gramáticas: cualquier lenguaje soportado por Prism funciona con solo declararlo. Algunos habituales:
+- bash y shell para terminal
+- javascript, typescript y json
+- python, php, ruby, go y java
+- yaml, html y css
+
+## Grupos de código
+
+code_group muestra la misma operación en varios lenguajes con pestañas. Cada elemento lleva label, language y content.
+
+```json
+{
+  "code_group": [
+    { "label": "cURL", "language": "bash", "content": "curl https://api.ejemplo.com/v1/users" },
+    { "label": "Python", "language": "python", "content": "requests.get('https://api.ejemplo.com/v1/users')" }
+  ]
+}
+```
+
+```bash
+curl https://api.capidocs.dev/v2/data \
+  -X POST \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -d '{"title": "Nuevo elemento"}'
+```
+
+```javascript
+await fetch('https://api.capidocs.dev/v2/data', {
+  method: 'POST',
+  headers: { Authorization: 'Bearer YOUR_API_KEY' },
+  body: JSON.stringify({ title: 'Nuevo elemento' })
+});
+```
+
+```python
+import requests
+requests.post('https://api.capidocs.dev/v2/data',
+    headers={'Authorization': 'Bearer YOUR_API_KEY'},
+    json={'title': 'Nuevo elemento'})
+```
+
+## Copiar al portapapeles
+
+Todos los bloques incluyen botón de copiar: en el encabezado cuando el bloque tiene título y flotante cuando no lo tiene. Los paneles de ejemplos de los endpoints copian siempre la pestaña activa.
+
+> Sin configuración: El botón de copiar se agrega solo a cada bloque nuevo, incluso al contenido generado en tiempo de ejecución.
+
+## Personalizar la paleta
+
+Los colores de sintaxis viven en variables CSS con valores independientes para tema claro y oscuro. Para ajustar la paleta a tu marca basta con redefinirlas.
+
+```css
+:root {
+    --code-text: #e4e4e7;
+    --code-comment: #71717a;
+    --code-string: #86efac;
+    --code-number: #fdba74;
+    --code-keyword: #c4b5fd;
+    --code-function: #93c5fd;
+    --code-property: #7dd3fc;
+}
+
+[data-theme="light"] {
+    --code-text: #27272a;
+    --code-string: #15803d;
+    --code-keyword: #7c3aed;
+}
+```
+
+---
+
+# Configuración
+
+Todo capidocs se controla desde un solo archivo: config/api-spec.json. Sin compilación, sin dependencias.
+
+## Un solo archivo
+
+El archivo config/api-spec.json define la marca, la navegación, las páginas y los endpoints. El sitio lo carga con un fetch al iniciar: editas, recargas y ves el cambio.
+
+> Note: Los cambios se aplican al recargar la página. No existe un paso de build obligatorio.
+
+```json
+{
+  "site_config": { "...": "marca, tema, navbar, TOC, versiones" },
+  "api": { "name": "Mi API", "version": "1.0.0", "base_url": "https://api.ejemplo.com/v1" },
+  "navigation": [ { "id": "home", "title": "Inicio", "icon": "fas fa-home", "type": "page" } ],
+  "sections": [ { "title": "Grupo del sidebar", "pages": [], "endpoints": [] } ],
+  "pages": { "home": { "template": "hero", "content": {} } },
+  "endpoints": { "users-endpoint": { "method": "GET", "path": "/users" } }
+}
+```
+
+## Marca y logotipos
+
+Con use_logos activo, el navbar usa el logo según el tema y se eliminan el nombre y la insignia de texto. Si está desactivado, se muestra brand_icon junto al nombre.
+
+```json
+{
+  "site_config": {
+    "name": "Documentación técnica",
+    "brand": "capidocs",
+    "use_logos": true,
+    "logos": {
+      "navbar_light": "logos/logo-light.svg",
+      "navbar_dark": "logos/logo-dark.svg",
+      "hero": "logos/logo-hero.svg",
+      "icon": "logos/favicon.svg",
+      "footer": "logos/logo-footer.svg"
+    }
+  }
+}
+```
+
+## Tema
+
+default_theme acepta system, light o dark. Con system, el sitio sigue la preferencia del sistema operativo y reacciona en vivo si cambia. Cuando el lector elige un tema con el botón del navbar, su preferencia se guarda y tiene prioridad.
+
+> Paridad clara y oscura: Todos los componentes, incluidos los bloques de código, tienen paleta propia en ambos temas. No hay cajas oscuras en el tema claro.
+
+```json
+{
+  "site_config": {
+    "default_theme": "system"
+  }
+}
+```
+
+## Barra de navegación
+
+tabs crea pestañas de nivel superior en el centro del navbar; cada una muestra solo los grupos del sidebar listados en groups (el grupo de navigation se llama nav_guides y los demás usan el título de su sección). links agrega enlaces a la derecha y cta pinta un botón destacado.
+
+> Note: Con menos de dos tabs la barra de pestañas no se muestra y el sidebar presenta todos los grupos.
+
+```json
+{
+  "site_config": {
+    "navbar": {
+      "tabs": [
+        { "text": "Guías", "icon": "fas fa-book-open", "groups": ["nav_guides", "Plataforma"] },
+        { "text": "Referencia API", "icon": "fas fa-code", "groups": ["Endpoints principales"] }
+      ],
+      "links": [ { "text": "Webhooks", "href": "#webhooks" } ],
+      "cta": { "text": "Comenzar", "href": "#getting-started" }
+    }
+  }
+}
+```
+
+## Tabla de contenido
+
+La columna derecha se genera sola a partir de los encabezados de la página. Puedes desactivarla, exigir un mínimo de encabezados o excluir páginas y textos concretos.
+
+> Note: Las páginas de endpoint no muestran TOC: esa columna la ocupan los paneles de ejemplos de petición y respuesta.
+
+```json
+{
+  "site_config": {
+    "toc": {
+      "enabled": true,
+      "min_headings": 2,
+      "exclude_pages": ["home"],
+      "exclude_headings": { "texts": ["Aviso"], "selectors": [".alert h4"] }
+    }
+  }
+}
+```
+
+## Títulos de página
+
+page_titles controla el título del documento por ruta, con un título base y un separador.
+
+```json
+{
+  "site_config": {
+    "page_titles": {
+      "base_title": "capidocs - Portal de documentación",
+      "separator": " | ",
+      "routes": { "home": "Inicio", "getting-started": "Primeros pasos" }
+    }
+  }
+}
+```
+
+## Versiones
+
+versions publica varias especificaciones a la vez. El selector aparece junto al logo; al cambiar de versión se carga el spec correspondiente y la elección se recuerda en el navegador.
+
+```json
+{
+  "site_config": {
+    "versions": [
+      { "label": "v2.1", "spec": "config/api-spec.json" },
+      { "label": "v1.0", "spec": "config/api-spec-v1.json" }
+    ]
+  }
+}
+```
+
+## Textos de la interfaz
+
+lang define el idioma del documento y site_config.ui permite traducir o personalizar cualquier texto fijo de la interfaz. Si una clave no está definida, se usa el texto en español por defecto.
+
+```json
+{
+  "site_config": {
+    "lang": "es",
+    "ui": {
+      "nav_guides": "Guías",
+      "try_it": "Pruébalo",
+      "responses_title": "Respuestas"
+    }
+  }
+}
+```
+- `nav_guides` (string) — Título del grupo de navegación principal del sidebar.
+- `try_it` (string) — Texto del botón que abre el playground en las páginas de endpoint.
+- `authorizations_title` (string) — Encabezado de la sección de autorización.
+- `query_params_title` (string) — Encabezado de los parámetros de consulta.
+- `body_title` (string) — Encabezado del cuerpo de la petición.
+- `responses_title` (string) — Encabezado de la lista de respuestas.
+- `required` (string) — Etiqueta del chip de campo obligatorio.
+- `example` (string) — Prefijo de la línea de ejemplo de cada campo.
+- `copy_code` (string) — Etiqueta accesible del botón de copiar en los paneles de código.
+- `feedback_q` (string) — Pregunta del módulo de feedback al pie de cada página.
+- `copy_link` (string) — Texto del botón para copiar el enlace de la página.
+- `prev` (string) — Etiqueta del enlace a la página anterior.
+- `next` (string) — Etiqueta del enlace a la página siguiente.
+
+---
+
+# Documenta tu API
+
+Convierte tu especificación en una referencia interactiva: dos columnas, ejemplos por lenguaje, respuestas por código de estado y consola de pruebas.
+
+## Anatomía de un endpoint
+
+Cada endpoint se define en el objeto endpoints con su método, ruta y detalles de petición y respuesta. Con eso capidocs pinta la página completa: barra del endpoint, parámetros como field rows y paneles de ejemplos fijos a la derecha.
+
+> Note: Los segmentos con llaves, como {collectionId}, se resaltan como parámetros de ruta en la barra del endpoint.
+
+```json
+{
+  "endpoints": {
+    "create-item": {
+      "method": "POST",
+      "path": "/items/{collectionId}",
+      "title": "Crear elemento",
+      "description": "Crea un elemento dentro de una colección.",
+      "request": { "headers": [], "query_params": [], "body": {} },
+      "responses": { "201": {} },
+      "code_examples": []
+    }
+  }
+}
+```
+
+## Aparecer en el sidebar
+
+El endpoint se registra en una sección del sidebar con el mismo id. El método se muestra como chip de color: verde para GET, azul para POST, ámbar para PUT, rojo para DELETE y violeta para PATCH.
+
+```json
+{
+  "sections": [
+    {
+      "title": "Endpoints principales",
+      "endpoints": [
+        { "id": "create-item", "method": "POST", "path": "/items/{collectionId}", "title": "Crear elemento" }
+      ]
+    }
+  ]
+}
+```
+
+## Parámetros y cuerpo
+
+Los headers, parámetros de consulta y propiedades del cuerpo se documentan una vez y se muestran como field rows con chips de tipo, origen y obligatoriedad, más una línea de ejemplo. El arreglo required del esquema marca qué propiedades llevan el chip rojo.
+
+```json
+{
+  "request": {
+    "headers": [
+      { "name": "Authorization", "value": "Bearer YOUR_API_KEY", "required": true, "description": "Clave de API." }
+    ],
+    "query_params": [
+      { "name": "limit", "type": "integer", "required": false, "example": "20", "description": "Elementos por página." }
+    ],
+    "body": {
+      "type": "json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "Título del elemento.", "example": "Mi elemento" }
+        },
+        "required": ["title"]
+      }
+    }
+  }
+}
+```
+
+## Respuestas
+
+Cada código de estado lleva descripción y, opcionalmente, ejemplos con valores reales. En la página se listan como filas con chip de color y alimentan el panel derecho: una pestaña por estado con su JSON de ejemplo.
+
+```json
+{
+  "responses": {
+    "201": {
+      "description": "Creado",
+      "examples": {
+        "success": {
+          "summary": "Elemento creado",
+          "value": { "success": true, "data": { "id": "item_123" } }
+        }
+      }
+    },
+    "401": { "description": "Clave de API inválida" }
+  }
+}
+```
+
+## Ejemplos por lenguaje
+
+code_examples define las pestañas del panel de petición. El código puede ir en línea o en un archivo real dentro de config/examples, que se edita con resaltado en tu editor y se carga al vuelo. Si no defines ninguno, capidocs genera el comando cURL automáticamente a partir del endpoint.
+
+```json
+{
+  "code_examples": [
+    {
+      "id": "create-item-curl",
+      "tech": "curl",
+      "name": "cURL",
+      "language": "bash",
+      "file": "config/examples/create-item.curl.sh"
+    },
+    {
+      "id": "create-item-js",
+      "tech": "javascript",
+      "name": "JavaScript",
+      "language": "javascript",
+      "file": "config/examples/create-item.fetch.js"
+    }
+  ]
+}
+```
+
+## Playground
+
+El botón Pruébalo de la barra del endpoint despliega una consola con los headers, parámetros y cuerpo ya precargados con los ejemplos. La petición se ejecuta de verdad desde el navegador y muestra el estado, el tiempo y el cuerpo de la respuesta.
+
+> CORS: Como la petición sale del navegador del lector, tu API debe permitir CORS desde el dominio de la documentación para que la consola reciba la respuesta.
+
+## Importar desde OpenAPI
+
+Si ya tienes una especificación OpenAPI 3.x en JSON, el conversor incluido genera el api-spec.json completo: endpoints, parámetros, esquemas, ejemplos de respuesta y comandos cURL.
+
+> Note: El conversor no tiene dependencias. Si tu especificación está en YAML, conviértela antes a JSON.
+
+```bash
+node build/openapi-to-capidocs.mjs openapi.json config/api-spec.json
+```
+
+---
+
+# Funciones de la plataforma
+
+Búsqueda, versiones, acciones de página y documentación lista para IA. Todo incluido sin configurar nada.
+
+## Búsqueda instantánea
+
+El buscador se abre con el atajo de teclado o desde el navbar y encuentra páginas, secciones y endpoints con coincidencia difusa. El índice se construye en el navegador a partir de la configuración; si generaste search-index.json con el build ligero, se usa ese índice precalculado.
+
+> Atajo: Pulsa cmd+K en macOS o ctrl+K en Windows y Linux para buscar desde cualquier página.
+
+## Selector de versiones
+
+Si publicas varias versiones de tu API, el selector junto al logo permite cambiar entre especificaciones. La elección del lector se recuerda entre visitas. La configuración está descrita en la página de Configuración.
+
+## Acciones de página
+
+El menú de tres puntos junto al breadcrumb ofrece acciones pensadas para compartir y para trabajar con asistentes de IA:
+- Copiar la página como Markdown
+- Ver el Markdown crudo de la página
+- Abrir la página en Claude con contexto
+- Abrir la página en ChatGPT con contexto
+
+## Feedback y navegación
+
+Cada página cierra con una pregunta de utilidad (pulgar arriba o abajo), un botón para copiar el enlace y la navegación automática a la página anterior y siguiente según el orden de la configuración.
+
+## Documentación lista para IA
+
+El build ligero genera llms.txt y llms-full.txt en la raíz del sitio: un resumen estructurado y el contenido completo en texto plano, pensados para que los modelos de lenguaje consuman tu documentación sin scraping.
+
+## Build ligero opcional
+
+El sitio funciona sin compilar nada. Si quieres los extras precalculados, un solo comando de Node sin dependencias genera el índice de búsqueda, los archivos para IA, el sitemap y el robots.txt.
+
+> Note: Ejecútalo cuando cambies el contenido si quieres mantener actualizados el índice precalculado y los archivos para IA.
+
+```bash
+node build/build.mjs
+```
+
+## Despliegue
+
+capidocs es un sitio estático puro: HTML, CSS y JavaScript sin servidor. Se publica en cualquier hosting estático, como Cloudflare Pages, Netlify, GitHub Pages o un nginx propio.
+
+> Note: La navegación usa hash routing, así que no necesitas configurar redirecciones ni fallback de SPA.
+
+```bash
+npx wrangler pages deploy . --project-name=mi-documentacion
+```
 
 ---
 

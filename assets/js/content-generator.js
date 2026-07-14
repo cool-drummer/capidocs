@@ -282,7 +282,7 @@ class ContentGenerator {
                         <div class="field-head">
                             <code class="field-name">${this.escapeHtml(f.name)}</code>
                             ${f.type ? `<span class="field-type">${this.escapeHtml(f.type)}</span>` : ''}
-                            ${f.required ? `<span class="field-required">required</span>` : `<span class="field-optional">optional</span>`}
+                            ${f.required ? `<span class="field-required">${this.escapeHtml(this.t('required', 'requerido'))}</span>` : `<span class="field-optional">${this.escapeHtml(this.t('optional', 'opcional'))}</span>`}
                             ${f.default !== undefined ? `<span class="field-default">default: ${this.escapeHtml(f.default)}</span>` : ''}
                         </div>
                         ${f.description ? `<div class="field-desc">${this.escapeHtml(f.description)}</div>` : ''}
@@ -795,28 +795,43 @@ class ContentGenerator {
             `;
         }
         
-        // sections with endpoints
+        // sections with pages or endpoints
         if (this.config.sections) {
             this.config.sections.forEach(section => {
-                if (section.endpoints) {
-                    sidebarHTML += `
-                        <div class="sidebar-section" data-group="${this.escapeAttr(section.title)}">
-                            <h6 class="sidebar-title">${this.escapeHtml(section.title)}</h6>
-                            <nav class="sidebar-nav">
-                                <ul>
-                                    ${section.endpoints.map(endpoint => `
-                                        <li class="sidebar-nav-item">
-                                            <a href="#${this.escapeAttr(endpoint.id)}" class="sidebar-nav-link">
-                                                ${endpoint.method ? `<span class="method-badge method-${this.escapeAttr(endpoint.method.toLowerCase())}">${this.escapeHtml(endpoint.method)}</span>` : `<i class="${this.escapeAttr(endpoint.icon)}"></i>`}
-                                                ${this.escapeHtml(endpoint.title)}
-                                            </a>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </nav>
-                        </div>
-                    `;
-                }
+                const items = [];
+
+                (section.pages || []).forEach(page => {
+                    items.push(`
+                        <li class="sidebar-nav-item">
+                            <a href="#${this.escapeAttr(page.id)}" class="sidebar-nav-link">
+                                ${page.icon ? `<i class="${this.escapeAttr(page.icon)}"></i>` : ''}
+                                ${this.escapeHtml(page.title)}
+                            </a>
+                        </li>
+                    `);
+                });
+
+                (section.endpoints || []).forEach(endpoint => {
+                    items.push(`
+                        <li class="sidebar-nav-item">
+                            <a href="#${this.escapeAttr(endpoint.id)}" class="sidebar-nav-link">
+                                ${endpoint.method ? `<span class="method-badge method-${this.escapeAttr(endpoint.method.toLowerCase())}">${this.escapeHtml(endpoint.method)}</span>` : `<i class="${this.escapeAttr(endpoint.icon)}"></i>`}
+                                ${this.escapeHtml(endpoint.title)}
+                            </a>
+                        </li>
+                    `);
+                });
+
+                if (!items.length) return;
+
+                sidebarHTML += `
+                    <div class="sidebar-section" data-group="${this.escapeAttr(section.title)}">
+                        <h6 class="sidebar-title">${this.escapeHtml(section.title)}</h6>
+                        <nav class="sidebar-nav">
+                            <ul>${items.join('')}</ul>
+                        </nav>
+                    </div>
+                `;
             });
         }
         
