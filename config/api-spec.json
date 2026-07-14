@@ -93,7 +93,11 @@
           "text": "Webhooks",
           "href": "#webhooks"
         }
-      ]
+      ],
+      "cta": {
+        "text": "Comenzar",
+        "href": "#getting-started"
+      }
     },
     "lang": "es",
     "versions": [
