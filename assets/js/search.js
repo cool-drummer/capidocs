@@ -158,8 +158,8 @@
             resultsEl.innerHTML =
                 '<div class="search-empty">' +
                 '<div class="search-empty-icon"><i class="fas fa-magnifying-glass"></i></div>' +
-                '<p class="search-empty-title">Nada para «' + esc(term) + '»</p>' +
-                '<p class="search-empty-hint">Revisa la ortografía o prueba con otro término.</p>' +
+                '<p class="search-empty-title">' + esc(ui('search_empty_title', 'Nada para')) + ' «' + esc(term) + '»</p>' +
+                '<p class="search-empty-hint">' + esc(ui('search_empty_hint', 'Revisa la ortografía o prueba con otro término.')) + '</p>' +
                 '</div>';
             return;
         }
@@ -222,19 +222,19 @@
         modal.className = 'search-modal-overlay';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
-        modal.setAttribute('aria-label', 'Buscar en la documentación');
+        modal.setAttribute('aria-label', ui('search_aria', 'Buscar en la documentación'));
         modal.innerHTML =
             '<div class="search-modal">' +
             '<div class="search-input-wrap">' +
             '<i class="fas fa-magnifying-glass search-input-ico"></i>' +
-            '<input type="text" class="search-input" placeholder="Buscar documentación..." autocomplete="off" spellcheck="false" aria-label="Buscar">' +
+            '<input type="text" class="search-input" placeholder="' + esc(ui('search_placeholder', 'Buscar documentación...')) + '" autocomplete="off" spellcheck="false" aria-label="' + esc(ui('search_label', 'Buscar')) + '">' +
             '<kbd class="search-kbd">Esc</kbd>' +
             '</div>' +
             '<div class="search-results" role="listbox"></div>' +
             '<div class="search-foot">' +
-            '<span><kbd class="search-kbd">↑</kbd><kbd class="search-kbd">↓</kbd> navegar</span>' +
-            '<span><kbd class="search-kbd">↵</kbd> abrir</span>' +
-            '<span><kbd class="search-kbd">esc</kbd> cerrar</span>' +
+            '<span><kbd class="search-kbd">↑</kbd><kbd class="search-kbd">↓</kbd> ' + esc(ui('search_hint_navigate', 'navegar')) + '</span>' +
+            '<span><kbd class="search-kbd">↵</kbd> ' + esc(ui('search_hint_open', 'abrir')) + '</span>' +
+            '<span><kbd class="search-kbd">esc</kbd> ' + esc(ui('search_hint_close', 'cerrar')) + '</span>' +
             '</div>' +
             '</div>';
         document.body.appendChild(modal);
@@ -282,6 +282,10 @@
         document.body.classList.remove('search-open');
     }
 
+    function ui(key, fallback) {
+        return (window.configLoader && window.configLoader.ui) ? window.configLoader.ui(key, fallback) : fallback;
+    }
+
     function buildTrigger() {
         const content = document.querySelector('.navbar-content');
         const nav = document.getElementById('navbar-nav');
@@ -289,17 +293,26 @@
         const btn = document.createElement('button');
         btn.className = 'navbar-search';
         btn.type = 'button';
-        btn.setAttribute('aria-label', 'Buscar');
+        btn.setAttribute('aria-label', ui('search_label', 'Buscar'));
         btn.innerHTML =
             '<i class="fas fa-magnifying-glass"></i>' +
-            '<span class="navbar-search-label">Buscar</span>' +
+            '<span class="navbar-search-label"></span>' +
             '<kbd class="navbar-search-kbd"><span class="search-cmd"></span>K</kbd>';
+        btn.querySelector('.navbar-search-label').textContent = ui('search_label', 'Buscar');
         btn.addEventListener('click', open);
         content.insertBefore(btn, nav || null);
 
         const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
         const cmd = btn.querySelector('.search-cmd');
         if (cmd) cmd.textContent = isMac ? '⌘' : 'Ctrl ';
+    }
+
+    function initTrigger() {
+        if (window.configLoader) {
+            window.configLoader.load().then(buildTrigger).catch(buildTrigger);
+        } else {
+            buildTrigger();
+        }
     }
 
     document.addEventListener('keydown', function (e) {
@@ -314,9 +327,9 @@
     });
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', buildTrigger);
+        document.addEventListener('DOMContentLoaded', initTrigger);
     } else {
-        buildTrigger();
+        initTrigger();
     }
 
     window.capiDocsSearch = { open: open, close: close };

@@ -1,20 +1,20 @@
 # capidocs API
 
-> Documentation platform API for technical content management. Provides content operations, user management, and real-time collaboration features.
+> API de la plataforma de documentación para gestión de contenido técnico. Ofrece operaciones de contenido, gestión de usuarios y colaboración en tiempo real.
 
 Base URL: https://api.capidocs.dev/v2
 
 ## Pages
-- [Home](#home): Technical Documentation Platform & API
-- [Getting Started](#getting-started): Overview
-- [Authentication](#authentication): API Key Authentication
-- [API Endpoints](#endpoints): User Management
+- [Inicio](#home): Plataforma de documentación técnica y API
+- [Primeros pasos](#getting-started): Resumen
+- [Autenticación](#authentication): Autenticación con clave de API
+- [Endpoints de la API](#endpoints): Gestión de usuarios
 - [Componentes](#components): Qué puede llevar una sección
 - [Bloques de código](#code-blocks): Bloque básico
 - [Configuración](#configuration): Un solo archivo
 - [Documenta tu API](#document-api): Anatomía de un endpoint
 - [Funciones de la plataforma](#features): Búsqueda instantánea
-- [User Management](#users-endpoint): Retrieve a list of users with optional filtering and pagination. Supports various query parameters for customizing the results.
-- [Data Operations](#data-endpoint): Create a new data item in the system. Supports various data types and custom metadata.
-- [Webhooks](#webhooks): Webhook Events
-- [Error Handling](#error-handling): HTTP Status Codes
+- [Gestión de usuarios](#users-endpoint): Obtén una lista de usuarios con filtrado y paginación opcionales. Admite varios parámetros de consulta para personalizar los resultados.
+- [Operaciones de datos](#data-endpoint): Crea un nuevo elemento de datos en el sistema. Admite varios tipos de datos y metadatos personalizados.
+- [Webhooks](#webhooks): Eventos disponibles
+- [Manejo de errores](#error-handling): Códigos de estado HTTP

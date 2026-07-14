@@ -2,38 +2,38 @@
 
 # capidocs API
 
-Technical Documentation Platform & API
+Plataforma de documentación técnica y API
 
 ---
 
-# Getting Started
+# Primeros pasos
 
-Learn how to integrate our API into your application quickly and efficiently.
+Aprende a integrar nuestra API en tu aplicación de forma rápida y eficiente.
 
-## Overview
+## Resumen
 
-Our REST API provides a comprehensive set of endpoints for building modern web applications. The API follows RESTful principles and uses standard HTTP methods and status codes for consistent interaction patterns.
+Nuestra API REST ofrece un conjunto completo de endpoints para construir aplicaciones web modernas. Sigue los principios RESTful y usa métodos HTTP y códigos de estado estándar para una interacción consistente.
 
-## Base URL
+## URL base
 
-All API requests should be made to our base URL with the appropriate endpoint path:
+Todas las peticiones deben dirigirse a nuestra URL base con la ruta del endpoint correspondiente:
 
 ```text
 https://api.capidocs.dev/v2
 ```
 
-## Request Format
+## Formato de petición
 
-The API accepts and returns JSON data. Always include the Content-Type header in your requests:
+La API acepta y devuelve JSON. Incluye siempre el header Content-Type en tus peticiones:
 
 ```http
 Content-Type: application/json
 Authorization: Bearer YOUR_API_KEY
 ```
 
-## Response Format
+## Formato de respuesta
 
-All responses follow a consistent structure with success indicators and appropriate HTTP status codes:
+Todas las respuestas siguen una estructura consistente con indicadores de éxito y códigos de estado HTTP apropiados:
 
 ```json
 {
@@ -46,13 +46,13 @@ All responses follow a consistent structure with success indicators and appropri
 
 ---
 
-# Authentication
+# Autenticación
 
-Secure your API requests using our authentication methods. We support multiple authentication schemes for different use cases.
+Protege tus peticiones con nuestros métodos de autenticación. Soportamos varios esquemas para distintos casos de uso.
 
-## API Key Authentication
+## Autenticación con clave de API
 
-The simplest authentication method using API keys. Include your API key in the Authorization header with Bearer scheme.
+El método más simple. Incluye tu clave de API en el header Authorization con el esquema Bearer.
 
 ```http
 GET /v2/users HTTP/1.1
@@ -63,56 +63,56 @@ Content-Type: application/json
 
 ## OAuth 2.0
 
-For applications that need to access user data on behalf of users, we support OAuth 2.0 with authorization code flow.
-- Redirect users to our authorization endpoint
-- Receive authorization code after user consent
-- Exchange code for access token
-- Use access token for API requests
+Para aplicaciones que necesitan acceder a datos en nombre de los usuarios, soportamos OAuth 2.0 con flujo de código de autorización.
+- Redirige al usuario a nuestro endpoint de autorización
+- Recibe el código de autorización tras el consentimiento
+- Intercambia el código por un token de acceso
+- Usa el token de acceso en las peticiones a la API
 
-## JWT Tokens
+## Tokens JWT
 
-JSON Web Tokens provide a stateless authentication method ideal for microservices and distributed systems.
+Los JSON Web Tokens ofrecen autenticación sin estado, ideal para microservicios y sistemas distribuidos.
 
-> Note: JWT tokens expire after 24 hours. Implement token refresh logic in your application.
+> Note: Los tokens JWT expiran a las 24 horas. Implementa lógica de renovación en tu aplicación.
 
-## Rate Limiting
+## Límite de peticiones
 
-API requests are rate limited to ensure fair usage and system stability:
+Las peticiones están limitadas para garantizar un uso justo y la estabilidad del sistema:
 
-| Plan | Requests/Hour | Burst Limit |
+| Plan | Peticiones por hora | Límite de ráfaga |
 | --- | --- | --- |
-| Free | 1,000 | 100/min |
-| Professional | 10,000 | 500/min |
-| Enterprise | 100,000 | 2,000/min |
+| Gratuito | 1 000 | 100/min |
+| Profesional | 10 000 | 500/min |
+| Empresa | 100 000 | 2 000/min |
 
 ---
 
-# API Endpoints
+# Endpoints de la API
 
-Complete reference for all available API endpoints with request/response examples.
+Referencia completa de todos los endpoints disponibles con ejemplos de petición y respuesta.
 
-## User Management
+## Gestión de usuarios
 
-Endpoints for managing user accounts, profiles, and authentication.
+Endpoints para administrar cuentas de usuario, perfiles y autenticación.
 
-| Method | Endpoint | Description |
+| Método | Endpoint | Descripción |
 | --- | --- | --- |
-| GET | /users | List all users |
-| GET | /users/{id} | Get user by ID |
-| POST | /users | Create new user |
-| PUT | /users/{id} | Update user |
-| DELETE | /users/{id} | Delete user |
+| GET | /users | Listar todos los usuarios |
+| GET | /users/{id} | Obtener usuario por id |
+| POST | /users | Crear usuario |
+| PUT | /users/{id} | Actualizar usuario |
+| DELETE | /users/{id} | Eliminar usuario |
 
-## Data Operations
+## Operaciones de datos
 
-CRUD operations for your application data with advanced querying capabilities.
+Operaciones CRUD sobre los datos de tu aplicación con capacidades avanzadas de consulta.
 
-| Method | Endpoint | Description |
+| Método | Endpoint | Descripción |
 | --- | --- | --- |
-| GET | /data | List data items |
-| POST | /data | Create data item |
-| PUT | /data/{id} | Update data item |
-| DELETE | /data/{id} | Delete data item |
+| GET | /data | Listar elementos |
+| POST | /data | Crear elemento |
+| PUT | /data/{id} | Actualizar elemento |
+| DELETE | /data/{id} | Eliminar elemento |
 
 ---
 
@@ -757,11 +757,11 @@ npx wrangler pages deploy . --project-name=mi-documentacion
 
 ---
 
-# List Users
+# Listar usuarios
 
 `GET /users`
 
-Retrieve a list of users with optional filtering and pagination. Supports various query parameters for customizing the results.
+Obtén una lista de usuarios con filtrado y paginación opcionales. Admite varios parámetros de consulta para personalizar los resultados.
 
 ### cURL
 
@@ -821,11 +821,11 @@ else:
 
 ---
 
-# Create Data Item
+# Crear elemento de datos
 
 `POST /data`
 
-Create a new data item in the system. Supports various data types and custom metadata.
+Crea un nuevo elemento de datos en el sistema. Admite varios tipos de datos y metadatos personalizados.
 
 ### cURL
 
@@ -878,20 +878,20 @@ if (data.success) {
 
 # Webhooks
 
-Configure real-time notifications for events in your application using webhooks.
+Configura notificaciones en tiempo real para los eventos de tu aplicación mediante webhooks.
 
-## Webhook Events
+## Eventos disponibles
 
-Available webhook events that you can subscribe to:
-- user.created - New user registration
-- user.updated - User profile changes
-- data.created - New data item created
-- data.updated - Data item modified
-- system.error - System error occurred
+Eventos de webhook a los que te puedes suscribir:
+- user.created - registro de un nuevo usuario
+- user.updated - cambios en el perfil del usuario
+- data.created - nuevo elemento de datos creado
+- data.updated - elemento de datos modificado
+- system.error - ocurrió un error del sistema
 
-## Webhook Configuration
+## Configuración del webhook
 
-Configure webhook endpoints in your developer dashboard or via API:
+Configura los endpoints de webhook en tu panel de desarrollador o vía API:
 
 ```json
 {
@@ -901,9 +901,9 @@ Configure webhook endpoints in your developer dashboard or via API:
 }
 ```
 
-## Webhook Payload
+## Payload del webhook
 
-Example webhook payload structure:
+Estructura de ejemplo del payload de un webhook:
 
 ```json
 {
@@ -919,28 +919,28 @@ Example webhook payload structure:
 
 ---
 
-# Error Handling
+# Manejo de errores
 
-Understanding API error responses and how to handle them in your application.
+Entiende las respuestas de error de la API y cómo manejarlas en tu aplicación.
 
-## HTTP Status Codes
+## Códigos de estado HTTP
 
-Standard HTTP status codes used by the API:
+Códigos de estado HTTP estándar que usa la API:
 
-| Status Code | Meaning | Description |
+| Código | Significado | Descripción |
 | --- | --- | --- |
-| 200 | OK | Request successful |
-| 201 | Created | Resource created successfully |
-| 400 | Bad Request | Invalid request parameters |
-| 401 | Unauthorized | Authentication required |
-| 403 | Forbidden | Access denied |
-| 404 | Not Found | Resource not found |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Server error occurred |
+| 200 | OK | Petición exitosa |
+| 201 | Created | Recurso creado correctamente |
+| 400 | Bad Request | Parámetros de petición inválidos |
+| 401 | Unauthorized | Se requiere autenticación |
+| 403 | Forbidden | Acceso denegado |
+| 404 | Not Found | Recurso no encontrado |
+| 429 | Too Many Requests | Límite de peticiones excedido |
+| 500 | Internal Server Error | Error del servidor |
 
-## Error Response Format
+## Formato de respuesta de error
 
-All error responses follow a consistent structure:
+Todas las respuestas de error siguen una estructura consistente:
 
 ```json
 {
@@ -957,15 +957,15 @@ All error responses follow a consistent structure:
 }
 ```
 
-## Common Error Codes
+## Códigos de error comunes
 
-Application-specific error codes you may encounter:
+Códigos de error propios de la aplicación que puedes encontrar:
 
-| Error Code | Description | Resolution |
+| Código de error | Descripción | Solución |
 | --- | --- | --- |
-| INVALID_API_KEY | API key is invalid or expired | Check your API key |
-| VALIDATION_ERROR | Request data validation failed | Fix request parameters |
-| RESOURCE_NOT_FOUND | Requested resource doesn't exist | Verify resource ID |
-| RATE_LIMIT_EXCEEDED | Too many requests | Wait before retrying |
+| INVALID_API_KEY | La clave de API es inválida o expiró | Revisa tu clave de API |
+| VALIDATION_ERROR | La validación de los datos falló | Corrige los parámetros de la petición |
+| RESOURCE_NOT_FOUND | El recurso solicitado no existe | Verifica el id del recurso |
+| RATE_LIMIT_EXCEEDED | Demasiadas peticiones | Espera antes de reintentar |
 
 ---
