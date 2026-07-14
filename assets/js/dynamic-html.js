@@ -91,18 +91,28 @@ class DynamicHTMLGenerator {
         const navbarBrand = document.querySelector('.navbar-brand');
         if (!navbarBrand) return;
 
-        if (siteConfig.use_logos && siteConfig.logos) {
+        const usingLogos = !!(siteConfig.use_logos && siteConfig.logos);
+
+        if (usingLogos) {
             this.setupLogoElements(navbarBrand, siteConfig);
         } else {
             this.setupIconElements(navbarBrand, siteConfig);
         }
 
-        const brandName = navbarBrand.querySelector('span, .brand-text');
+        const brandName = navbarBrand.querySelector('span:not(.brand-badge), .brand-text');
+        const brandBadge = navbarBrand.querySelector('.brand-badge');
+
+        // When a logo already carries the wordmark, drop the redundant name + badge
+        // so the navbar reads clean (Mintlify-style).
+        if (usingLogos) {
+            if (brandName) brandName.remove();
+            if (brandBadge) brandBadge.remove();
+            return;
+        }
+
         if (brandName && siteConfig.name) {
             brandName.textContent = siteConfig.name;
         }
-
-        const brandBadge = navbarBrand.querySelector('.brand-badge');
         if (brandBadge && siteConfig.brand) {
             brandBadge.textContent = siteConfig.brand;
         }
@@ -240,11 +250,11 @@ class DynamicHTMLGenerator {
         footer.innerHTML = `
             <div class="footer-content">
                 ${logoHtml}
-                <h3 class="footer-title">${this.escapeHtml(api.name || 'API Documentation')}</h3>
-                <p class="footer-subtitle">${this.escapeHtml(api.description || 'Official API documentation')}</p>
+                <h3 class="footer-title">${this.escapeHtml(api.name || 'Documentación de la API')}</h3>
+                <p class="footer-subtitle">${this.escapeHtml(api.description || 'Documentación oficial de la API')}</p>
                 ${licenseHtml}
                 <div class="footer-bottom">
-                    <p>&copy; ${new Date().getFullYear()} ${this.escapeHtml(siteConfig.brand || 'API Services')}. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${this.escapeHtml(siteConfig.brand || 'API Services')}. Todos los derechos reservados.</p>
                 </div>
             </div>
         `;
@@ -293,15 +303,15 @@ class DynamicHTMLGenerator {
         if (footer) {
             footer.innerHTML = `
                 <div class="footer-content">
-                    <h3 class="footer-title">API Documentation</h3>
-                    <p class="footer-subtitle">Loading configuration...</p>
+                    <h3 class="footer-title">Documentación de la API</h3>
+                    <p class="footer-subtitle">Cargando configuración…</p>
                     <p class="footer-license">
                         <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">
-                            This project is open source and available under the MIT License.
+                            Este proyecto es de código abierto y está disponible bajo la licencia MIT.
                         </a>
                     </p>
                     <div class="footer-bottom">
-                        <p>&copy; ${new Date().getFullYear()} API Services. All rights reserved.</p>
+                        <p>&copy; ${new Date().getFullYear()} API Services. Todos los derechos reservados.</p>
                     </div>
                 </div>
             `;

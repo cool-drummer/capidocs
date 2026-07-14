@@ -117,10 +117,10 @@ class CapiDocsCore {
         if (themeIcon && themeText) {
             if (this.currentTheme === 'dark') {
                 themeIcon.className = 'fas fa-sun';
-                themeText.textContent = 'Light';
+                themeText.textContent = 'Claro';
             } else {
                 themeIcon.className = 'fas fa-moon';
-                themeText.textContent = 'Dark';
+                themeText.textContent = 'Oscuro';
             }
         }
     }

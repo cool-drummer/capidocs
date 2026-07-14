@@ -53,9 +53,10 @@
             bodyOut.textContent = pretty;
             if (typeof Prism !== 'undefined') Prism.highlightElement(bodyOut);
         } catch (err) {
-            statusEl.textContent = 'Error de red';
+            console.error('Playground request failed:', err);
+            statusEl.textContent = 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.';
             statusEl.className = 'playground-status err';
-            bodyOut.textContent = 'No se pudo completar la petición. Puede deberse a una política CORS del servidor o a que el endpoint no está disponible.';
+            bodyOut.textContent = 'No se pudo completar la petición. Vuelve a intentarlo en un momento.';
         } finally {
             if (btn) btn.disabled = false;
         }

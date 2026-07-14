@@ -63,6 +63,23 @@
       }
     },
     "navbar": {
+      "tabs": [
+        {
+          "text": "Guías",
+          "icon": "fas fa-book-open",
+          "groups": [
+            "nav_guides",
+            "Advanced Features"
+          ]
+        },
+        {
+          "text": "Referencia API",
+          "icon": "fas fa-code",
+          "groups": [
+            "Core Endpoints"
+          ]
+        }
+      ],
       "links": [
         {
           "text": "Authentication",
