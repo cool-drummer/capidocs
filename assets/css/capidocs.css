@@ -3820,15 +3820,8 @@ body.has-tabs .toc-sidebar {
 }
 
 [data-theme="light"] .endpoint-banner {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.03) 100%);
-    border-color: rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(8px);
-}
-
-[data-theme="light"] .endpoint-banner:hover {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.06) 100%);
-    border-color: rgba(0, 0, 0, 0.25);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: var(--bg-secondary);
+    border-color: var(--border-primary);
 }
 
 [data-theme="light"] .endpoint-banner-icon {
@@ -3843,8 +3836,8 @@ body.has-tabs .toc-sidebar {
 
 [data-theme="light"] .endpoint-url-text {
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(0, 0, 0, 0.15);
+    background: var(--bg-primary);
+    border-color: var(--border-primary);
 }
 
 [data-theme="light"] .endpoint-copy-btn {
@@ -5065,6 +5058,28 @@ body.search-open { overflow: hidden; }
 .endpoint-banner:hover,
 .testimonial-item:hover,
 .icon-advanced:hover {
-    border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-primary)) !important;
     transform: none !important;
+}
+
+/* Neutral (non-colored) borders on every content container.
+   Callouts are intentionally excluded: their colored left border is semantic. */
+.feature-item,
+.doc-card,
+.doc-card-link,
+.quick-start-section,
+.quick-start-section:hover,
+.step-item,
+.step-item:hover,
+.alert,
+.alert:hover,
+.testimonial-item,
+.testimonial-item:hover,
+.endpoint-banner,
+.endpoint-banner:hover,
+.multi-tech-examples,
+.code-block,
+.table-container,
+.tech-tabs,
+.example-header {
+    border-color: var(--border-primary) !important;
 }
