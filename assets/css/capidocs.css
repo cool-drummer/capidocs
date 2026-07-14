@@ -1082,9 +1082,7 @@ body.has-tabs .toc-sidebar {
 }
 
 .feature-item:hover {
-    border-color: var(--brand-accent-border);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-primary));
 }
 
 .feature-item::before {
@@ -4089,8 +4087,7 @@ body.has-tabs .toc-sidebar {
 }
 
 [data-theme="light"] .feature-item:hover {
-    border-color: var(--brand-accent-border);
-    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-primary));
 }
 
 [data-theme="light"] .quick-start-section:hover {
@@ -4621,9 +4618,7 @@ body.search-open { overflow: hidden; }
     color: inherit;
 }
 .doc-card-link:hover {
-    border-color: var(--brand-accent-border);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-primary));
 }
 .card-icon {
     width: 2.125rem;
@@ -5030,4 +5025,46 @@ body.search-open { overflow: hidden; }
 @media (max-width: 640px) {
     .playground-field { grid-template-columns: 1fr; gap: 0.25rem; }
     .playground-field label { text-align: left; }
+}
+
+/* ===== Flat content components: no shadows, neutral (non-colored) hover ===== */
+.feature-item,
+.feature-item:hover,
+.doc-card,
+.doc-card-link:hover,
+.quick-start-section,
+.quick-start-section:hover,
+.step-item,
+.step-item:hover,
+.alert,
+.alert:hover,
+.testimonial-item,
+.testimonial-item:hover,
+.endpoint-banner,
+.endpoint-banner:hover,
+.multi-tech-examples,
+.callout,
+.code-block,
+.table-container,
+.hero-brand-badge,
+.section-icon,
+.icon-advanced,
+.icon-advanced:hover,
+.success-box,
+.error-box,
+.note-box,
+.warning-box,
+.audience-box,
+.critical-box {
+    box-shadow: none !important;
+}
+
+.quick-start-section:hover,
+.step-item:hover,
+.alert:hover,
+.endpoint-banner:hover,
+.testimonial-item:hover,
+.icon-advanced:hover {
+    border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-primary)) !important;
+    transform: none !important;
 }
