@@ -15,11 +15,11 @@
 }
 
 :root {
-    --brand-accent: #fb923c;
-    --brand-accent-hover: #fdba74;
-    --brand-accent-light: rgba(251, 146, 60, 0.12);
-    --brand-accent-border: rgba(251, 146, 60, 0.35);
-    --accent-solid: #fb923c;
+    --brand-accent: #4bb3a1;
+    --brand-accent-hover: #6cc191;
+    --brand-accent-light: rgba(75, 179, 161, 0.14);
+    --brand-accent-border: rgba(75, 179, 161, 0.35);
+    --accent-solid: #4bb3a1;
 
     --bg-primary: #0c0c0e;
     --bg-secondary: #111114;
@@ -34,9 +34,9 @@
 
     --border-primary: #26262a;
     --border-secondary: #1b1b1e;
-    --border-focus: #fb923c;
+    --border-focus: #4bb3a1;
 
-    --brand-primary: #fb923c;
+    --brand-primary: #4bb3a1;
     --brand-secondary: #a1a1aa;
 
 
@@ -112,15 +112,15 @@
 
     --border-primary: #e4e4e7;
     --border-secondary: #f0f0f1;
-    --border-focus: #ea580c;
+    --border-focus: #2f8f90;
 
-    --brand-primary: #ea580c;
+    --brand-primary: #2f8f90;
     --brand-secondary: #52525b;
-    --brand-accent: #ea580c;
-    --brand-accent-hover: #c2410c;
-    --brand-accent-light: rgba(234, 88, 12, 0.08);
-    --brand-accent-border: rgba(234, 88, 12, 0.30);
-    --accent-solid: #ea580c;
+    --brand-accent: #2f8f90;
+    --brand-accent-hover: #26757a;
+    --brand-accent-light: rgba(47, 143, 144, 0.09);
+    --brand-accent-border: rgba(47, 143, 144, 0.30);
+    --accent-solid: #2f8f90;
 
     --shadow-sm: 0 1px 2px 0 rgb(24 24 27 / 0.05);
     --shadow: 0 1px 3px 0 rgb(24 24 27 / 0.07), 0 1px 2px -1px rgb(24 24 27 / 0.05);
@@ -540,25 +540,18 @@ body.has-tabs .navbar-tabs {
 }
 
 .hero-logo-img {
-    height: 4.5rem;
+    height: 4rem;
     width: auto;
     max-width: 16rem;
     object-fit: contain;
-    filter: invert(1);
-}
-
-[data-theme="light"] .hero-logo-img,
-[data-theme="light"] .footer-logo {
-    filter: none;
 }
 
 .footer-logo {
-    height: 5.5rem;
+    height: 3rem;
     width: auto;
     max-width: 16rem;
     object-fit: contain;
     margin-bottom: var(--space-2);
-    filter: invert(1);
 }
 
 @media (max-width: 768px) {
@@ -568,12 +561,12 @@ body.has-tabs .navbar-tabs {
     }
     
     .hero-logo-img {
-        height: 4.5rem;
+        height: 3.5rem;
         max-width: 14rem;
     }
-    
+
     .footer-logo {
-        height: 9rem;
+        height: 2.75rem;
         max-width: 12rem;
     }
     
