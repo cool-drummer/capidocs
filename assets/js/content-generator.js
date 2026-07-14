@@ -638,7 +638,7 @@ class ContentGenerator {
         // main navigation
         if (this.config.navigation) {
             sidebarHTML += `
-                <div class="sidebar-section">
+                <div class="sidebar-section" data-group="nav_guides">
                     <h6 class="sidebar-title">${this.escapeHtml(this.t('nav_guides', 'Guías'))}</h6>
                     <nav class="sidebar-nav">
                         <ul>
@@ -661,7 +661,7 @@ class ContentGenerator {
             this.config.sections.forEach(section => {
                 if (section.endpoints) {
                     sidebarHTML += `
-                        <div class="sidebar-section">
+                        <div class="sidebar-section" data-group="${this.escapeAttr(section.title)}">
                             <h6 class="sidebar-title">${this.escapeHtml(section.title)}</h6>
                             <nav class="sidebar-nav">
                                 <ul>
@@ -682,6 +682,71 @@ class ContentGenerator {
         }
         
         return sidebarHTML;
+    }
+
+    buildPageGroupMap() {
+        const map = {};
+        (this.config.navigation || []).forEach(item => { map[item.id] = 'nav_guides'; });
+        (this.config.sections || []).forEach(section => {
+            (section.endpoints || []).forEach(ep => { map[ep.id] = section.title; });
+            (section.pages || []).forEach(pg => { map[pg.id] = section.title; });
+        });
+        return map;
+    }
+
+    renderNavbarTabs() {
+        const container = document.getElementById('navbar-tabs');
+        if (!container) return;
+
+        const tabs = this.config?.site_config?.navbar?.tabs;
+        if (!Array.isArray(tabs) || tabs.length < 2) {
+            document.body.classList.remove('has-tabs');
+            container.innerHTML = '';
+            return;
+        }
+
+        this.pageGroupMap = this.buildPageGroupMap();
+        document.body.classList.add('has-tabs');
+
+        container.innerHTML = tabs.map((tab, index) => `
+            <button type="button" class="navbar-tab" data-tab-index="${index}">
+                ${tab.icon ? `<i class="${this.escapeAttr(tab.icon)}"></i>` : ''}
+                ${this.escapeHtml(tab.text)}
+            </button>
+        `).join('');
+
+        const applyTab = (index) => {
+            const tab = tabs[index];
+            if (!tab) return;
+            const groups = tab.groups || [];
+            document.querySelectorAll('.sidebar-section').forEach(section => {
+                const group = section.getAttribute('data-group');
+                section.style.display = groups.includes(group) ? '' : 'none';
+            });
+            container.querySelectorAll('.navbar-tab').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+        };
+
+        const tabForRoute = () => {
+            const pageId = (window.location.hash || '').replace(/^#/, '') || 'home';
+            const group = this.pageGroupMap[pageId];
+            const found = tabs.findIndex(t => (t.groups || []).includes(group));
+            return found >= 0 ? found : 0;
+        };
+
+        container.querySelectorAll('.navbar-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                applyTab(parseInt(btn.getAttribute('data-tab-index'), 10));
+            });
+        });
+
+        if (!this._tabsHashBound) {
+            window.addEventListener('hashchange', () => applyTab(tabForRoute()));
+            this._tabsHashBound = true;
+        }
+
+        applyTab(tabForRoute());
     }
 
     generateEndpointCard() {
@@ -856,11 +921,19 @@ class ContentGenerator {
     }
 
     generateNotFoundPage(pageId) {
+        console.error('Page not found in configuration:', pageId);
         return `
             <div class="error-page">
-                <h2>Page Not Found</h2>
-                <p>The page "${this.escapeHtml(pageId)}" could not be found in the configuration.</p>
-                <a href="#home" class="btn btn-primary">Go to Home</a>
+                <div class="error-content">
+                    <div class="error-badge"><i class="fas fa-compass"></i></div>
+                    <h2 class="error-title">No encontramos esta página</h2>
+                    <p class="error-desc">Puede que el enlace haya cambiado o ya no exista. Prueba desde el inicio o busca lo que necesitas.</p>
+                    <div class="error-actions">
+                        <a class="btn btn-primary" href="#home">Volver al inicio</a>
+                        <button class="btn btn-outline" data-action="open-search">Buscar en la documentación</button>
+                    </div>
+                    <p class="error-hint">Los detalles técnicos se registraron en la consola.</p>
+                </div>
             </div>
         `;
     }
@@ -868,7 +941,7 @@ class ContentGenerator {
     getFallbackConfig() {
         return {
             api: {
-                name: "API Documentation",
+                name: "Documentación de la API",
                 version: "1.0.0"
             },
             pages: {
@@ -876,8 +949,8 @@ class ContentGenerator {
                     template: "hero",
                     content: {
                         hero: {
-                            title: "API Documentation",
-                            subtitle: "Loading configuration...",
+                            title: "Documentación de la API",
+                            subtitle: "Cargando configuración…",
                             stats: []
                         }
                     }
@@ -896,7 +969,8 @@ class ContentGenerator {
             if (sidebar) {
                 sidebar.innerHTML = this.generateSidebar();
             }
-            
+            this.renderNavbarTabs();
+
             console.log('Content generator setup complete');
         } catch (error) {
             console.error('Content generator setup failed:', error);
@@ -906,10 +980,11 @@ class ContentGenerator {
             if (sidebar) {
                 sidebar.innerHTML = this.generateSidebar();
             }
+            this.renderNavbarTabs();
         }
     }
 
- 
+
     clearCache() {
         this.cache.clear();
     }

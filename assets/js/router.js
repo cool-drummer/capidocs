@@ -92,14 +92,18 @@ class CapidocsRouter {
     }
 
     generateFallbackContent(pageId) {
+        console.error('Content generator unavailable for page:', pageId);
         return `
-            <div class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">${pageId}</h2>
-                    <p class="section-subtitle">Content generator not available</p>
-                </div>
-                <div class="note-box">
-                    This page is being loaded with fallback content. Please refresh the page.
+            <div class="error-page">
+                <div class="error-content">
+                    <div class="error-badge"><i class="fas fa-triangle-exclamation"></i></div>
+                    <h2 class="error-title">No pudimos cargar esta página</h2>
+                    <p class="error-desc">Ocurrió un problema al mostrar este contenido. Vuelve a intentarlo en un momento.</p>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="location.reload()">Volver a intentar</button>
+                        <a class="btn btn-outline" href="#home">Volver al inicio</a>
+                    </div>
+                    <p class="error-hint">Los detalles técnicos se registraron en la consola.</p>
                 </div>
             </div>
         `;
@@ -107,8 +111,17 @@ class CapidocsRouter {
 
     setupEventListeners() {
         window.addEventListener('hashchange', () => this.handleRouteChange());
-        
+
         document.addEventListener('click', (e) => {
+            const searchTrigger = e.target.closest('[data-action="open-search"]');
+            if (searchTrigger) {
+                e.preventDefault();
+                if (window.capiDocsSearch && typeof window.capiDocsSearch.open === 'function') {
+                    window.capiDocsSearch.open();
+                }
+                return;
+            }
+
             const link = e.target.closest('a[href^="#"]');
             if (link) {
                 if (link.classList.contains('toc-link')) {
@@ -279,54 +292,54 @@ class CapidocsRouter {
     }
 
     generate404Content(route) {
+        console.error('Route not found:', route);
         return `
             <div class="error-page">
                 <div class="error-content">
-                    <h2>Page Not Found</h2>
-                    <p>The page "${route}" could not be found.</p>
-                    <a href="#home" class="btn btn-primary">Go to Home</a>
+                    <div class="error-badge"><i class="fas fa-compass"></i></div>
+                    <h2 class="error-title">No encontramos esta página</h2>
+                    <p class="error-desc">Puede que el enlace haya cambiado o ya no exista. Prueba desde el inicio o busca lo que necesitas.</p>
+                    <div class="error-actions">
+                        <a class="btn btn-primary" href="#home">Volver al inicio</a>
+                        <button class="btn btn-outline" data-action="open-search">Buscar en la documentación</button>
+                    </div>
+                    <p class="error-hint">Los detalles técnicos se registraron en la consola.</p>
                 </div>
             </div>
         `;
     }
 
     generateErrorContent(error) {
-        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const errorDetails = isDevelopment ? `
-            <div class="error-details" style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 6px; font-family: monospace; font-size: 0.875rem;">
-                <strong>Error Details:</strong><br>
-                ${error.message || 'Unknown error'}<br>
-                ${error.stack ? `<br><strong>Stack:</strong><br>${error.stack.replace(/\n/g, '<br>')}` : ''}
-            </div>
-        ` : '';
-        
+        console.error('Error rendering page content:', error);
         return `
             <div class="error-page">
                 <div class="error-content">
-                    <h2>Error Loading Page</h2>
-                    <p>An error occurred while loading this page.</p>
-                    ${errorDetails}
-                    <div style="margin-top: 1rem;">
-                        <button onclick="location.reload()" class="btn btn-primary">Reload Page</button>
-                        <button onclick="window.capiDocsRouter?.navigate('home')" class="btn btn-outline" style="margin-left: 0.5rem;">Go to Home</button>
+                    <div class="error-badge"><i class="fas fa-triangle-exclamation"></i></div>
+                    <h2 class="error-title">No pudimos cargar esta página</h2>
+                    <p class="error-desc">Ocurrió un problema al mostrar este contenido. Vuelve a intentarlo en un momento.</p>
+                    <div class="error-actions">
+                        <a class="btn btn-primary" href="#home">Volver al inicio</a>
+                        <button class="btn btn-outline" data-action="open-search">Buscar en la documentación</button>
                     </div>
+                    <p class="error-hint">Los detalles técnicos se registraron en la consola.</p>
                 </div>
             </div>
         `;
     }
 
     showInitializationError(error) {
+        console.error('Documentation initialization error:', error);
         if (this.mainContent) {
             this.mainContent.innerHTML = `
                 <div class="error-page">
                     <div class="error-content">
-                        <h2>Initialization Failed</h2>
-                        <p>The documentation system failed to initialize properly.</p>
-                        <div class="error-details" style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 6px; font-family: monospace; font-size: 0.875rem;">
-                            <strong>Error:</strong> ${error.message || 'Unknown initialization error'}<br>
-                            <strong>Check:</strong> Make sure config/api-spec.json is accessible and valid.
+                        <div class="error-badge"><i class="fas fa-triangle-exclamation"></i></div>
+                        <h2 class="error-title">No pudimos cargar esta página</h2>
+                        <p class="error-desc">Ocurrió un problema al mostrar este contenido. Vuelve a intentarlo en un momento.</p>
+                        <div class="error-actions">
+                            <button class="btn btn-primary" onclick="location.reload()">Volver a intentar</button>
                         </div>
-                        <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">Retry</button>
+                        <p class="error-hint">Los detalles técnicos se registraron en la consola.</p>
                     </div>
                 </div>
             `;

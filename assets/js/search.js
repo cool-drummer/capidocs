@@ -154,7 +154,13 @@
 
     function renderResults() {
         if (!results.length) {
-            resultsEl.innerHTML = '<div class="search-empty">No hay resultados</div>';
+            const term = (input && input.value ? input.value : '').trim();
+            resultsEl.innerHTML =
+                '<div class="search-empty">' +
+                '<div class="search-empty-icon"><i class="fas fa-magnifying-glass"></i></div>' +
+                '<p class="search-empty-title">Nada para «' + esc(term) + '»</p>' +
+                '<p class="search-empty-hint">Revisa la ortografía o prueba con otro término.</p>' +
+                '</div>';
             return;
         }
         resultsEl.innerHTML = results.map(function (entry, i) {
