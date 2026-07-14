@@ -3,8 +3,12 @@
   <url><loc>https://capidocs-demo.pages.dev/#home</loc></url>
   <url><loc>https://capidocs-demo.pages.dev/#getting-started</loc></url>
   <url><loc>https://capidocs-demo.pages.dev/#authentication</loc></url>
-  <url><loc>https://capidocs-demo.pages.dev/#components</loc></url>
   <url><loc>https://capidocs-demo.pages.dev/#endpoints</loc></url>
+  <url><loc>https://capidocs-demo.pages.dev/#components</loc></url>
+  <url><loc>https://capidocs-demo.pages.dev/#code-blocks</loc></url>
+  <url><loc>https://capidocs-demo.pages.dev/#configuration</loc></url>
+  <url><loc>https://capidocs-demo.pages.dev/#document-api</loc></url>
+  <url><loc>https://capidocs-demo.pages.dev/#features</loc></url>
   <url><loc>https://capidocs-demo.pages.dev/#users-endpoint</loc></url>
   <url><loc>https://capidocs-demo.pages.dev/#data-endpoint</loc></url>
   <url><loc>https://capidocs-demo.pages.dev/#webhooks</loc></url>
