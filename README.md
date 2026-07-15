@@ -1,13 +1,35 @@
-# Capidocs - Professional API Documentation Template
+<h1 align="center">Capidocs</h1>
 
-A modern, responsive, and fully configurable documentation template for REST APIs. Transform your API documentation into a professional, branded experience in minutes.
+<p align="center">A modern, responsive, and fully configurable documentation template for REST APIs — Mintlify-style layout, dual themes, and multilingual support, all driven by a single JSON config.</p>
 
-## 🌟 Live Demo
+<p align="center">
+  <a href="https://capidocs-demo.pages.dev"><img alt="Live demo" src="https://img.shields.io/badge/demo-capidocs--demo.pages.dev-4bb3a1?style=flat-square"></a>
+  <img alt="No build step" src="https://img.shields.io/badge/build-none%20(static)-2f8f90?style=flat-square">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-4bb3a1?style=flat-square"></a>
+</p>
 
-- **Dark Theme**: Professional dark mode with excellent contrast
-- **Light Theme**: Clean, modern light interface
-- **Mobile Responsive**: Perfect on all devices
-- **Interactive**: Live code examples and syntax highlighting
+## 🌐 Live demo
+
+**→ [capidocs-demo.pages.dev](https://capidocs-demo.pages.dev)** — hosted on Cloudflare Pages.
+
+![Capidocs home page, dark theme](docs/screenshots/home-dark.png)
+
+<table>
+  <tr>
+    <td width="50%"><img alt="Home, light theme" src="docs/screenshots/home-light.png"></td>
+    <td width="50%"><img alt="Code blocks with syntax highlighting" src="docs/screenshots/code-dark.png"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Light theme with system preference</em></td>
+    <td align="center"><em>Own syntax theme, copy-to-clipboard</em></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img alt="API reference endpoint layout" src="docs/screenshots/endpoint-dark.png"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><em>Mintlify-style two-column API reference: fields on the left, live request/response panels on the right</em></td>
+  </tr>
+</table>
 
 ## ✨ Key Features
 
@@ -17,16 +39,20 @@ A modern, responsive, and fully configurable documentation template for REST API
 - **Multiple Page Types**: Hero pages, content pages, and API endpoint documentation
 
 ### 🎨 Professional Design
-- **Dual Theme Support**: Automatic dark/light mode with user preference persistence
-- **Brand Customization**: Logo integration, color schemes, and custom branding
+- **Mintlify-style layout**: Top-level tabs (Guides / API Reference), a clean sidebar, and a two-column endpoint layout with sticky request/response panels
+- **Dual Theme Support**: Dark/light mode that follows the system preference by default and persists the user's choice
+- **Brand Customization**: SVG logo integration and a single accent color that flows through every interactive element
 - **Responsive Layout**: Mobile-first design that works on all screen sizes
-- **Modern UI**: Clean typography, smooth animations, and professional aesthetics
+
+### 🌍 Multilingual (i18n)
+- **One spec per language**: `config/api-spec.json` (Spanish) and `config/api-spec.en.json` (English), plus a language selector in the navbar
+- **Fully localized UI**: Navigation, labels, and controls translate along with the content
 
 ### 🚀 Developer Experience
-- **Multi-language Code Examples**: Support for 10+ programming languages
-- **Syntax Highlighting**: Beautiful code blocks with copy-to-clipboard functionality
-- **Interactive Navigation**: Smooth routing with table of contents
-- **SEO Optimized**: Proper meta tags and semantic HTML structure
+- **Multi-language Code Examples**: Tabs for cURL, JavaScript, Python and 10+ languages
+- **Syntax Highlighting**: A self-contained syntax theme (no external CDN) with copy-to-clipboard on every block
+- **Interactive Navigation**: Hash routing, auto-generated table of contents, and a "Try it" playground on endpoints
+- **SEO Optimized**: Proper meta tags, semantic HTML, `sitemap.xml`, `robots.txt` and `llms.txt`
 
 ### 🔒 Security First
 - **XSS Protection**: Sanitized content and safe DOM manipulation
@@ -103,7 +129,7 @@ Upload to any static hosting service:
 - `brand`: Brand name displayed in navigation
 - `brand_icon`: FontAwesome icon when logos are disabled
 - `use_logos`: Set to `false` to use text + icon instead of logos
-- `default_theme`: "light" or "dark" default theme
+- `default_theme`: `"system"` (follow OS preference), `"light"` or `"dark"`
 
 ### API Information
 
@@ -542,8 +568,11 @@ capidocs/
 │       ├── content-generator.js  # Content rendering
 │       └── syntax-highlighter.js # Code highlighting
 ├── config/
-│   └── api-spec.json            # Main configuration
-├── logos/                       # Brand assets
+│   ├── api-spec.json            # Main configuration (Spanish)
+│   ├── api-spec.en.json         # English translation
+│   └── examples/                # Runnable code samples referenced by `file`
+├── docs/screenshots/            # README images
+├── logos/                       # Brand assets (capybara mark, SVG)
 └── index.html                   # Main HTML file
 ```
 
