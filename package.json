@@ -14,7 +14,9 @@
     "lint": "eslint . && tsc -b packages/spec packages/compiler --noEmit",
     "borders": "scripts/border-sweep.sh apps/site/assets/css",
     "serve": "node scripts/serve.mjs apps/site 8877",
-    "snapshot": "node scripts/snapshot.mjs"
+    "snapshot": "node scripts/snapshot.mjs",
+    "publish": "node scripts/publish.mjs apps/site .tmp/dist",
+    "deploy": "pnpm run publish && wrangler pages deploy .tmp/dist --project-name=capidocs-demo --branch=main"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
