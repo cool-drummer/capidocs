@@ -115,7 +115,7 @@
         "spec": "config/api-spec-v1.json"
       }
     ],
-    "site_url": "https://capidocs-demo.pages.dev",
+    "site_url": "https://capidocs.dadocompany.com",
     "ui": {
       "nav_guides": "Guías",
       "try_it": "Pruébalo",

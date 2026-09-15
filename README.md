@@ -3,14 +3,14 @@
 <p align="center">A modern, responsive, and fully configurable documentation template for REST APIs — Mintlify-style layout, dual themes, and multilingual support, all driven by a single JSON config.</p>
 
 <p align="center">
-  <a href="https://capidocs-demo.pages.dev"><img alt="Live demo" src="https://img.shields.io/badge/demo-capidocs--demo.pages.dev-4bb3a1?style=flat-square"></a>
+  <a href="https://capidocs.dadocompany.com"><img alt="Live demo" src="https://img.shields.io/badge/demo-capidocs.dadocompany.com-4bb3a1?style=flat-square"></a>
   <img alt="No build step" src="https://img.shields.io/badge/build-none%20(static)-2f8f90?style=flat-square">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-4bb3a1?style=flat-square"></a>
 </p>
 
 ## 🌐 Live demo
 
-**→ [capidocs-demo.pages.dev](https://capidocs-demo.pages.dev)** — hosted on Cloudflare Pages.
+**→ [capidocs.dadocompany.com](https://capidocs.dadocompany.com)** — hosted on Cloudflare Pages.
 
 ![Capidocs home page, dark theme](docs/screenshots/home-dark.png)
 

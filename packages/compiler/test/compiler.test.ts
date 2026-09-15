@@ -42,8 +42,10 @@ describe('outputs', () => {
 
   it('writes a sitemap and robots that agree on site_url', async () => {
     const spec = await loadSpec();
-    expect(buildSitemap(spec)).toContain('<loc>https://capidocs-demo.pages.dev/#home</loc>');
-    expect(buildRobots(spec)).toContain('Sitemap: https://capidocs-demo.pages.dev/sitemap.xml');
+    const base = spec.site_config.site_url!.replace(/\/$/, '');
+    expect(base).toMatch(/^https:\/\//);
+    expect(buildSitemap(spec)).toContain(`<loc>${base}/#home</loc>`);
+    expect(buildRobots(spec)).toContain(`Sitemap: ${base}/sitemap.xml`);
   });
 
   it('escapes xml in the sitemap', () => {
