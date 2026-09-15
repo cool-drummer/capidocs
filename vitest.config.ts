@@ -12,6 +12,16 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'api',
+          include: ['apps/api/test/**/*.test.ts'],
+          environment: 'node',
+          testTimeout: 30000,
+          hookTimeout: 60000,
+          fileParallelism: false,
+        },
+      },
+      {
+        test: {
           name: 'site',
           include: ['apps/site/test/**/*.test.js'],
           environment: 'jsdom',

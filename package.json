@@ -8,15 +8,18 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -b packages/spec packages/compiler",
+    "build": "tsc -b packages/spec packages/compiler apps/api",
     "build:site": "pnpm run build && node packages/compiler/dist/cli.js build apps/site",
     "test": "pnpm run build && vitest run",
-    "lint": "eslint . && tsc -b packages/spec packages/compiler --noEmit",
+    "lint": "eslint . && tsc -b packages/spec packages/compiler apps/api --noEmit",
     "borders": "scripts/border-sweep.sh apps/site/assets/css",
     "serve": "node scripts/serve.mjs apps/site 8877",
     "snapshot": "node scripts/snapshot.mjs",
     "publish": "node scripts/publish.mjs apps/site .tmp/dist",
-    "deploy": "pnpm run publish && wrangler pages deploy .tmp/dist --project-name=capidocs-demo --branch=main"
+    "deploy": "pnpm run publish && wrangler pages deploy .tmp/dist --project-name=capidocs-demo --branch=main",
+    "db:up": "docker compose -f docker-compose.dev.yml up -d",
+    "db:down": "docker compose -f docker-compose.dev.yml down",
+    "api:dev": "DATABASE_URL=postgres://capidocs:capidocs@127.0.0.1:55432/capidocs node apps/api/dist/server.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
