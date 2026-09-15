@@ -34,7 +34,7 @@
 ## ✨ Key Features
 
 ### 🔧 100% Configurable
-- **JSON Configuration + plain code files**: Structure lives in `config/api-spec.json`; multi-line code samples live as real files under `config/examples/` (referenced with `file`), so you never escape `\n` or `\"` by hand
+- **JSON Configuration + plain code files**: Structure lives in `apps/site/config/api-spec.json`; multi-line code samples live as real files under `config/examples/` (referenced with `file`), so you never escape `\n` or `\"` by hand
 - **No Code Changes Required**: Customize content, branding, and structure without touching code
 - **Multiple Page Types**: Hero pages, content pages, and API endpoint documentation
 
@@ -45,7 +45,7 @@
 - **Responsive Layout**: Mobile-first design that works on all screen sizes
 
 ### 🌍 Multilingual (i18n)
-- **One spec per language**: `config/api-spec.json` (Spanish) and `config/api-spec.en.json` (English), plus a language selector in the navbar
+- **One spec per language**: `api-spec.json` (Spanish) and `api-spec.en.json` (English) under `apps/site/config/`, plus a language selector in the navbar
 - **Fully localized UI**: Navigation, labels, and controls translate along with the content
 
 ### 🚀 Developer Experience
@@ -91,7 +91,7 @@ logos/
 - **footer**: 160×40px - Footer logo
 
 ### 3. Configure Your API Documentation
-Edit `config/api-spec.json` with your API details (see configuration guide below).
+Edit `apps/site/config/api-spec.json` with your API details (see configuration guide below).
 
 ### 4. Deploy
 Upload to any static hosting service:
@@ -559,34 +559,54 @@ they are joined with newlines automatically, so you never write `\n`.
 ### File Structure
 ```
 capidocs/
-├── assets/
-│   ├── css/
-│   │   └── capidocs.css          # Main stylesheet
-│   └── js/
-│       ├── core.js               # Core functionality
-│       ├── router.js             # Page routing
-│       ├── content-generator.js  # Content rendering
-│       └── syntax-highlighter.js # Code highlighting
-├── config/
-│   ├── api-spec.json            # Main configuration (Spanish)
-│   ├── api-spec.en.json         # English translation
-│   └── examples/                # Runnable code samples referenced by `file`
-├── docs/screenshots/            # README images
-├── logos/                       # Brand assets (capybara mark, SVG)
-└── index.html                   # Main HTML file
+├── apps/site/                    # The documentation site (no build step)
+│   ├── index.html
+│   ├── assets/
+│   │   ├── css/capidocs.css      # Stylesheet
+│   │   └── js/                   # ES modules: main, app, router, content-generator, ...
+│   ├── config/
+│   │   ├── api-spec.json         # Main spec (Spanish)
+│   │   ├── api-spec.en.json      # English spec
+│   │   └── examples/             # Runnable code samples referenced by `file`
+│   ├── logos/                    # Brand assets (capybara mark, SVG)
+│   └── test/                     # Sanitizer and rendering tests
+├── packages/spec/                # Zod schema and validator for the spec
+├── packages/compiler/            # search-index.json, llms.txt, sitemap, OpenAPI import
+├── scripts/                      # Static server, headless snapshots, border sweep
+└── docs/screenshots/             # README images
 ```
 
+The site in `apps/site/` still runs with no build step: open `index.html` from any static
+host and it fetches its spec at runtime. Everything under `packages/` is optional tooling.
+
 ### Customizing Styles
-Modify `assets/css/capidocs.css` to customize:
+Modify `apps/site/assets/css/capidocs.css` to customize:
 - Colors and theming
 - Typography
 - Layout spacing
 - Component styles
 
-### Adding New Features
-1. Extend the configuration schema in `api-spec.json`
-2. Update the content generator to handle new content types
-3. Add corresponding CSS styles
+### Optional tooling
+
+```bash
+pnpm install
+pnpm build                                  # compile packages/spec and packages/compiler
+node packages/compiler/dist/cli.js validate apps/site/config/api-spec.json
+node packages/compiler/dist/cli.js build apps/site
+node packages/compiler/dist/cli.js import-openapi openapi.json apps/site/config/api-spec.json
+pnpm test                                   # schema, compiler, sanitizer and rendering tests
+pnpm serve                                  # static server on :8877
+node scripts/snapshot.mjs http://127.0.0.1:8877/#home --theme=dark --out=home.png
+```
+
+`build` writes `search-index.json`, `llms.txt`, `llms-full.txt`, `sitemap.xml` and
+`robots.txt` next to the spec. The site works without them: search falls back to an index
+built in the browser.
+
+### Adding New Blocks
+1. Extend the schema in `packages/spec/src/schema.ts`
+2. Render it in `apps/site/assets/js/content-generator.js`
+3. Add its CSS and a case in `apps/site/test/render.test.js`
 4. Test across themes and devices
 
 ## 📱 Browser Support
@@ -638,6 +658,6 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
-**Ready to create professional API documentation?** Start by editing `config/api-spec.json` and replacing the logos with your brand assets. Your documentation will be ready in minutes!
+**Ready to create professional API documentation?** Start by editing `apps/site/config/api-spec.json` and replacing the logos with your brand assets. Your documentation will be ready in minutes!
 
 For questions or support, please open an issue in the repository. 

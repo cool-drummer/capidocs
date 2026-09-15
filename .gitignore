@@ -238,3 +238,4 @@ local-config.json
 *.rar
 *.tar
 *.zip 
+*.tsbuildinfo

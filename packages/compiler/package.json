@@ -1,0 +1,28 @@
+{
+  "name": "@capidocs/compiler",
+  "version": "0.1.0",
+  "description": "Builds search index, llms.txt, sitemap and OpenAPI imports for a capidocs site",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "capidocs": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@capidocs/site": "workspace:*",
+    "@capidocs/spec": "workspace:*"
+  }
+}

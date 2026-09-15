@@ -1,0 +1,30 @@
+{
+  "name": "capidocs",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -b packages/spec packages/compiler",
+    "build:site": "pnpm run build && node packages/compiler/dist/cli.js build apps/site",
+    "test": "pnpm run build && vitest run",
+    "lint": "eslint . && tsc -b packages/spec packages/compiler --noEmit",
+    "borders": "scripts/border-sweep.sh apps/site/assets/css",
+    "serve": "node scripts/serve.mjs apps/site 8877",
+    "snapshot": "node scripts/snapshot.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^4.1.11"
+  },
+  "type": "module"
+}

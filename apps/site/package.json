@@ -1,0 +1,23 @@
+{
+  "name": "@capidocs/site",
+  "version": "0.1.0",
+  "description": "Static, zero-build API documentation site driven by a JSON spec",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./index.html",
+    "./spec-utils": "./assets/js/spec-utils.js",
+    "./sanitize": "./assets/js/sanitize.js",
+    "./theme": "./assets/js/theme.js",
+    "./escape": "./assets/js/escape.js",
+    "./content-generator": "./assets/js/content-generator.js",
+    "./spec-loader": "./assets/js/spec-loader.js",
+    "./app": "./assets/js/app.js"
+  },
+  "files": [
+    "index.html",
+    "assets",
+    "logos",
+    "config"
+  ]
+}
