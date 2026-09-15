@@ -165,7 +165,7 @@ apps/site/assets/css/capidocs.css:4903:    border: 1px solid var(--border-primar
 apps/site/assets/css/capidocs.css:4913:.playground-body:focus { border-color: var(--brand-accent-border); }
 apps/site/assets/css/capidocs.css:4918:    border: 1px solid var(--border-primary);
 apps/site/assets/css/capidocs.css:4928:    border-bottom: 1px solid var(--border-primary);
-apps/site/assets/css/capidocs.css:5029:    border-color: var(--border-primary) !important;
+apps/site/assets/css/capidocs.css:5029:    border-color: var(--border-primary);
 apps/site/assets/css/capidocs.css:5066:    border: 1px solid var(--border-primary);
 apps/site/assets/css/capidocs.css:5171:    border-top: 1px solid var(--border-secondary);
 apps/site/assets/css/capidocs.css:5218:    border-top: 1px solid var(--border-secondary);

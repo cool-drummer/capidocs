@@ -5026,7 +5026,7 @@ body.search-open { overflow: hidden; }
 .table-container,
 .tech-tabs,
 .example-header {
-    border-color: var(--border-primary) !important;
+    border-color: var(--border-primary);
 }
 
 /* ===== API reference layout (Mintlify-style) ===== */

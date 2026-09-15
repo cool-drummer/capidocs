@@ -65,6 +65,9 @@ async function main() {
     await send('Page.enable', {}, sessionId);
     await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 700 }, sessionId);
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] }, sessionId);
+    if (options.seed) {
+        await send('Page.addScriptToEvaluateOnNewDocument', { source: String(options.seed) }, sessionId);
+    }
     await send('Page.navigate', { url }, sessionId);
 
     const started = Date.now();
@@ -90,6 +93,7 @@ async function main() {
         tocItems: document.querySelectorAll('.toc-item').length,
         highlighted: document.querySelectorAll('code.highlighted').length,
         errorPage: !!document.querySelector('#main-content .error-page'),
+        gate: !!document.querySelector('#docs-gate'),
         theme: document.documentElement.getAttribute('data-theme'),
         overflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth
     }))()`);

@@ -19,7 +19,7 @@ export async function createCapidocs({ spec, assetBase = '', searchIndexUrl = 's
     const t = createTranslator(spec);
     const resolveAsset = (path) => (assetBase && !/^(?:[a-z]+:|\/)/i.test(path) ? assetBase.replace(/\/?$/, '/') + path : path);
 
-    applyBrandTheme(site.theme);
+    applyBrandTheme(site.theme, document, resolveAsset);
 
     const core = new Core({ t, defaultTheme: site.default_theme });
     const chrome = new Chrome({ spec, t, resolveAsset });
