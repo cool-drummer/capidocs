@@ -54,9 +54,19 @@ export function brandCss(theme) {
     return blocks.join('\n');
 }
 
-export function applyBrandTheme(theme, doc = document) {
+export function applyBrandTheme(theme, doc = document, resolveAsset = (path) => path) {
     const existing = doc.getElementById('capidocs-brand');
     if (existing) existing.remove();
+    const existingSheet = doc.getElementById('capidocs-brand-sheet');
+    if (existingSheet) existingSheet.remove();
+    if (!theme) return;
+    if (theme.stylesheet) {
+        const sheet = doc.createElement('link');
+        sheet.id = 'capidocs-brand-sheet';
+        sheet.rel = 'stylesheet';
+        sheet.href = resolveAsset(theme.stylesheet);
+        doc.head.appendChild(sheet);
+    }
     const css = brandCss(theme);
     if (!css) return;
     const imports = (theme.fonts && theme.fonts.imports) || [];
