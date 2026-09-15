@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://capidocs-demo.pages.dev/sitemap.xml
+Sitemap: https://capidocs.dadocompany.com/sitemap.xml
 # LLM-friendly docs
-# https://capidocs-demo.pages.dev/llms.txt
-# https://capidocs-demo.pages.dev/llms-full.txt
+# https://capidocs.dadocompany.com/llms.txt
+# https://capidocs.dadocompany.com/llms-full.txt
