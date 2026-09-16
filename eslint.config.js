@@ -25,7 +25,15 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/**/*.ts', 'scripts/**/*.mjs', 'vitest.config.ts', 'eslint.config.js'],
+    files: ['apps/studio/src/**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.browser },
+    },
+  },
+  {
+    files: ['packages/**/*.ts', 'apps/api/**/*.ts', 'scripts/**/*.mjs', 'apps/studio/vite.config.ts', 'vitest.config.ts', 'eslint.config.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

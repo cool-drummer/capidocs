@@ -361,6 +361,36 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
     return reply.status(201).send({ portal });
   });
 
+  app.put('/portals/:portalId', async (request) => {
+    const user = await currentUser(request);
+    assertCan(actorFor(user), 'portal.update', { workspaceId: user.workspaceId });
+    const params = z.object({ portalId: z.string().uuid() }).parse(request.params);
+    const body = z
+      .object({
+        name: z.string().trim().min(2).optional(),
+        siteUrl: z.string().url().nullable().optional(),
+        locales: z.array(z.string().min(2)).min(1).optional(),
+        accessMode: z.enum(['open', 'gate', 'accounts']).optional(),
+        brand: z.record(z.string(), z.unknown()).optional(),
+        deployTarget: z.record(z.string(), z.unknown()).optional(),
+      })
+      .parse(request.body);
+
+    const rows = await db
+      .select({ id: portals.id })
+      .from(portals)
+      .where(and(eq(portals.id, params.portalId), eq(portals.workspaceId, user.workspaceId)))
+      .limit(1);
+    if (!rows.length) throw notFound();
+
+    const [portal] = await db
+      .update(portals)
+      .set({ ...body, updatedAt: new Date() })
+      .where(eq(portals.id, params.portalId))
+      .returning();
+    return { portal };
+  });
+
   app.post('/portals/:portalId/publish', async (request) => {
     const user = await currentUser(request);
     const params = z.object({ portalId: z.string().uuid() }).parse(request.params);
