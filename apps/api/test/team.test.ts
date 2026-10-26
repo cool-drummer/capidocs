@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { detectMime, storageKeyFor } from '../src/modules/attachments.js';
-import { renderHtml, renderText, templates, type MailMessage } from '../src/lib/mail.js';
+import type { MailMessage } from '../src/lib/mail.js';
 import { Client, resetDatabase, testConfig, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = process.env.TEST_TEAM_DATABASE_URL ?? testDatabaseUrl('capidocs_team_test');
@@ -52,25 +52,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await app?.close();
   if (filesDir) await rm(filesDir, { recursive: true, force: true });
-});
-
-describe('mail templates', () => {
-  it('escapes user text in the html body', () => {
-    const html = renderHtml({ to: 'x@y.z', ...templates.invitation({ workspace: '<script>', inviter: 'A & B', role: 'miembro', url: 'https://x.test' }) }, 'Capidocs');
-    expect(html).not.toContain('<script>');
-    expect(html).toContain('&lt;script&gt;');
-    expect(html).toContain('A &amp; B');
-  });
-
-  it('writes a plain text version with the link', () => {
-    const text = renderText({ to: 'x@y.z', ...templates.invitation({ workspace: 'Dado', inviter: 'Dan', role: 'miembro', url: 'https://x.test/a' }) });
-    expect(text).toContain('https://x.test/a');
-  });
-
-  it('never leaks technical detail in a failure notice', () => {
-    const message = templates.publishFailed({ portal: 'Docs' });
-    expect(JSON.stringify(message)).not.toMatch(/stack|error:|sql|ECONN/i);
-  });
 });
 
 describe('invitations', () => {

@@ -5,7 +5,7 @@ import { portals } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
 import { deploy, deployTargetSchema } from '../lib/deploy.js';
 import { notFound } from '../lib/errors.js';
-import { templates } from '../lib/mail.js';
+import { templates } from '../lib/mail-templates.js';
 import { actorFor } from '../modules/context.js';
 import { importPortal } from '../modules/import.js';
 import { buildPortal, recordPublish } from '../modules/publish.js';

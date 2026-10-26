@@ -4,10 +4,11 @@ import { z } from 'zod';
 import { users } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
 import { csrfTokenFor } from '../lib/csrf.js';
-import { templates } from '../lib/mail.js';
+import { templates } from '../lib/mail-templates.js';
 import { actorFor, loadSpaceSubject } from '../modules/context.js';
 import {
   acceptInvitation,
+  INVITATION_DAYS,
   createInvitation,
   inspectInvitation,
   listInvitations,
@@ -40,8 +41,9 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
       templates.invitation({
         workspace: workspace.name,
         inviter: user.name,
-        role: body.role === 'admin' ? 'administrador' : 'miembro',
+        role: body.role,
         url: `${context.studioUrl}/?invitation=${token}`,
+        expiresInDays: INVITATION_DAYS,
       }),
     );
     return reply.status(201).send({ invitation: { id: invitation.id, email: invitation.email, role: invitation.role, expiresAt: invitation.expiresAt } });
@@ -69,7 +71,7 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
 
     const workspace = await context.loadWorkspace(invitation.workspaceId);
     const inviter = (await db.select().from(users).where(eq(users.id, invitation.invitedById)).limit(1))[0];
-    if (inviter) await notify(inviter.email, templates.invitationAccepted({ workspace: workspace.name, who: body.name }));
+    if (inviter) await notify(inviter.email, templates.invitationAccepted({ workspace: workspace.name, who: body.name, email: invitation.email }));
     await notify(invitation.email, templates.welcome({ workspace: workspace.name, url: context.studioUrl }));
 
     const { token: sessionToken } = await context.sessions.begin(request, reply, userId);

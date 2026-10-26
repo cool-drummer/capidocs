@@ -9,8 +9,22 @@ export interface MailMessage {
 
 export interface Mailer {
   send(message: MailMessage): Promise<{ id: string }>;
-  sent: MailMessage[];
 }
+
+export interface MailSettings {
+  transport: 'resend' | 'console';
+  apiKey: string | null;
+  from: string | null;
+  brand: string;
+}
+
+export interface MailLogger {
+  info: (data: Record<string, unknown>, message: string) => void;
+  error: (data: Record<string, unknown>, message: string) => void;
+}
+
+const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+const RESEND_TIMEOUT_MS = 10_000;
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
@@ -38,32 +52,43 @@ export function renderText(message: MailMessage): string {
   return parts.join('\n');
 }
 
-export function createMailer(options: { apiKey?: string; from?: string; brand?: string; logger?: (message: string) => void }): Mailer {
-  const sent: MailMessage[] = [];
-  const brand = options.brand ?? 'Capidocs';
-  const log = options.logger ?? (() => undefined);
+export function maskAddress(address: string): string {
+  const [local = '', domain = ''] = address.split('@');
+  return `${local.slice(0, 1)}***@${domain}`;
+}
+
+export function createMailer(settings: MailSettings, logger: MailLogger): Mailer {
+  if (settings.transport === 'console') {
+    let count = 0;
+    return {
+      async send(message) {
+        count += 1;
+        logger.info({ mail: { to: message.to, subject: message.subject, text: renderText(message) } }, 'mail printed by the console transport');
+        return { id: `console-${count}` };
+      },
+    };
+  }
+
+  if (!settings.apiKey || !settings.from) throw new Error('resend transport needs an API key and a sender');
+  const apiKey = settings.apiKey;
+  const from = settings.from;
 
   return {
-    sent,
     async send(message) {
-      sent.push(message);
-      if (!options.apiKey || !options.from) {
-        log(`mail not sent (no provider configured): ${message.subject} -> ${message.to}`);
-        return { id: 'logged' };
-      }
-      const response = await fetch('https://api.resend.com/emails', {
+      const response = await fetch(RESEND_ENDPOINT, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${options.apiKey}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: options.from,
+          from,
           to: message.to,
           subject: message.subject,
-          html: renderHtml(message, brand),
+          html: renderHtml(message, settings.brand),
           text: renderText(message),
         }),
+        signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
       });
       if (!response.ok) {
-        log(`mail provider failed with ${response.status} for ${message.to}`);
+        logger.error({ status: response.status, to: maskAddress(message.to) }, 'mail provider rejected the message');
         throw new Error(`mail provider responded ${response.status}`);
       }
       const payload = (await response.json()) as { id?: string };
@@ -71,49 +96,3 @@ export function createMailer(options: { apiKey?: string; from?: string; brand?: 
     },
   };
 }
-
-export const templates = {
-  invitation: (options: { workspace: string; inviter: string; url: string; role: string }): Omit<MailMessage, 'to'> => ({
-    subject: `Te invitaron a ${options.workspace}`,
-    heading: `Te invitaron a ${options.workspace}`,
-    body: [
-      `${options.inviter} te invitó a colaborar en la documentación de ${options.workspace}.`,
-      `Tu rol será: ${options.role}.`,
-    ],
-    action: { label: 'Aceptar la invitación', url: options.url },
-    footer: 'Si no esperabas esta invitación, puedes ignorar este correo.',
-  }),
-
-  welcome: (options: { workspace: string; url: string }): Omit<MailMessage, 'to'> => ({
-    subject: `Bienvenido a ${options.workspace}`,
-    heading: `Ya eres parte de ${options.workspace}`,
-    body: ['Tu cuenta quedó lista. Desde aquí puedes escribir, revisar y publicar documentación.'],
-    action: { label: 'Entrar al studio', url: options.url },
-  }),
-
-  invitationAccepted: (options: { workspace: string; who: string }): Omit<MailMessage, 'to'> => ({
-    subject: `${options.who} aceptó tu invitación`,
-    heading: `${options.who} ya está en ${options.workspace}`,
-    body: ['La invitación que enviaste fue aceptada.'],
-  }),
-
-  passwordChanged: (options: { workspace: string }): Omit<MailMessage, 'to'> => ({
-    subject: 'Tu contraseña cambió',
-    heading: 'Cambiaste tu contraseña',
-    body: [`Se actualizó la contraseña de tu cuenta en ${options.workspace}.`],
-    footer: 'Si no fuiste tú, cambia tu contraseña de inmediato y avisa a quien administra el espacio.',
-  }),
-
-  published: (options: { portal: string; pages: number; url?: string }): Omit<MailMessage, 'to'> => ({
-    subject: `Se publicó ${options.portal}`,
-    heading: `${options.portal} está publicado`,
-    body: [`Se publicaron ${options.pages} páginas.`],
-    ...(options.url ? { action: { label: 'Ver el portal', url: options.url } } : {}),
-  }),
-
-  publishFailed: (options: { portal: string }): Omit<MailMessage, 'to'> => ({
-    subject: `No se pudo publicar ${options.portal}`,
-    heading: `La publicación de ${options.portal} no se completó`,
-    body: ['Revisa el destino de publicación en el studio y vuelve a intentarlo.'],
-  }),
-};

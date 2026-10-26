@@ -60,11 +60,9 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
   const store = createLocalStore(config.files.dir);
   const mailer =
     overrides.mailer ??
-    createMailer({
-      ...(config.mail.transport === 'resend' && config.mail.apiKey ? { apiKey: config.mail.apiKey } : {}),
-      ...(config.mail.from ? { from: config.mail.from } : {}),
-      brand: config.mail.brand,
-      logger: (message) => app.log.warn(message),
+    createMailer(config.mail, {
+      info: (data, message) => app.log.info(data, message),
+      error: (data, message) => app.log.error(data, message),
     });
 
   const context = createRouteContext({
@@ -74,7 +72,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     sessionPolicy: { ...config.session, secure: config.secureCookies },
     mailer,
     store,
-    onMailError: (error) => app.log.error({ err: error }, 'mail delivery failed'),
+    onMailError: (error) => app.log.error({ reason: (error as Error).message }, 'mail delivery failed'),
   });
 
   app.setErrorHandler((error, request, reply) => {
