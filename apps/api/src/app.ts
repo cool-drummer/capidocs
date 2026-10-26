@@ -20,10 +20,12 @@ import { portalRoutes } from './routes/portals.js';
 import { previewRoutes, runtimeRoutes } from './routes/preview.js';
 import { studioRoutes } from './routes/studio.js';
 import { securityHeaders } from './lib/security-headers.js';
+import { loggerOptions, type LogDestination } from './lib/logging.js';
 import { createUrlSigner } from './lib/preview.js';
 
 export interface AppOverrides {
   logger?: boolean;
+  logStream?: LogDestination;
   mailer?: Mailer;
   store?: AttachmentStore;
 }
@@ -56,7 +58,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
   await purgeSessions(db);
 
   const app = Fastify({
-    logger: overrides.logger ? { level: config.server.logLevel } : false,
+    logger: overrides.logger || overrides.logStream ? loggerOptions(config.server.logLevel, overrides.logStream) : false,
     trustProxy: (_address: string, hop: number) => hop < config.server.trustProxyHops,
     bodyLimit: config.limits.bodyBytes,
   });
