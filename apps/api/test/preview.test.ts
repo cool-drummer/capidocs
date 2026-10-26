@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type CapidocsApp } from '../src/app.js';
-import { createUrlSigner } from '../src/lib/preview.js';
+import { createUrlSigner, previewFrame, previewFrameCsp } from '../src/lib/preview.js';
 import { Client, memoryMailer, resetDatabase, testConfig, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = testDatabaseUrl('capidocs_preview_test');
@@ -169,5 +169,16 @@ describe('runtime assets', () => {
       const response = await app.inject({ method: 'GET', url });
       expect(response.statusCode, url).toBe(404);
     }
+  });
+});
+
+describe('preview runtime', () => {
+  it('loads every script, style and font from the studio itself', () => {
+    const { html, nonce } = previewFrame();
+    expect(html).not.toMatch(/https?:\/\//);
+    expect(html).toContain('/site/assets/vendor/prism/prism-core.min.js');
+    const csp = previewFrameCsp('https://studio.example.com', nonce);
+    expect(csp).not.toContain('cdnjs');
+    expect(csp).toContain(`script-src 'nonce-${nonce}' https://studio.example.com/site/;`);
   });
 });
