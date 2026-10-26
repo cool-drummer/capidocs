@@ -1,5 +1,5 @@
 import { parseDiagramSetJson, validateDiagramSet } from './model.js';
-import { mountExplorer, readStoredSet, safeStorage } from './explorer.js';
+import { clearSavedData, markSavedRecord, mountExplorer, readSavedRecord, safeLocale, storageAreas } from './explorer.js';
 import { createDiagramTranslator, friendlyError } from './i18n.js';
 import { escapeHtml } from '../escape.js';
 import { applyTheme } from './theme.js';
@@ -27,11 +27,11 @@ async function loadFromUrl(src) {
     return result.set;
 }
 
-function takeHandoff(storage) {
+function takeHandoff(area) {
     try {
-        const raw = storage?.getItem(HANDOFF_KEY);
+        const raw = area?.getItem(HANDOFF_KEY);
         if (!raw) return null;
-        storage.removeItem(HANDOFF_KEY);
+        area.removeItem(HANDOFF_KEY);
         const result = validateDiagramSet(JSON.parse(raw));
         return result.ok ? result.set : null;
     } catch (error) {
@@ -40,10 +40,14 @@ function takeHandoff(storage) {
     }
 }
 
-function renderFailure(root, error) {
-    const t = createDiagramTranslator(document.documentElement.lang);
+function prepareScreen(root) {
     applyTheme(document.documentElement, window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     root.classList.add('dx-app');
+    return createDiagramTranslator(document.documentElement.lang);
+}
+
+function renderFailure(root, error) {
+    const t = prepareScreen(root);
     root.innerHTML = `
         <div class="dx-failure" role="alert">
             <h1 class="dx-display dx-display-sm">${escapeHtml(t('app.title'))}</h1>
@@ -53,15 +57,31 @@ function renderFailure(root, error) {
     document.documentElement.dataset.capidocs = 'failed';
 }
 
+export function renderRecovery(root, areas) {
+    const t = prepareScreen(root);
+    root.innerHTML = `
+        <div class="dx-failure" role="alert">
+            <h1 class="dx-display dx-display-sm">${escapeHtml(t('recovery.title'))}</h1>
+            <p class="dx-lede">${escapeHtml(t('recovery.body'))}</p>
+            <p><button type="button" class="dx-btn dx-btn-strong" data-recovery-clear>${escapeHtml(t('recovery.clear'))}</button></p>
+        </div>`;
+    root.querySelector('[data-recovery-clear]').addEventListener('click', () => {
+        clearSavedData(areas);
+        window.location.replace(window.location.pathname);
+    });
+    document.documentElement.dataset.capidocs = 'failed';
+}
+
 async function boot() {
     const root = document.getElementById('app');
     if (!root) return;
-    const storage = safeStorage();
+    const areas = storageAreas(window);
     const params = new URLSearchParams(window.location.search);
     let set;
     let source;
+    let saved = null;
     try {
-        const handoff = params.has('handoff') ? takeHandoff(storage) : null;
+        const handoff = params.has('handoff') ? takeHandoff(areas.local) : null;
         const src = params.get('src');
         if (handoff) {
             set = handoff;
@@ -70,12 +90,19 @@ async function boot() {
             set = await loadFromUrl(src);
             source = 'url';
         } else {
-            const stored = readStoredSet(storage);
-            const validated = stored ? validateDiagramSet(stored) : null;
+            saved = readSavedRecord(areas);
+            if (saved && saved.verified !== true) {
+                renderRecovery(root, areas);
+                return;
+            }
+            const validated = saved ? validateDiagramSet(saved.set) : null;
             if (validated?.ok) {
                 set = validated.set;
                 source = 'local';
+                markSavedRecord(areas, false);
             } else {
+                if (saved) clearSavedData(areas);
+                saved = null;
                 set = await loadFromUrl(DEFAULT_SOURCE);
                 source = 'default';
             }
@@ -85,20 +112,33 @@ async function boot() {
         renderFailure(root, error);
         return;
     }
-    document.documentElement.lang = set.lang || 'es';
-    const explorer = mountExplorer(root, {
-        set,
-        source,
-        storage,
-        onForget: async () => {
-            try {
-                explorer.setSet(await loadFromUrl(DEFAULT_SOURCE), 'default');
-            } catch (error) {
-                console.error('diagram explorer: default set failed', error);
-                renderFailure(root, error);
+    document.documentElement.lang = safeLocale(set.lang);
+    let explorer;
+    try {
+        explorer = mountExplorer(root, {
+            set,
+            source,
+            storages: areas,
+            remember: Boolean(saved?.remember),
+            savedAt: saved?.savedAt ?? null,
+            onRendered: () => {
+                if (source === 'local') markSavedRecord(areas, true);
+            },
+            onForget: async () => {
+                try {
+                    explorer.setSet(await loadFromUrl(DEFAULT_SOURCE), 'default');
+                } catch (error) {
+                    console.error('diagram explorer: default set failed', error);
+                    renderFailure(root, error);
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('diagram explorer: the explorer could not start', error);
+        if (source === 'local') renderRecovery(root, areas);
+        else renderFailure(root, error);
+        return;
+    }
     window.capidocsDiagrams = explorer;
 }
 

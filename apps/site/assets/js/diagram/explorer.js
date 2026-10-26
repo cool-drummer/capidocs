@@ -8,9 +8,13 @@ import { loadExportFonts, setExportFontCss } from './render/fonts.js';
 import { applyTheme, themeTokens } from './theme.js';
 import { createDiagramTranslator, friendlyError } from './i18n.js';
 import { ensureFonts, mountDiagram } from './viewer.js';
+import { HANDOFF_KEY } from './blocks.js';
 
-export const STORAGE_KEY = 'capidocs.diagrams.set.v1';
+export const STORAGE_KEY = 'capidocs.diagrams.set.v2';
 export const THEME_KEY = 'capidocs.diagrams.theme';
+export const REMEMBER_DAYS = 30;
+const LEGACY_KEY = 'capidocs.diagrams.set.v1';
+const DAY = 86400000;
 export const IMPORT_ACCEPT = '.json,.md,.markdown,.mmd,.drawio,.xml,.html,.htm';
 const EXPORT_KINDS = ['svg', 'png', 'jpg', 'pdf', 'json', 'html'];
 const STANDALONE_ENTRY = 'assets/js/diagram/standalone-entry.js';
@@ -24,7 +28,7 @@ const LOADERS = {
 };
 
 export function icon(name, size = 16, className = 'dx-icon') {
-    const entry = BUILTIN_ICONS[name];
+    const entry = Object.hasOwn(BUILTIN_ICONS, name) ? BUILTIN_ICONS[name] : null;
     if (!entry) return '';
     const paint = entry.stroke
         ? 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
@@ -32,22 +36,96 @@ export function icon(name, size = 16, className = 'dx-icon') {
     return `<svg class="${className}" width="${size}" height="${size}" viewBox="${escapeAttr(entry.viewBox)}" aria-hidden="true" focusable="false" ${paint}>${entry.paths.map((d) => `<path d="${escapeAttr(d)}"/>`).join('')}</svg>`;
 }
 
-export function readStoredSet(storage = safeStorage()) {
+export function storageAreas(win = globalThis) {
+    const pick = (name) => {
+        try {
+            return win[name] ?? null;
+        } catch {
+            return null;
+        }
+    };
+    return { session: pick('sessionStorage'), local: pick('localStorage') };
+}
+
+function removeKey(area, key) {
     try {
-        const raw = storage?.getItem(STORAGE_KEY);
+        area?.removeItem(key);
+    } catch (error) {
+        console.error('diagram explorer: storage removal failed', error);
+    }
+}
+
+function readRecord(area) {
+    try {
+        const raw = area?.getItem(STORAGE_KEY);
         if (!raw) return null;
         const parsed = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' ? parsed.set ?? null : null;
+        return parsed && typeof parsed === 'object' && parsed.set && typeof parsed.set === 'object' ? parsed : null;
     } catch {
         return null;
     }
 }
 
-export function safeStorage() {
-    try {
-        return globalThis.localStorage ?? null;
-    } catch {
+export function readSavedRecord(areas, now = Date.now()) {
+    const session = readRecord(areas.session);
+    if (session) return { ...session, remember: false, area: 'session' };
+    const local = readRecord(areas.local);
+    if (!local) {
+        removeKey(areas.local, STORAGE_KEY);
         return null;
+    }
+    const saved = Date.parse(local.savedAt);
+    if (local.remember !== true || !Number.isFinite(saved) || now - saved > REMEMBER_DAYS * DAY || saved - now > DAY) {
+        removeKey(areas.local, STORAGE_KEY);
+        return null;
+    }
+    return { ...local, area: 'local' };
+}
+
+export function writeSavedRecord(areas, { set, remember = false, verified = true, savedAt }) {
+    const target = remember ? areas.local : areas.session;
+    if (!target) throw Object.assign(new Error('storage unavailable'), { code: 'storage' });
+    const record = { version: 2, savedAt: savedAt ?? new Date().toISOString(), remember: Boolean(remember), verified: Boolean(verified), set: serializeDiagramSet(set) };
+    target.setItem(STORAGE_KEY, JSON.stringify(record));
+    removeKey(remember ? areas.session : areas.local, STORAGE_KEY);
+    return record;
+}
+
+export function markSavedRecord(areas, verified) {
+    for (const area of [areas.session, areas.local]) {
+        const record = readRecord(area);
+        if (!record) continue;
+        record.verified = Boolean(verified);
+        try {
+            area.setItem(STORAGE_KEY, JSON.stringify(record));
+        } catch (error) {
+            console.error('diagram explorer: storage update failed', error);
+        }
+    }
+}
+
+export function clearSavedData(areas) {
+    for (const area of [areas.session, areas.local]) {
+        for (const key of [STORAGE_KEY, HANDOFF_KEY, THEME_KEY, LEGACY_KEY]) removeKey(area, key);
+    }
+}
+
+export function linkDestination(href) {
+    try {
+        const url = new URL(href);
+        if (url.protocol === 'mailto:') return url.pathname;
+        if (url.protocol === 'http:' || url.protocol === 'https:') return url.host;
+        return '';
+    } catch {
+        return '';
+    }
+}
+
+export function safeLocale(lang) {
+    try {
+        return Intl.getCanonicalLocales(String(lang || 'es'))[0] ?? 'es';
+    } catch {
+        return 'es';
     }
 }
 
@@ -117,11 +195,11 @@ function systemTheme() {
 export function mountExplorer(root, options = {}) {
     const doc = root.ownerDocument;
     const win = doc.defaultView ?? globalThis;
-    const storage = options.storage === undefined ? safeStorage() : options.storage;
+    const areas = options.storages === undefined ? storageAreas(win) : (options.storages ?? { session: null, local: null });
     const features = {
         import: options.features?.import ?? true,
         export: options.features?.export ?? EXPORT_KINDS,
-        storage: options.features?.storage ?? Boolean(storage)
+        storage: options.features?.storage ?? Boolean(areas.session || areas.local)
     };
     const services = { ...(options.services ?? {}) };
     const state = {
@@ -141,6 +219,11 @@ export function mountExplorer(root, options = {}) {
         fontCss: false,
         fontsReady: false,
         pendingTrail: null,
+        remember: Boolean(options.remember),
+        pendingPersist: false,
+        rendered: false,
+        includeData: false,
+        savedAt: options.savedAt ?? null,
         destroyed: false
     };
     const t = (...args) => state.t(...args);
@@ -152,7 +235,7 @@ export function mountExplorer(root, options = {}) {
 
     const readTheme = () => {
         try {
-            return storage?.getItem(THEME_KEY) ?? null;
+            return areas.local?.getItem(THEME_KEY) ?? null;
         } catch {
             return null;
         }
@@ -251,7 +334,7 @@ export function mountExplorer(root, options = {}) {
 
     const writeStorage = (key, value) => {
         try {
-            storage?.setItem(key, value);
+            areas.local?.setItem(key, value);
             return true;
         } catch (error) {
             console.error('diagram explorer: storage failed', error);
@@ -261,19 +344,40 @@ export function mountExplorer(root, options = {}) {
 
     const persist = () => {
         if (!features.storage || state.source !== 'local') return;
-        if (!writeStorage(STORAGE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), set: serializeDiagramSet(state.set) }))) {
+        try {
+            const record = writeSavedRecord(areas, { set: state.set, remember: state.remember, verified: true });
+            state.savedAt = record.savedAt;
+        } catch (error) {
+            console.error('diagram explorer: storage failed', error);
             toast(friendlyError(t, 'storage'), { tone: 'error' });
         }
     };
 
-    const forget = () => {
-        try {
-            storage?.removeItem(STORAGE_KEY);
-        } catch (error) {
-            console.error('diagram explorer: storage removal failed', error);
+    const afterRender = () => {
+        if (state.destroyed) return;
+        if (state.pendingPersist) {
+            state.pendingPersist = false;
+            persist();
+            refreshLocalNotices();
         }
+        if (!state.rendered) {
+            state.rendered = true;
+            options.onRendered?.();
+        }
+    };
+
+    const forget = () => {
+        clearSavedData(areas);
+        state.pendingPersist = false;
         options.onForget?.();
         toast(t('storage.removed'));
+    };
+
+    const rememberHere = () => {
+        state.remember = true;
+        persist();
+        refreshLocalNotices();
+        toast(t('storage.remembered', { days: REMEMBER_DAYS }));
     };
 
     const navigate = (hash) => {
@@ -295,9 +399,22 @@ export function mountExplorer(root, options = {}) {
              <button type="button" role="menuitem" class="dx-menu-item" data-action="import-paste">${icon('clipboard')}<span>${escapeHtml(t('import.paste'))}</span></button>
            </div>`
         : '';
+    const expiryText = () => {
+        const saved = Date.parse(state.savedAt ?? '');
+        const until = new Date((Number.isFinite(saved) ? saved : Date.now()) + REMEMBER_DAYS * DAY);
+        return until.toLocaleDateString(safeLocale(state.set?.lang), { day: 'numeric', month: 'long', year: 'numeric' });
+    };
     const localNotice = () => state.source === 'local' && features.storage
-        ? `<div class="dx-local"><span class="dx-chip dx-chip-accent">${escapeHtml(t('storage.localBadge'))}</span><span class="dx-local-text">${escapeHtml(t('storage.saved'))}</span><button type="button" class="dx-btn dx-btn-ghost dx-btn-sm" data-action="forget">${icon('trash', 14)}<span>${escapeHtml(t('storage.remove'))}</span></button></div>`
+        ? `<div class="dx-local" data-local-notice>
+            <span class="dx-chip dx-chip-accent">${escapeHtml(t('storage.localBadge'))}</span>
+            <span class="dx-local-text">${escapeHtml(state.remember ? t('storage.savedLocal', { date: expiryText() }) : t('storage.savedSession'))}</span>
+            ${state.remember ? '' : `<button type="button" class="dx-btn dx-btn-ghost dx-btn-sm" data-action="remember">${icon('save', 14)}<span>${escapeHtml(t('storage.remember'))}</span></button>`}
+            <button type="button" class="dx-btn dx-btn-ghost dx-btn-sm" data-action="forget">${icon('trash', 14)}<span>${escapeHtml(t('storage.remove'))}</span></button>
+          </div>`
         : '';
+    const refreshLocalNotices = () => {
+        for (const notice of screen.querySelectorAll('[data-local-notice]')) notice.outerHTML = localNotice();
+    };
 
     const renderGallery = () => {
         destroyViewer();
@@ -331,7 +448,7 @@ export function mountExplorer(root, options = {}) {
                                 <div class="dx-cat-body">
                                     <div class="dx-cat-head">${entry.icon ? `<span class="dx-cat-icon">${icon(entry.icon, 16)}</span>` : ''}<h2 class="dx-cat-title">${escapeHtml(entry.title)}</h2><span class="dx-cat-count">${escapeHtml(t('gallery.categoryCount', { count }))}</span></div>
                                     ${entry.description ? `<p class="dx-cat-desc">${escapeHtml(entry.description)}</p>` : ''}
-                                    <span class="dx-cat-link">${escapeHtml(t('gallery.explore', { name: entry.title.toLocaleLowerCase(state.set.lang || 'es') }))}${icon('chevron-right', 14)}</span>
+                                    <span class="dx-cat-link">${escapeHtml(t('gallery.explore', { name: entry.title.toLocaleLowerCase(safeLocale(state.set.lang)) }))}${icon('chevron-right', 14)}</span>
                                 </div>
                             </a>`;
                         }).join('')}
@@ -378,6 +495,7 @@ export function mountExplorer(root, options = {}) {
             thumbs.forEach(fill);
         }
         doc.title = `${heading} · ${t('app.title')}`;
+        afterRender();
     };
 
     const sidebarMarkup = (activeId) => {
@@ -411,8 +529,11 @@ export function mountExplorer(root, options = {}) {
             kinds.has('html') ? item('export', 'file-code', t('export.html'), 'data-kind="html"') : ''
         ].join('');
         const data = kinds.has('json') ? item('export', 'file-json', t('export.json'), 'data-kind="json"') : '';
+        const option = kinds.has('svg')
+            ? `<button type="button" role="menuitemcheckbox" class="dx-menu-item dx-menu-check" data-action="include-data" aria-checked="${state.includeData ? 'true' : 'false'}"><span class="dx-checkmark" aria-hidden="true">${icon('check', 12)}</span><span>${escapeHtml(t('export.includeData'))}</span></button>`
+            : '';
         const section = (title, body) => (body ? `<div class="dx-menu-section"><p class="dx-menu-label">${escapeHtml(title)}</p>${body}</div>` : '');
-        return section(t('export.image'), image) + section(t('export.document'), documents) + section(t('export.data'), data);
+        return section(t('export.image'), image) + section(t('export.document'), documents) + section(t('export.data'), data) + section(t('export.options'), option);
     };
 
     const renderWorkspace = () => {
@@ -457,7 +578,10 @@ export function mountExplorer(root, options = {}) {
                 state.selection = selection;
                 renderInspector();
             },
-            onRender: () => renderInspector(),
+            onRender: () => {
+                renderInspector();
+                afterRender();
+            },
             onStep: () => renderInspector()
         });
         state.viewer.ready.then(() => {
@@ -535,6 +659,12 @@ export function mountExplorer(root, options = {}) {
             ${steps.length ? `<section class="dx-section"><div class="dx-section-row"><h3 class="dx-section-label">${escapeHtml(t('inspector.steps'))}</h3><button type="button" class="dx-btn dx-btn-soft dx-btn-sm" data-action="play-steps">${icon('play', 14)}<span>${escapeHtml(t('inspector.playSteps'))}</span></button></div><ol class="dx-steps">${steps.map((step, index) => `<li><button type="button" class="dx-step" data-action="go-step" data-index="${index}"${state.viewer.step === index ? ' aria-current="step"' : ''}><span class="dx-step-num">${index + 1}</span><span class="dx-step-text"><strong>${escapeHtml(step.title)}</strong>${step.description ? `<span>${escapeHtml(step.description)}</span>` : ''}</span></button></li>`).join('')}</ol></section>` : ''}`;
     };
 
+    const externalLink = (link, secondary) => {
+        const destination = linkDestination(link.href);
+        const label = secondary ? t('inspector.openLink') : (link.label ?? t('inspector.openLink'));
+        return `<a class="dx-btn dx-btn-soft dx-link-out" href="${escapeAttr(link.href)}" title="${escapeAttr(link.href)}" target="_blank" rel="noopener noreferrer">${icon('external-link', 15)}<span>${escapeHtml(label)}</span>${destination ? `<span class="dx-link-host">${escapeHtml(destination)}</span>` : ''}</a>`;
+    };
+
     const nodeTitle = (diagram, id) => {
         if (diagram.kind === 'sequence') return diagram.participants.find((participant) => participant.id === id)?.title ?? id;
         return diagram.nodes.find((node) => node.id === id)?.title ?? diagram.groups.find((group) => group.id === id)?.title ?? id;
@@ -569,7 +699,7 @@ export function mountExplorer(root, options = {}) {
                 <h2 class="dx-inspector-title">${source.icon ? `<span class="dx-title-icon" data-color="${escapeAttr(source.color ?? 'neutral')}">${icon(source.icon, 16)}</span>` : ''}<span>${escapeHtml(source.title)}</span></h2>
                 ${source.subtitle ? `<p class="dx-mono">${escapeHtml(source.subtitle)}</p>` : ''}
             </header>
-            ${link ? `<div class="dx-section dx-actions-row">${link.diagram ? `<button type="button" class="dx-btn dx-btn-strong" data-action="open-detail" data-id="${escapeAttr(id)}">${icon('arrow-up-right', 15)}<span>${escapeHtml(link.label ?? t('inspector.openDetail'))}</span></button>` : ''}${link.href ? `<a class="dx-btn dx-btn-soft" href="${escapeAttr(link.href)}" target="_blank" rel="noopener noreferrer">${icon('external-link', 15)}<span>${escapeHtml(link.diagram ? t('inspector.openLink') : (link.label ?? t('inspector.openLink')))}</span></a>` : ''}</div>` : ''}
+            ${link ? `<div class="dx-section dx-actions-row">${link.diagram ? `<button type="button" class="dx-btn dx-btn-strong" data-action="open-detail" data-id="${escapeAttr(id)}">${icon('arrow-up-right', 15)}<span>${escapeHtml(link.label ?? t('inspector.openDetail'))}</span></button>` : ''}${link.href ? externalLink(link, Boolean(link.diagram)) : ''}</div>` : ''}
             ${source.description ? `<section class="dx-section"><p class="dx-prose">${escapeHtml(source.description)}</p></section>` : ''}
             ${source.props?.length ? `<section class="dx-section"><div class="dx-section-row"><h3 class="dx-section-label">${escapeHtml(t('inspector.props'))}</h3>${expandable ? `<button type="button" class="dx-link-btn dx-small" data-action="toggle-expand" data-id="${escapeAttr(id)}">${escapeHtml(state.viewer.isExpanded(id) ? t('viewer.collapse') : t('viewer.expand'))}</button>` : ''}</div><dl class="dx-props">${source.props.map((prop) => `<div><dt>${escapeHtml(prop.label)}</dt><dd class="${prop.mono ? 'dx-mono' : ''}"${prop.status ? ` data-status="${escapeAttr(prop.status)}"` : ''}>${escapeHtml(prop.value)}</dd></div>`).join('')}</dl></section>` : ''}
             ${source.fields?.length ? `<section class="dx-section"><h3 class="dx-section-label">${escapeHtml(t('inspector.fields'))}</h3><dl class="dx-props dx-fields">${source.fields.map((field) => `<div><dt class="dx-mono">${field.key ? `<span class="dx-key">${escapeHtml(field.key)}</span>` : ''}${escapeHtml(field.name)}</dt><dd class="dx-mono dx-muted">${escapeHtml(field.type ?? '')}</dd></div>`).join('')}</dl></section>` : ''}
@@ -591,7 +721,7 @@ export function mountExplorer(root, options = {}) {
             </header>
             ${group.link?.diagram ? `<div class="dx-section dx-actions-row"><button type="button" class="dx-btn dx-btn-strong" data-action="open-detail" data-id="${escapeAttr(id)}">${icon('arrow-up-right', 15)}<span>${escapeHtml(group.link.label ?? t('inspector.openDetail'))}</span></button></div>` : ''}
             ${group.description ? `<section class="dx-section"><p class="dx-prose">${escapeHtml(group.description)}</p></section>` : ''}
-            <section class="dx-section"><ul class="dx-connections">${[...children.map((child) => ({ id: child.id, title: child.title, type: 'group', icon: 'layers' })), ...members.map((node) => ({ id: node.id, title: node.title, type: 'node', icon: node.icon && BUILTIN_ICONS[node.icon] ? node.icon : 'box' }))].map((entry) => `<li><button type="button" class="dx-row-btn" data-action="select" data-type="${entry.type}" data-id="${escapeAttr(entry.id)}">${icon(entry.icon, 14)}<span class="dx-row-title">${escapeHtml(entry.title)}</span></button></li>`).join('')}</ul></section>
+            <section class="dx-section"><ul class="dx-connections">${[...children.map((child) => ({ id: child.id, title: child.title, type: 'group', icon: 'layers' })), ...members.map((node) => ({ id: node.id, title: node.title, type: 'node', icon: node.icon && Object.hasOwn(BUILTIN_ICONS, node.icon) ? node.icon : 'box' }))].map((entry) => `<li><button type="button" class="dx-row-btn" data-action="select" data-type="${entry.type}" data-id="${escapeAttr(entry.id)}">${icon(entry.icon, 14)}<span class="dx-row-title">${escapeHtml(entry.title)}</span></button></li>`).join('')}</ul></section>
             <section class="dx-section"><button type="button" class="dx-btn dx-btn-soft dx-btn-sm" data-action="toggle-group" data-id="${escapeAttr(id)}">${icon(state.viewer.isCollapsed(id) ? 'chevron-down' : 'chevron-up', 14)}<span>${escapeHtml(t('viewer.groupToggle', { title: group.title }))}</span></button></section>`;
     };
 
@@ -743,7 +873,7 @@ export function mountExplorer(root, options = {}) {
                 const pages = [];
                 for (const entry of targets) {
                     const scene = exportScene(entry);
-                    const svg = renderSvg(scene, { mode: 'export', theme: 'light', set: state.set, diagram: entry, embedFontCss: embed, title: entry.title });
+                    const svg = renderSvg(scene, { mode: 'export', theme: 'light', set: state.set, diagram: entry, embedFontCss: embed, title: entry.title, metadata: false });
                     const blob = await raster(svg, { width: scene.width, height: scene.height, scale: 2, type: 'image/jpeg', background: tokens.canvas, quality: 0.92 });
                     pages.push({
                         width: scene.width,
@@ -758,7 +888,7 @@ export function mountExplorer(root, options = {}) {
                 await download(new Blob([bytes], { type: 'application/pdf' }), `${kind === 'pdf' ? name : slug(state.set.title)}.pdf`);
             } else {
                 const embed = await fontCss();
-                const svg = state.viewer.toSvg({ theme: state.theme, embedFontCss: embed });
+                const svg = state.viewer.toSvg({ theme: state.theme, embedFontCss: embed, metadata: kind === 'svg' && state.includeData });
                 if (kind === 'svg') {
                     await download(new Blob([svg], { type: 'image/svg+xml' }), `${name}.svg`);
                 } else {
@@ -776,7 +906,7 @@ export function mountExplorer(root, options = {}) {
         }
     };
 
-    const applyIncoming = (incoming, mode) => {
+    const applyIncoming = (incoming, mode, remember = false) => {
         let next = incoming;
         if (mode === 'merge') {
             const merged = mergeDiagramSets(state.set, incoming);
@@ -789,7 +919,8 @@ export function mountExplorer(root, options = {}) {
         }
         const firstNew = mode === 'merge' ? next.diagrams[state.set.diagrams.length]?.id : next.start ?? next.diagrams[0]?.id;
         setSet(next, 'local');
-        persist();
+        state.remember = Boolean(remember);
+        state.pendingPersist = true;
         toast(t('import.done', { count: incoming.diagrams.length }));
         navigate(firstNew ? diagramHref(firstNew) : '#/');
     };
@@ -831,6 +962,8 @@ export function mountExplorer(root, options = {}) {
                 <p>${escapeHtml(t('import.ready', { count: result.set.diagrams.length }))}</p>
                 <ul class="dx-import-list">${result.set.diagrams.slice(0, 6).map((diagram) => `<li>${icon(diagram.kind === 'sequence' ? 'arrow-left-right' : 'workflow', 14)}<span>${escapeHtml(diagram.title)}</span></li>`).join('')}</ul>
                 ${warnings ? `<p class="dx-warning">${icon('alert-triangle', 14)}<span>${escapeHtml(t('import.warnings', { count: warnings }))}</span></p>` : ''}
+                ${features.storage ? `<label class="dx-check"><input type="checkbox" data-remember><span>${escapeHtml(t('import.remember', { days: REMEMBER_DAYS }))}</span></label>
+                <p class="dx-privacy">${icon('lock', 14)}<span>${escapeHtml(t('import.privacy'))}</span></p>` : ''}
                 <footer class="dx-dialog-foot">
                     <button type="button" class="dx-btn dx-btn-ghost" data-dialog="cancel">${escapeHtml(t('import.cancel'))}</button>
                     <button type="button" class="dx-btn dx-btn-soft" data-dialog="replace">${escapeHtml(t('import.replace'))}</button>
@@ -838,9 +971,10 @@ export function mountExplorer(root, options = {}) {
                 </footer>
             </form>`, (action) => {
             const incoming = state.pendingImport;
+            const remember = Boolean(dialog.querySelector('[data-remember]')?.checked);
             closeDialog();
             if (!incoming || action === 'cancel') return;
-            applyIncoming(incoming, action === 'replace' ? 'replace' : 'merge');
+            applyIncoming(incoming, action === 'replace' ? 'replace' : 'merge', remember);
         });
     };
 
@@ -922,7 +1056,7 @@ export function mountExplorer(root, options = {}) {
             return;
         }
         const action = target.dataset.action;
-        if (action !== 'export-menu' && action !== 'import-menu') closeMenus();
+        if (action !== 'export-menu' && action !== 'import-menu' && action !== 'include-data') closeMenus();
         switch (action) {
             case 'theme':
                 state.theme = state.theme === 'dark' ? 'light' : 'dark';
@@ -947,6 +1081,13 @@ export function mountExplorer(root, options = {}) {
             case 'forget':
                 forget();
                 break;
+            case 'remember':
+                rememberHere();
+                break;
+            case 'include-data':
+                state.includeData = !state.includeData;
+                target.setAttribute('aria-checked', String(state.includeData));
+                return;
             case 'export':
                 runExport(target.dataset.kind, target.dataset.scale);
                 break;
