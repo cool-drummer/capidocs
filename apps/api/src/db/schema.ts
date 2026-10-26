@@ -113,6 +113,7 @@ export const portals = pgTable(
     brand: jsonb('brand').notNull().default({}),
     locales: text('locales').array().notNull().default(sql`ARRAY['es']::text[]`),
     accessMode: varchar('access_mode', { length: 20 }).notNull().default('open'),
+    accessConfig: jsonb('access_config').notNull().default({}),
     deployTarget: jsonb('deploy_target').notNull().default({}),
     siteUrl: text('site_url'),
     createdAt: createdAt(),

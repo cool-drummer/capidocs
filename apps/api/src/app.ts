@@ -38,6 +38,7 @@ import {
   softDeletePage,
   spaceTree,
 } from './modules/pages.js';
+import { importPortal } from './modules/import.js';
 import { buildPortal, recordPublish } from './modules/publish.js';
 
 export interface AppOptions {
@@ -559,6 +560,7 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
         locales: z.array(z.string().min(2)).min(1).optional(),
         accessMode: z.enum(['open', 'gate', 'accounts']).optional(),
         brand: z.record(z.string(), z.unknown()).optional(),
+        accessConfig: z.record(z.string(), z.unknown()).optional(),
         deployTarget: z.record(z.string(), z.unknown()).optional(),
       })
       .parse(request.body);
@@ -576,6 +578,20 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
       .where(eq(portals.id, params.portalId))
       .returning();
     return { portal };
+  });
+
+  app.post('/portals/import', async (request, reply) => {
+    const user = await currentUser(request);
+    assertCan(actorFor(user), 'portal.create', { workspaceId: user.workspaceId });
+    const body = z
+      .object({ spec: z.unknown(), name: z.string().trim().min(2).optional(), publish: z.boolean().optional() })
+      .parse(request.body);
+    const result = await importPortal(db, user.workspaceId, user.id, body.spec, {
+      label: 'spec importado',
+      ...(body.name ? { portalName: body.name } : {}),
+      ...(body.publish === undefined ? {} : { publish: body.publish }),
+    });
+    return reply.status(201).send(result);
   });
 
   app.post('/portals/:portalId/publish', async (request) => {

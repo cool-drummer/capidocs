@@ -74,7 +74,7 @@ export async function buildPortal(db: Database, portalId: string): Promise<Porta
         name: portal.name,
         brand: portal.brand as never,
         accessMode: portal.accessMode as 'open' | 'gate' | 'accounts',
-        accessConfig: (portal as unknown as { accessConfig?: Record<string, unknown> }).accessConfig ?? {},
+        accessConfig: (portal.accessConfig ?? {}) as Record<string, unknown>,
         siteUrl: portal.siteUrl,
         locales: portal.locales,
       },

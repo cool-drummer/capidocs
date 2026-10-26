@@ -206,6 +206,8 @@ const STATEMENTS = [
      creator_id uuid NOT NULL,
      created_at timestamptz NOT NULL DEFAULT now())`,
   `CREATE INDEX IF NOT EXISTS attachments_space_idx ON attachments(space_id, created_at DESC)`,
+
+  `ALTER TABLE portals ADD COLUMN IF NOT EXISTS access_config jsonb NOT NULL DEFAULT '{}'::jsonb`,
 ];
 
 export async function migrate(sql: Sql): Promise<number> {
