@@ -185,9 +185,9 @@ export const api = {
   revokeInvitation: (id: string) => request<{ ok: boolean }>('DELETE', `/members/invitations/${id}`),
   setMemberRole: (userId: string, role: 'admin' | 'member') => request<{ ok: boolean }>('PUT', `/members/${userId}`, { role }),
   removeMember: (userId: string) => request<{ ok: boolean }>('DELETE', `/members/${userId}`),
-  invitation: (token: string) => request<{ email: string; role: string; workspace: string }>('GET', `/invitations/${token}`),
+  invitation: (token: string) => request<{ email: string; role: string; workspace: string }>('POST', '/invitations/inspect', { token }),
   acceptInvitation: (token: string, name: string, password: string) =>
-    request<{ workspace: string; csrfToken: string }>('POST', `/invitations/${token}/accept`, { name, password }).then(remember),
+    request<{ workspace: string; csrfToken: string }>('POST', '/invitations/accept', { token, name, password }).then(remember),
 
   spaceMembers: (spaceId: string) => request<{ members: SpaceMember[] }>('GET', `/spaces/${spaceId}/members`),
   setSpaceMember: (spaceId: string, userId: string, role: 'admin' | 'writer' | 'reader') =>

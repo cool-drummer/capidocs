@@ -15,6 +15,7 @@ export interface Config {
   secureCookies: boolean;
   session: { idleMinutes: number; absoluteHours: number };
   passwordResetTtlMinutes: number;
+  invitationTtlHours: number;
   setupToken: string | null;
   runtimeDir: string;
   files: { dir: string };
@@ -125,6 +126,7 @@ export function loadConfig(env: Env = process.env): Config {
       absoluteHours: read.integer('SESSION_ABSOLUTE_HOURS', 24, { min: 1, max: 720 }),
     },
     passwordResetTtlMinutes: read.integer('PASSWORD_RESET_TTL_MINUTES', 30, { min: 5, max: 1440 }),
+    invitationTtlHours: read.integer('INVITATION_TTL_HOURS', 168, { min: 1, max: 720 }),
     setupToken: read.text('SETUP_TOKEN'),
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
     files: { dir: resolve(read.text('FILES_DIR') ?? '.tmp/files') },
