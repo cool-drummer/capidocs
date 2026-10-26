@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { users } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
+import { csrfTokenFor } from '../lib/csrf.js';
 import { templates } from '../lib/mail.js';
 import { actorFor, loadSpaceSubject } from '../modules/context.js';
 import {
@@ -61,7 +62,7 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
     return { email: invitation.email, role: invitation.role, workspace: workspace.name };
   });
 
-  app.post('/invitations/:token/accept', async (request, reply) => {
+  app.post('/invitations/:token/accept', { config: { publicEntry: true } }, async (request, reply) => {
     const params = z.object({ token: z.string().min(10) }).parse(request.params);
     const body = z.object({ name: z.string().trim().min(2), password: z.string().min(10) }).parse(request.body);
     const { userId, invitation } = await acceptInvitation(db, params.token, body.name, body.password);
@@ -71,8 +72,8 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
     if (inviter) await notify(inviter.email, templates.invitationAccepted({ workspace: workspace.name, who: body.name }));
     await notify(invitation.email, templates.welcome({ workspace: workspace.name, url: context.studioUrl }));
 
-    await context.sessions.begin(request, reply, userId);
-    return reply.status(201).send({ workspace: workspace.name });
+    const { token: sessionToken } = await context.sessions.begin(request, reply, userId);
+    return reply.status(201).send({ workspace: workspace.name, csrfToken: csrfTokenFor(sessionToken) });
   });
 
   app.put('/members/:userId', async (request) => {

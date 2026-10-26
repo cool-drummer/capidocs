@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Config } from './config.js';
 import { createDatabase, type Database } from './db/client.js';
 import { migrate } from './db/migrate.js';
+import { createCsrfGuard } from './lib/csrf.js';
 import { ApiError } from './lib/errors.js';
 import { createMailer, type Mailer } from './lib/mail.js';
 import { createLocalStore, type AttachmentStore } from './modules/attachments.js';
@@ -25,6 +26,9 @@ declare module 'fastify' {
   interface FastifyRequest {
     user?: SessionUser;
     sessionId?: string;
+  }
+  interface FastifyContextConfig {
+    publicEntry?: boolean;
   }
 }
 
@@ -91,6 +95,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
 
   await app.register(
     async (api) => {
+      api.addHook('onRequest', createCsrfGuard({ allowedOrigins: [config.publicOrigin], sessionToken: context.sessions.tokenOf }));
       api.get('/health', async () => ({ status: 'ok' }));
       authRoutes(api, context);
       contentRoutes(api, context);

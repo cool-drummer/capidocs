@@ -66,6 +66,7 @@ export interface CallResult {
 
 export class Client {
   cookie = '';
+  csrf = '';
 
   constructor(private readonly app: CapidocsApp) {}
 
@@ -74,7 +75,11 @@ export class Client {
       method,
       url: `/api${path}`,
       ...(options.payload === undefined ? {} : { payload: options.payload as never }),
-      headers: { ...(this.cookie ? { cookie: this.cookie } : {}), ...options.headers },
+      headers: {
+        ...(this.cookie ? { cookie: this.cookie } : {}),
+        ...(this.csrf && method !== 'GET' ? { 'x-csrf-token': this.csrf } : {}),
+        ...options.headers,
+      },
     });
   }
 
@@ -88,6 +93,12 @@ export class Client {
     const header = response.headers['set-cookie'];
     const cookie = Array.isArray(header) ? header[0] : header;
     if (cookie) this.cookie = cookie.split(';')[0]!;
+    try {
+      const body = JSON.parse(response.body) as { csrfToken?: unknown };
+      if (typeof body.csrfToken === 'string') this.csrf = body.csrfToken;
+    } catch {
+      return;
+    }
   }
 
   async login(email: string, password: string): Promise<InjectResponse> {

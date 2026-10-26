@@ -97,12 +97,26 @@ export class ApiError extends Error {
 }
 
 const BASE = '/api';
+let csrfToken = '';
+
+function remember<T>(payload: T): T {
+  const token = (payload as { csrfToken?: unknown }).csrfToken;
+  if (typeof token === 'string') csrfToken = token;
+  return payload;
+}
+
+function headersFor(method: string, contentType?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (contentType) headers['Content-Type'] = contentType;
+  if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  return headers;
+}
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const response = await fetch(BASE + path, {
     method,
     credentials: 'same-origin',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: headersFor(method, body ? 'application/json' : undefined),
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await response.text();
@@ -115,10 +129,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export const api = {
-  me: () => request<{ user: SessionUser; workspace: Workspace }>('GET', '/me'),
+  me: () => request<{ user: SessionUser; workspace: Workspace; csrfToken: string }>('GET', '/me').then(remember),
   setup: (body: Record<string, unknown>) => request<{ workspace: Workspace }>('POST', '/auth/setup', body),
-  login: (email: string, password: string) => request<{ user: SessionUser }>('POST', '/auth/login', { email, password }),
-  logout: () => request<{ ok: boolean }>('POST', '/auth/logout'),
+  login: (email: string, password: string) =>
+    request<{ user: SessionUser; csrfToken: string }>('POST', '/auth/login', { email, password }).then(remember),
+  logout: () =>
+    request<{ ok: boolean }>('POST', '/auth/logout').finally(() => {
+      csrfToken = '';
+    }),
 
   spaces: () => request<{ spaces: Space[] }>('GET', '/spaces'),
   createSpace: (body: Record<string, unknown>) => request<{ space: Space }>('POST', '/spaces', body),
@@ -169,7 +187,7 @@ export const api = {
   removeMember: (userId: string) => request<{ ok: boolean }>('DELETE', `/members/${userId}`),
   invitation: (token: string) => request<{ email: string; role: string; workspace: string }>('GET', `/invitations/${token}`),
   acceptInvitation: (token: string, name: string, password: string) =>
-    request<{ workspace: string }>('POST', `/invitations/${token}/accept`, { name, password }),
+    request<{ workspace: string; csrfToken: string }>('POST', `/invitations/${token}/accept`, { name, password }).then(remember),
 
   spaceMembers: (spaceId: string) => request<{ members: SpaceMember[] }>('GET', `/spaces/${spaceId}/members`),
   setSpaceMember: (spaceId: string, userId: string, role: 'admin' | 'writer' | 'reader') =>
@@ -182,7 +200,7 @@ export const api = {
     const response = await fetch(`${BASE}/attachments?spaceId=${spaceId}&name=${encodeURIComponent(file.name)}`, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/octet-stream' },
+      headers: headersFor('POST', 'application/octet-stream'),
       body: await file.arrayBuffer(),
     });
     const payload = (await response.json()) as Record<string, unknown>;

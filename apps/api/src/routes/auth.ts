@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { members, users, workspaces } from '../db/schema.js';
 import { hashPassword, verifyPassword } from '../lib/auth.js';
+import { csrfTokenFor } from '../lib/csrf.js';
 import { ApiError, conflict, forbidden } from '../lib/errors.js';
 import { loadMembership } from '../modules/context.js';
 import { emailSchema, type RouteContext } from './context.js';
@@ -10,7 +11,7 @@ import { emailSchema, type RouteContext } from './context.js';
 export function authRoutes(app: FastifyInstance, context: RouteContext) {
   const { db } = context;
 
-  app.post('/auth/setup', async (request, reply) => {
+  app.post('/auth/setup', { config: { publicEntry: true } }, async (request, reply) => {
     const existing = await db.select({ id: workspaces.id }).from(workspaces).limit(1);
     if (existing.length) throw conflict('Este espacio de trabajo ya está configurado.');
 
@@ -39,7 +40,7 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
     return reply.status(201).send({ workspace: { id: workspace!.id, name: workspace!.name }, user: { id: user!.id, email: user!.email } });
   });
 
-  app.post('/auth/login', async (request, reply) => {
+  app.post('/auth/login', { config: { publicEntry: true } }, async (request, reply) => {
     const body = z.object({ email: emailSchema, password: z.string().min(1) }).parse(request.body);
     const rows = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
     const user = rows[0];
@@ -51,9 +52,9 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
     const membership = await loadMembership(db, user.id);
     if (!membership) throw forbidden();
 
-    await context.sessions.begin(request, reply, user.id);
+    const { token } = await context.sessions.begin(request, reply, user.id);
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
-    return { user: { id: user.id, name: user.name, email: user.email, role: membership.workspaceRole } };
+    return { user: { id: user.id, name: user.name, email: user.email, role: membership.workspaceRole }, csrfToken: csrfTokenFor(token) };
   });
 
   app.post('/auth/logout', async (request, reply) => {
@@ -64,6 +65,6 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
   app.get('/me', async (request) => {
     const user = await context.currentUser(request);
     const workspace = await context.loadWorkspace(user.workspaceId);
-    return { user, workspace };
+    return { user, workspace, csrfToken: csrfTokenFor(context.sessions.tokenOf(request)!) };
   });
 }
