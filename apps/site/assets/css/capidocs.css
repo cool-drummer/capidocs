@@ -5611,6 +5611,51 @@ body.search-open { overflow: hidden; }
 .section-image img { display: block; width: 100%; max-width: 860px; height: auto; border-radius: var(--radius-md); box-shadow: var(--shadow-md); background: var(--bg-tertiary); }
 .section-image figcaption { margin-top: 0.6rem; font-size: 0.82rem; color: var(--text-muted); }
 
+.diagram-block {
+    margin: var(--space-5) 0 var(--space-6);
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--bg-secondary);
+}
+
+.diagram-block-canvas {
+    position: relative;
+    height: 480px;
+}
+
+.diagram-block-canvas .dg-viewer {
+    position: absolute;
+    inset: 0;
+}
+
+.diagram-block-status {
+    margin: 0;
+    padding: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.diagram-block-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.diagram-block-open {
+    color: var(--brand-accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.diagram-block-open:hover {
+    text-decoration: underline;
+}
+
 /* ===== Access gate ===== */
 html.docs-gate-locked { overflow: hidden; }
 #docs-gate {

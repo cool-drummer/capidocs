@@ -97,6 +97,10 @@
         {
           "text": "Webhooks",
           "href": "#webhooks"
+        },
+        {
+          "text": "Diagramas",
+          "href": "diagrams.html"
         }
       ],
       "cta": {
@@ -160,7 +164,10 @@
       "not_found_title": "No encontramos esta página",
       "not_found_desc": "Puede que el enlace haya cambiado o ya no exista. Prueba desde el inicio o busca lo que necesitas.",
       "back_home": "Volver al inicio",
-      "error_hint": "Los detalles técnicos se registraron en la consola."
+      "error_hint": "Los detalles técnicos se registraron en la consola.",
+      "open_in_explorer": "Abrir en el explorador",
+      "diagram_loading": "Cargando diagrama…",
+      "diagram_error": "No se pudo cargar el diagrama."
     },
     "languages": [
       {
@@ -811,6 +818,12 @@
                 "type": "string",
                 "required": false,
                 "description": "Advertencia en caja con borde de alerta."
+              },
+              {
+                "name": "diagram",
+                "type": "object",
+                "required": false,
+                "description": "Diagrama interactivo tomado de un conjunto JSON (src) o declarado en línea (set)."
               }
             ]
           },
@@ -1043,6 +1056,16 @@
                 "link": "#features"
               }
             ]
+          },
+          {
+            "title": "Diagramas interactivos",
+            "content": "El bloque diagram inserta un diagrama del explorador en cualquier página. Se puede mover, acercar, expandir y abrir en el explorador para verlo completo.",
+            "diagram": {
+              "src": "config/diagrams/capidocs.json",
+              "diagram": "architecture",
+              "height": 460,
+              "caption": "Arquitectura de capidocs"
+            }
           }
         ]
       }

@@ -83,3 +83,26 @@ describe('strictness', () => {
     expect(result.issues[0]?.path).toBe('site_config.theme.accent.light');
   });
 });
+
+describe('diagram blocks', () => {
+  const withDiagram = (diagram: unknown) => {
+    const spec = load(demoSpecs[0]!) as { pages: Record<string, { content: { sections: Record<string, unknown>[] } }> };
+    spec.pages.components!.content.sections.push({ title: 'Diagrama', diagram });
+    return validateSpec(spec);
+  };
+
+  it('accepts a block that points to a set file or embeds one', () => {
+    expect(withDiagram({ src: 'config/diagrams/capidocs.json', diagram: 'architecture', height: 420, caption: 'Arquitectura' }).ok).toBe(true);
+    expect(withDiagram({ set: { title: 'En línea', diagrams: [] } }).ok).toBe(true);
+  });
+
+  it('needs exactly one source', () => {
+    expect(withDiagram({ diagram: 'architecture' }).ok).toBe(false);
+    expect(withDiagram({ src: 'a.json', set: {} }).ok).toBe(false);
+  });
+
+  it('rejects unknown keys and out of range heights', () => {
+    expect(withDiagram({ src: 'a.json', width: 300 }).ok).toBe(false);
+    expect(withDiagram({ src: 'a.json', height: 40 }).ok).toBe(false);
+  });
+});

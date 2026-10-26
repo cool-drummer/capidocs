@@ -54,11 +54,41 @@ export function brandCss(theme) {
     return blocks.join('\n');
 }
 
+const brandSheets = new WeakMap();
+
+function adoptCss(doc, css) {
+    const view = doc.defaultView;
+    if (!view || typeof view.CSSStyleSheet !== 'function' || !('adoptedStyleSheets' in doc)) return false;
+    try {
+        const sheet = new view.CSSStyleSheet();
+        sheet.replaceSync(css);
+        doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+        brandSheets.set(doc, sheet);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function applyBrandCss(doc, css) {
+    const previous = brandSheets.get(doc);
+    if (previous) {
+        doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter((sheet) => sheet !== previous);
+        brandSheets.delete(doc);
+    }
+    if (!css || adoptCss(doc, css)) return;
+    const style = doc.createElement('style');
+    style.id = 'capidocs-brand';
+    style.textContent = css;
+    doc.head.appendChild(style);
+}
+
 export function applyBrandTheme(theme, doc = document, resolveAsset = (path) => path) {
     const existing = doc.getElementById('capidocs-brand');
     if (existing) existing.remove();
     const existingSheet = doc.getElementById('capidocs-brand-sheet');
     if (existingSheet) existingSheet.remove();
+    applyBrandCss(doc, '');
     if (!theme) return;
     if (theme.stylesheet) {
         const sheet = doc.createElement('link');
@@ -70,15 +100,13 @@ export function applyBrandTheme(theme, doc = document, resolveAsset = (path) => 
     const css = brandCss(theme);
     if (!css) return;
     const imports = (theme.fonts && theme.fonts.imports) || [];
+    const present = new Set([...doc.querySelectorAll('link[rel="stylesheet"]')].map((link) => link.getAttribute('href')));
     imports.forEach((href) => {
-        if (doc.querySelector(`link[href="${href}"]`)) return;
+        if (present.has(href)) return;
         const link = doc.createElement('link');
         link.rel = 'stylesheet';
         link.href = href;
         doc.head.appendChild(link);
     });
-    const style = doc.createElement('style');
-    style.id = 'capidocs-brand';
-    style.textContent = css;
-    doc.head.appendChild(style);
+    applyBrandCss(doc, css);
 }

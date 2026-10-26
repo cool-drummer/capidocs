@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía &amp; diagramas</title>
+<script>globalThis.__capidocsPwned = true;</script>
+<style>pre.mermaid { color: red; }</style>
+</head>
+<body onload="globalThis.__capidocsPwned = true">
+<h1>Guía de préstamos</h1>
+<p>Resumen general del servicio.</p>
+<!-- <pre class="mermaid">flowchart LR
+  hidden --> comment</pre> -->
+<h2>Entrada &lt;principal&gt;</h2>
+<p>Cómo llega el lector <img src="x" onerror="globalThis.__capidocsPwned = true">al mostrador.</p>
+<pre class="mermaid">
+flowchart LR
+  A[Lector] --&gt;|pide| B["Mostrador &amp; caja"]
+  B --> C[Salida<br>principal]
+  click A href "javascript:globalThis.__capidocsPwned = true"
+</pre>
+<h2>Respuesta</h2>
+<pre><code class="language-mermaid"><span class="token">sequenceDiagram</span>
+  participant A as Lector
+  A-&gt;&gt;B: Hola &lt;b&gt;mundo&lt;/b&gt;
+</code></pre>
+<div class="mermaid">
+erDiagram
+  BOOK ||--o{ LOAN : tiene
+</div>
+<script type="text/plain" id="capidocs-diagram-set-fake">{"title":"no"}</script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
 import { validateSpec } from '@capidocs/spec';
 import { buildSite, loadSpecFile } from './build.js';
+import { commandDiagrams } from './diagrams.js';
 import { fromOpenApi } from './openapi.js';
 
 const USAGE = `capidocs <command>
@@ -10,6 +11,7 @@ const USAGE = `capidocs <command>
   build [siteDir] [--spec=config/api-spec.json]   Write search-index.json, llms.txt, llms-full.txt, sitemap.xml, robots.txt
   validate <specFile...>                          Validate one or more spec files against the schema
   import-openapi <openapi.json> [output.json]     Convert an OpenAPI 3.x document into a capidocs spec
+  diagrams <validate|import|bundle> ...           Validate, import and bundle diagram sets
 `;
 
 function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string> } {
@@ -33,11 +35,16 @@ async function commandBuild(args: string[]): Promise<number> {
   for (const file of result.written) {
     process.stdout.write(`${relative(process.cwd(), file.path).padEnd(22)} ${file.bytes} bytes\n`);
   }
+  let failed = false;
   if (result.missingFiles.length) {
     process.stderr.write(`Missing example files:\n${result.missingFiles.map((file) => `  ${file}`).join('\n')}\n`);
-    return 1;
+    failed = true;
   }
-  return 0;
+  if (result.diagramIssues.length) {
+    process.stderr.write(`Invalid diagrams:\n${result.diagramIssues.map((issue) => `  ${issue.path}: ${issue.message}`).join('\n')}\n`);
+    failed = true;
+  }
+  return failed ? 1 : 0;
 }
 
 async function commandValidate(args: string[]): Promise<number> {
@@ -52,10 +59,14 @@ async function commandValidate(args: string[]): Promise<number> {
     try {
       const result = validateSpec(JSON.parse(await readFile(path, 'utf8')));
       if (result.ok) {
-        const { missingFiles } = await loadSpecFile(path);
-        if (missingFiles.length) {
+        const { missingFiles, diagramIssues } = await loadSpecFile(path);
+        if (missingFiles.length || diagramIssues.length) {
           failed += 1;
-          process.stderr.write(`FAIL ${file}\n${missingFiles.map((entry) => `  missing example file: ${entry}`).join('\n')}\n`);
+          const lines = [
+            ...missingFiles.map((entry) => `  missing example file: ${entry}`),
+            ...diagramIssues.map((issue) => `  ${issue.path}: ${issue.message}`),
+          ];
+          process.stderr.write(`FAIL ${file}\n${lines.join('\n')}\n`);
         } else {
           process.stdout.write(`OK   ${file}\n`);
         }
@@ -91,6 +102,7 @@ const commands: Record<string, (args: string[]) => Promise<number>> = {
   build: commandBuild,
   validate: commandValidate,
   'import-openapi': commandImportOpenApi,
+  diagrams: commandDiagrams,
 };
 
 if (!command || !commands[command]) {

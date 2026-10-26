@@ -25,10 +25,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@fortawesome/fontawesome-free": "6.5.1",
     "@types/node": "^22.20.5",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "jsdom": "^29.1.1",
+    "lucide-static": "1.61.0",
+    "prismjs": "1.29.0",
+    "simple-icons": "16.36.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^4.1.12"

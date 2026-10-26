@@ -9,6 +9,7 @@ const outDir = resolve(outArg);
 
 const PUBLISHABLE = new Set([
   'index.html',
+  'diagrams.html',
   'assets',
   'config',
   'logos',
@@ -17,6 +18,7 @@ const PUBLISHABLE = new Set([
   'llms-full.txt',
   'sitemap.xml',
   'robots.txt',
+  '_headers',
 ]);
 
 const result = await buildSite(siteDir);

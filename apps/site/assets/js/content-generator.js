@@ -144,7 +144,29 @@ export class ContentGenerator {
                 ${section.accordion ? this.generateAccordion(section.accordion) : ''}
                 ${section.code_group ? this.generateCodeGroup(section.code_group) : ''}
                 ${section.fields ? this.generateFields(section.fields) : ''}
+                ${section.diagram ? this.generateDiagram(section.diagram) : ''}
             </div>`;
+    }
+
+    generateDiagram(block) {
+        const height = Math.min(1200, Math.max(200, Number(block.height) || 480));
+        const src = block.src ? this.resolveAsset(block.src) : '';
+        const explorer = this.resolveAsset('diagrams.html');
+        const href = src
+            ? `${explorer}?src=${encodeURIComponent(src)}#/d/${encodeURIComponent(block.diagram || '')}`
+            : `${explorer}?handoff=1#/d/${encodeURIComponent(block.diagram || '')}`;
+        const inline = block.set
+            ? `<script type="application/json" data-diagram-set>${JSON.stringify(block.set).replace(/[<>&\u2028\u2029]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`)}</script>`
+            : '';
+        return `
+            <figure class="diagram-block" data-diagram-block data-src="${escapeAttr(src)}" data-diagram="${escapeAttr(block.diagram || '')}" data-height="${height}">
+                <div class="diagram-block-canvas"><p class="diagram-block-status">${escapeHtml(this.t('diagram_loading', 'Cargando diagrama…'))}</p></div>
+                <figcaption class="diagram-block-bar">
+                    <span class="diagram-block-caption">${escapeHtml(block.caption || '')}</span>
+                    <a class="diagram-block-open" href="${escapeAttr(href)}"${block.set ? ' data-diagram-handoff' : ''}>${escapeHtml(this.t('open_in_explorer', 'Abrir en el explorador'))}</a>
+                </figcaption>
+                ${inline}
+            </figure>`;
     }
 
     generateImage(image) {

@@ -1,0 +1,18 @@
+---
+title: Préstamo de libros
+---
+flowchart LR
+    %% Flujo principal
+    reader([Lector]) -->|pide| desk[Mostrador]
+    desk --> check{¿Disponible?}
+    check -- sí --> loan[(Préstamos)]
+    check -.->|no| wait>Lista de espera]
+    subgraph back [Sistemas internos]
+        direction TB
+        loan
+        catalog[[Catálogo]]
+    end
+    desk ==> catalog
+    click catalog href "https://example.com/catalogo" "Abrir catálogo"
+    classDef warm fill:#f8cecc,stroke:#b85450
+    class wait warm

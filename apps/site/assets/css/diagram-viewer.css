@@ -1,0 +1,416 @@
+.dg-viewer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 240px;
+    overflow: hidden;
+    background: var(--dg-canvas);
+    color: var(--dg-ink);
+    font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+}
+
+.dg-viewport {
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+    touch-action: none;
+    outline: none;
+}
+
+.dg-viewport:focus-visible {
+    outline: 2px solid var(--dg-accent);
+    outline-offset: -2px;
+}
+
+.dg-static .dg-viewport {
+    cursor: default;
+    touch-action: auto;
+}
+
+.dg-panning .dg-viewport {
+    cursor: grabbing;
+}
+
+.dg-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.dg-node,
+.dg-edge,
+.dg-edge-label,
+.dg-group-chip,
+.dg-group,
+.dg-lane {
+    transition: opacity 160ms ease;
+}
+
+.dg-node {
+    cursor: pointer;
+    outline: none;
+}
+
+.dg-static .dg-node,
+.dg-static .dg-group-chip {
+    cursor: default;
+}
+
+.dg-node-bg,
+.dg-chip-bg,
+.dg-hit {
+    transition: fill 140ms ease;
+    vector-effect: non-scaling-stroke;
+}
+
+.dg-viewer:not(.dg-static) .dg-shape-card:hover .dg-node-bg,
+.dg-viewer:not(.dg-static) .dg-shape-table:hover .dg-node-bg,
+.dg-viewer:not(.dg-static) .dg-shape-cylinder:hover .dg-node-bg,
+.dg-viewer:not(.dg-static) .dg-participant:hover .dg-node-bg,
+.dg-viewer:not(.dg-static) .dg-group-chip:hover .dg-chip-bg {
+    fill: var(--dg-hover);
+}
+
+.dg-node:focus-visible .dg-node-bg,
+.dg-node:focus-visible .dg-hit,
+.dg-group-chip:focus-visible .dg-chip-bg {
+    stroke: var(--dg-accent);
+    stroke-width: 2;
+}
+
+.dg-viewer .dg-node.dg-selected .dg-node-bg,
+.dg-viewer .dg-node.dg-selected .dg-tile-label,
+.dg-viewer .dg-group-chip.dg-selected .dg-chip-bg {
+    fill: var(--dg-accent-tint);
+}
+
+.dg-viewer .dg-node.dg-selected .dg-badge rect {
+    fill: var(--dg-accent-soft);
+}
+
+.dg-viewer .dg-node.dg-selected .dg-hit {
+    fill: var(--dg-accent-tint);
+}
+
+.dg-group-chip {
+    cursor: pointer;
+    outline: none;
+}
+
+.dg-group.dg-selected .dg-group-bg {
+    fill: var(--dg-accent);
+}
+
+.dg-control {
+    cursor: pointer;
+}
+
+.dg-control .dg-control-bg {
+    transition: fill 120ms ease;
+}
+
+.dg-control:hover .dg-control-bg {
+    fill: var(--dg-inset);
+}
+
+.dg-edge-hit {
+    cursor: pointer;
+    pointer-events: stroke;
+}
+
+.dg-edge-line,
+.dg-edge-arrow {
+    transition: stroke 140ms ease, fill 140ms ease;
+}
+
+.dg-hover-mode .dg-node:not(.dg-hl),
+.dg-hover-mode .dg-edge:not(.dg-hl),
+.dg-hover-mode .dg-edge-label:not(.dg-hl),
+.dg-step-mode .dg-node:not(.dg-step),
+.dg-step-mode .dg-edge:not(.dg-step),
+.dg-step-mode .dg-edge-label:not(.dg-step),
+.dg-step-mode .dg-group-chip:not(.dg-step),
+.dg-filter-mode .dg-node:not(.dg-match),
+.dg-filter-mode .dg-edge:not(.dg-match),
+.dg-filter-mode .dg-edge-label:not(.dg-match) {
+    opacity: var(--dg-dim);
+}
+
+.dg-edge.dg-hl .dg-edge-line,
+.dg-edge.dg-hl .dg-edge-arrow,
+.dg-edge.dg-step .dg-edge-line,
+.dg-edge.dg-step .dg-edge-arrow,
+.dg-edge.dg-selected .dg-edge-line,
+.dg-edge.dg-selected .dg-edge-arrow {
+    stroke: var(--dg-accent);
+}
+
+.dg-edge.dg-hl .dg-edge-arrow:not([fill="none"]),
+.dg-edge.dg-step .dg-edge-arrow:not([fill="none"]),
+.dg-edge.dg-selected .dg-edge-arrow:not([fill="none"]) {
+    fill: var(--dg-accent);
+}
+
+.dg-edge-label.dg-step rect,
+.dg-edge-label.dg-selected rect {
+    fill: var(--dg-accent);
+}
+
+.dg-viewer .dg-edge-label.dg-label-hidden:not(.dg-hl):not(.dg-selected):not(.dg-step) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dg-node.dg-step .dg-node-bg,
+.dg-node.dg-flash .dg-node-bg {
+    fill: var(--dg-accent-tint);
+}
+
+.dg-reflow .dg-edges,
+.dg-reflow .dg-labels {
+    opacity: 0;
+}
+
+.dg-edges,
+.dg-labels {
+    transition: opacity 180ms ease;
+}
+
+.dg-entering {
+    opacity: 0;
+}
+
+.dg-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--dg-ink);
+    font: inherit;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.dg-tool:hover {
+    background: var(--dg-hover);
+}
+
+.dg-tool:focus-visible,
+.dg-trail-link:focus-visible {
+    outline: 2px solid var(--dg-accent);
+    outline-offset: 1px;
+}
+
+.dg-tool-strong {
+    background: var(--dg-ink);
+    color: var(--dg-surface);
+}
+
+.dg-tool-strong:hover {
+    background: var(--dg-muted);
+}
+
+.dg-zoom-value {
+    min-width: 56px;
+    color: var(--dg-muted);
+}
+
+.dg-zoom {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--dg-surface);
+}
+
+.dg-trail {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    max-width: calc(100% - 24px);
+    padding: 4px 6px;
+    border-radius: 10px;
+    background: var(--dg-surface);
+}
+
+.dg-trail ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dg-trail li {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 12.5px;
+}
+
+.dg-trail li + li::before {
+    content: "/";
+    padding: 0 4px;
+    color: var(--dg-faint);
+}
+
+.dg-trail li > span {
+    padding: 4px 6px;
+    font-weight: 600;
+}
+
+.dg-trail-link {
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--dg-muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.dg-trail-link:hover {
+    background: var(--dg-hover);
+    color: var(--dg-ink);
+}
+
+.dg-player {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: min(560px, calc(100% - 24px));
+    padding: 10px 10px 10px 16px;
+    border-radius: 14px;
+    background: var(--dg-surface);
+    transform: translateX(-50%);
+}
+
+.dg-player[hidden] {
+    display: none;
+}
+
+.dg-player-text {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+}
+
+.dg-player-count {
+    color: var(--dg-muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.dg-player-title {
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.dg-player-desc {
+    overflow: hidden;
+    color: var(--dg-muted);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dg-player-desc:empty {
+    display: none;
+}
+
+.dg-player-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.dg-step-mode .dg-zoom {
+    bottom: 84px;
+}
+
+.dg-wheel-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--dg-label-bg);
+    color: var(--dg-label-text);
+    font-size: 12.5px;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.dg-wheel-hint[hidden] {
+    display: none;
+}
+
+.dg-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.dg-ui-icon {
+    flex: none;
+}
+
+@media (max-width: 640px) {
+    .dg-zoom .dg-zoom-value {
+        display: none;
+    }
+
+    .dg-player {
+        gap: 8px;
+        padding: 8px 8px 8px 12px;
+    }
+
+    .dg-step-mode .dg-zoom {
+        bottom: 96px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dg-node,
+    .dg-edge,
+    .dg-edge-label,
+    .dg-group-chip,
+    .dg-group,
+    .dg-lane,
+    .dg-node-bg,
+    .dg-chip-bg,
+    .dg-edge-line,
+    .dg-edge-arrow,
+    .dg-edges,
+    .dg-labels,
+    .dg-tool {
+        transition: none;
+    }
+}

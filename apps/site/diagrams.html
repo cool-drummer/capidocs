@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagramas</title>
+    <meta name="description" content="Diagramas interactivos de la arquitectura, la operación y el negocio.">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" href="logos/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="assets/fonts/geist-sans.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="assets/css/diagram-viewer.css" data-dg-styles>
+    <link rel="stylesheet" href="assets/css/diagrams.css">
+    <link rel="modulepreload" href="assets/js/diagram/explorer-page.js">
+    <link rel="modulepreload" href="assets/js/diagram/explorer.js">
+    <link rel="modulepreload" href="assets/js/diagram/viewer.js">
+    <link rel="modulepreload" href="assets/js/diagram/model.js">
+    <link rel="modulepreload" href="assets/js/diagram/icons.js">
+    <link rel="modulepreload" href="assets/js/diagram/metrics.js">
+    <link rel="modulepreload" href="assets/js/diagram/theme.js">
+    <link rel="modulepreload" href="assets/js/diagram/i18n.js">
+    <link rel="modulepreload" href="assets/js/diagram/layout/index.js">
+    <link rel="modulepreload" href="assets/js/diagram/layout/graph.js">
+    <link rel="modulepreload" href="assets/js/diagram/layout/layered.js">
+    <link rel="modulepreload" href="assets/js/diagram/layout/route.js">
+    <link rel="modulepreload" href="assets/js/diagram/layout/sequence.js">
+    <link rel="modulepreload" href="assets/js/diagram/render/svg.js">
+    <link rel="modulepreload" href="assets/js/escape.js">
+    <link rel="preload" href="config/diagrams/capidocs.json" as="fetch" crossorigin>
+</head>
+
+<body>
+    <div id="app" class="dx-app">
+        <p class="dx-boot">Cargando diagramas…</p>
+    </div>
+    <script type="module" src="assets/js/diagram/explorer-page.js"></script>
+</body>
+
+</html>

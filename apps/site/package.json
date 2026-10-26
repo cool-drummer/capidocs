@@ -12,7 +12,12 @@
     "./escape": "./assets/js/escape.js",
     "./content-generator": "./assets/js/content-generator.js",
     "./spec-loader": "./assets/js/spec-loader.js",
-    "./app": "./assets/js/app.js"
+    "./app": "./assets/js/app.js",
+    "./diagram/model": "./assets/js/diagram/model.js",
+    "./diagram/xml": "./assets/js/diagram/xml.js",
+    "./diagram/import": "./assets/js/diagram/import/index.js",
+    "./diagram/export/pdf": "./assets/js/diagram/export/pdf.js",
+    "./diagram/export/standalone": "./assets/js/diagram/export/standalone.js"
   },
   "files": [
     "index.html",

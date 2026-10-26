@@ -50,7 +50,8 @@ export function sectionText(section) {
         section.warning,
         Array.isArray(section.list) ? section.list.join(' ') : '',
         section.table ? (section.table.headers || []).join(' ') : '',
-        section.callout ? [section.callout.title, section.callout.content].filter(Boolean).join(' ') : ''
+        section.callout ? [section.callout.title, section.callout.content].filter(Boolean).join(' ') : '',
+        section.diagram ? section.diagram.caption : ''
     ].filter(Boolean).join(' ');
 }
 
@@ -151,6 +152,10 @@ export function pageMarkdown(spec, route) {
             if (section.image) {
                 lines.push('', '![' + (section.image.alt || '') + '](' + section.image.src + ')');
                 if (section.image.caption) lines.push('', '_' + section.image.caption + '_');
+            }
+            if (section.diagram) {
+                const source = section.diagram.src ? section.diagram.src + (section.diagram.diagram ? '#' + section.diagram.diagram : '') : 'inline';
+                lines.push('', '> Diagram: ' + (section.diagram.caption || section.diagram.diagram || source) + ' (' + source + ')');
             }
             if (section.code) lines.push('', ...fence(section.code));
             (section.code_group || []).forEach((group) => lines.push('', ...fence(group)));
