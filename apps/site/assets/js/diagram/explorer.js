@@ -102,6 +102,14 @@ export function thumbnailWindow(scene, aspect) {
     return { x: 0, y: 0, w: scene.width, h: scene.height };
 }
 
+export function messageSample(style) {
+    const line = `<line x1="1" x2="${style === 'sync' ? 22 : 25}" y1="6" y2="6" class="dx-line-${style === 'reply' ? 'dashed' : 'solid'}"/>`;
+    const head = style === 'sync'
+        ? '<path d="M28 6 L21 2 L21 10 Z" class="dx-head-filled"/>'
+        : '<path d="M22 2 L28 6 L22 10" class="dx-head-open"/>';
+    return `<svg class="dx-line-sample dx-message-sample" width="30" height="12" viewBox="0 0 30 12" aria-hidden="true">${line}${head}</svg>`;
+}
+
 function systemTheme() {
     return globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
@@ -380,7 +388,7 @@ export function mountExplorer(root, options = {}) {
             if (!items.length) return '';
             return `<div class="dx-list-group" data-color="${escapeAttr(category.color)}">
                 <h3 class="dx-list-heading"><span class="dx-swatch" aria-hidden="true"></span>${escapeHtml(category.title)}</h3>
-                <ul>${items.map((diagram) => `<li><a class="dx-list-item" href="${diagramHref(diagram.id)}"${diagram.id === activeId ? ' aria-current="page"' : ''}>
+                <ul>${items.map((diagram) => `<li><a class="dx-list-item" href="${diagramHref(diagram.id)}" title="${escapeAttr(diagram.title)}"${diagram.id === activeId ? ' aria-current="page"' : ''}>
                     <span class="dx-list-icon" aria-hidden="true">${icon(diagram.kind === 'sequence' ? 'arrow-left-right' : (diagram.lanes.length ? 'layout-grid' : 'workflow'), 15)}</span>
                     <span class="dx-list-title">${escapeHtml(diagram.title)}</span>
                 </a></li>`).join('')}</ul>
@@ -490,7 +498,7 @@ export function mountExplorer(root, options = {}) {
                 if (item.type === 'block') { walk(item.items); item.branches.forEach((branch) => walk(branch.items)); }
             });
             walk(diagram.items);
-            parts.push(`<div class="dx-legend-block"><p class="dx-legend-title">${escapeHtml(t('inspector.messagesLegend'))}</p><ul class="dx-legend">${[...styles].map((style) => `<li><svg class="dx-line-sample" width="28" height="8" aria-hidden="true"><line x1="1" x2="27" y1="4" y2="4" class="dx-line-${style === 'reply' ? 'dashed' : 'solid'}"/></svg><span>${escapeHtml(t(`inspector.message.${style}`))}</span></li>`).join('')}</ul></div>`);
+            parts.push(`<div class="dx-legend-block"><p class="dx-legend-title">${escapeHtml(t('inspector.messagesLegend'))}</p><ul class="dx-legend">${[...styles].map((style) => `<li>${messageSample(style)}<span>${escapeHtml(t(`inspector.message.${style}`))}</span></li>`).join('')}</ul></div>`);
         }
         return parts.length ? `<section class="dx-section"><h3 class="dx-section-label">${escapeHtml(t('inspector.legend'))}</h3>${parts.join('')}</section>` : '';
     };
