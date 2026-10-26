@@ -19,7 +19,10 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext, signer
   app.get('/portals', async (request) => {
     const user = await context.currentUser(request);
     const rows = await db.select().from(portals).where(eq(portals.workspaceId, user.workspaceId)).orderBy(asc(portals.name));
-    return { portals: rows };
+    const manages = user.workspaceRole === 'owner' || user.workspaceRole === 'admin';
+    return {
+      portals: rows.map(({ deployTarget, accessConfig, ...portal }) => (manages ? { ...portal, deployTarget, accessConfig } : portal)),
+    };
   });
 
   app.post('/portals', async (request, reply) => {
