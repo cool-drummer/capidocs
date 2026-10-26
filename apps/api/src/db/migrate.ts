@@ -210,10 +210,14 @@ const STATEMENTS = [
   `ALTER TABLE portals ADD COLUMN IF NOT EXISTS access_config jsonb NOT NULL DEFAULT '{}'::jsonb`,
 ];
 
+const MIGRATION_LOCK = 7_310_221_904;
+
 export async function migrate(sql: Sql): Promise<number> {
-  await sql.unsafe('CREATE EXTENSION IF NOT EXISTS pgcrypto');
-  for (const statement of STATEMENTS) {
-    await sql.unsafe(statement);
-  }
+  await sql.begin(async (transaction) => {
+    await transaction.unsafe(`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK})`);
+    for (const statement of STATEMENTS) {
+      await transaction.unsafe(statement);
+    }
+  });
   return STATEMENTS.length;
 }
