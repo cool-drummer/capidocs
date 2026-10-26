@@ -5,10 +5,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { detectMime, storageKeyFor } from '../src/modules/attachments.js';
 import { renderHtml, renderText, templates, type MailMessage } from '../src/lib/mail.js';
-import { Client, resetDatabase, testDatabaseUrl } from './helpers.js';
+import { Client, resetDatabase, testConfig, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = process.env.TEST_TEAM_DATABASE_URL ?? testDatabaseUrl('capidocs_team_test');
-const ROOT = join(import.meta.dirname, '..', '..', '..');
 
 const outbox: MailMessage[] = [];
 const mailer = {
@@ -38,13 +37,7 @@ beforeAll(async () => {
   await resetDatabase(DATABASE_URL);
 
   filesDir = await mkdtemp(join(tmpdir(), 'capidocs-files-'));
-  app = await createApp({
-    databaseUrl: DATABASE_URL,
-    runtimeDir: join(ROOT, 'apps/site'),
-    filesDir,
-    mailer,
-    studioUrl: 'https://studio.test',
-  });
+  app = await createApp(testConfig(DATABASE_URL, { FILES_DIR: filesDir }), { mailer });
 
   await call('POST', '/auth/setup', {
     workspaceName: 'Dado',

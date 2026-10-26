@@ -1,17 +1,29 @@
 import { createApp } from './app.js';
+import { ConfigError, loadConfig, type Config } from './config.js';
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error('DATABASE_URL is required');
-  process.exit(1);
+function readConfig(): Config {
+  try {
+    return loadConfig(process.env);
+  } catch (error) {
+    if (error instanceof ConfigError) {
+      console.error(error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
 }
 
-const app = await createApp({
-  databaseUrl,
-  runtimeDir: process.env.CAPIDOCS_RUNTIME_DIR ?? 'apps/site',
-  secureCookies: process.env.NODE_ENV === 'production',
-  logger: true,
-});
+const config = readConfig();
+const app = await createApp(config, { logger: true });
+await app.listen({ port: config.server.port, host: config.server.host });
 
-const port = Number(process.env.PORT ?? 3090);
-await app.listen({ port, host: '127.0.0.1' });
+let closing = false;
+const shutdown = async (signal: string) => {
+  if (closing) return;
+  closing = true;
+  app.fastify.log.info({ signal }, 'shutting down');
+  await app.close();
+  process.exit(0);
+};
+process.once('SIGTERM', () => void shutdown('SIGTERM'));
+process.once('SIGINT', () => void shutdown('SIGINT'));

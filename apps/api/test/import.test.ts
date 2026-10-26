@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validateSpec } from '@capidocs/spec';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { importSpec } from '../src/lib/import-spec.js';
-import { Client, resetDatabase, testDatabaseUrl } from './helpers.js';
+import { Client, resetDatabase, testConfig, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = process.env.TEST_IMPORT_DATABASE_URL ?? testDatabaseUrl('capidocs_import_test');
 const ROOT = join(import.meta.dirname, '..', '..', '..');
@@ -23,7 +23,7 @@ async function call(method: 'GET' | 'POST' | 'PUT', url: string, payload?: unkno
 
 beforeAll(async () => {
   await resetDatabase(DATABASE_URL);
-  app = await createApp({ databaseUrl: DATABASE_URL, runtimeDir: join(ROOT, 'apps/site') });
+  app = await createApp(testConfig(DATABASE_URL));
   owner = new Client(app);
   await call('POST', '/auth/setup', {
     workspaceName: 'Acme',

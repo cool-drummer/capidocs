@@ -1,5 +1,7 @@
+import { join } from 'node:path';
 import postgres from 'postgres';
 import type { CapidocsApp } from '../src/app.js';
+import { loadConfig, type Config } from '../src/config.js';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 type InjectResponse = Awaited<ReturnType<CapidocsApp['inject']>>;
@@ -8,6 +10,18 @@ export const TEST_DATABASE_ROOT = process.env.TEST_DATABASE_ROOT ?? 'postgres://
 
 export function testDatabaseUrl(name: string): string {
   return `${TEST_DATABASE_ROOT}/${name}`;
+}
+
+export const ROOT = join(import.meta.dirname, '..', '..', '..');
+
+export function testConfig(databaseUrl: string, env: Record<string, string> = {}): Config {
+  return loadConfig({
+    NODE_ENV: 'test',
+    DATABASE_URL: databaseUrl,
+    PUBLIC_URL: 'https://studio.test',
+    CAPIDOCS_RUNTIME_DIR: join(ROOT, 'apps/site'),
+    ...env,
+  });
 }
 
 export async function resetDatabase(url: string): Promise<void> {

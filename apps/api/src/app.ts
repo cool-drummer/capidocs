@@ -1,6 +1,7 @@
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import type { Config } from './config.js';
 import { createDatabase, type Database } from './db/client.js';
 import { migrate } from './db/migrate.js';
 import { ApiError } from './lib/errors.js';
@@ -14,15 +15,9 @@ import { createRouteContext } from './routes/context.js';
 import { memberRoutes } from './routes/members.js';
 import { portalRoutes } from './routes/portals.js';
 
-export interface AppOptions {
-  databaseUrl: string;
-  runtimeDir: string;
-  secureCookies?: boolean;
+export interface AppOverrides {
   logger?: boolean;
-  studioUrl?: string;
-  filesDir?: string;
   mailer?: Mailer;
-  mail?: { apiKey?: string; from?: string };
 }
 
 declare module 'fastify' {
@@ -43,28 +38,33 @@ export interface CapidocsApp {
 
 export const API_PREFIX = '/api';
 
-export async function createApp(options: AppOptions): Promise<CapidocsApp> {
-  const { db, sql, close } = createDatabase(options.databaseUrl);
+export async function createApp(config: Config, overrides: AppOverrides = {}): Promise<CapidocsApp> {
+  const { db, sql, close } = createDatabase(config.databaseUrl, { max: config.databasePoolSize });
   await migrate(sql);
 
-  const app = Fastify({ logger: options.logger ?? false, bodyLimit: 12 * 1024 * 1024 });
+  const app = Fastify({
+    logger: overrides.logger ? { level: config.server.logLevel } : false,
+    trustProxy: (_address: string, hop: number) => hop < config.server.trustProxyHops,
+    bodyLimit: 12 * 1024 * 1024,
+  });
   await app.register(cookie);
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));
 
-  const store = createLocalStore(options.filesDir ?? '.tmp/files');
+  const store = createLocalStore(config.files.dir);
   const mailer =
-    options.mailer ??
+    overrides.mailer ??
     createMailer({
-      ...(options.mail?.apiKey ? { apiKey: options.mail.apiKey } : {}),
-      ...(options.mail?.from ? { from: options.mail.from } : {}),
+      ...(config.mail.transport === 'resend' && config.mail.apiKey ? { apiKey: config.mail.apiKey } : {}),
+      ...(config.mail.from ? { from: config.mail.from } : {}),
+      brand: config.mail.brand,
       logger: (message) => app.log.warn(message),
     });
 
   const context = createRouteContext({
     db,
-    runtimeDir: options.runtimeDir,
-    studioUrl: (options.studioUrl ?? 'http://localhost:5190').replace(/\/$/, ''),
-    secureCookies: options.secureCookies ?? false,
+    runtimeDir: config.runtimeDir,
+    studioUrl: config.publicUrl,
+    secureCookies: config.secureCookies,
     mailer,
     store,
     onMailError: (error) => app.log.error({ err: error }, 'mail delivery failed'),

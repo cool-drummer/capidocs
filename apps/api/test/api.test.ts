@@ -7,10 +7,9 @@ import { validateSpec } from '@capidocs/spec';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { can } from '../src/lib/access.js';
 import { isValidPosition, positionBetween } from '../src/lib/position.js';
-import { Client, resetDatabase, testDatabaseUrl } from './helpers.js';
+import { Client, resetDatabase, testConfig, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ?? testDatabaseUrl('capidocs_test');
-const ROOT = join(import.meta.dirname, '..', '..', '..');
 
 let app: CapidocsApp;
 let outDir: string;
@@ -28,7 +27,7 @@ async function login(email: string, password: string, who: string) {
 beforeAll(async () => {
   await resetDatabase(DATABASE_URL);
   outDir = await mkdtemp(join(tmpdir(), 'capidocs-portal-'));
-  app = await createApp({ databaseUrl: DATABASE_URL, runtimeDir: join(ROOT, 'apps/site') });
+  app = await createApp(testConfig(DATABASE_URL));
 }, 60000);
 
 afterAll(async () => {
