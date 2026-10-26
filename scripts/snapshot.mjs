@@ -63,6 +63,7 @@ async function main() {
     const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
     await send('Runtime.enable', {}, sessionId);
     await send('Page.enable', {}, sessionId);
+    await send('Log.enable', {}, sessionId);
     await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 700 }, sessionId);
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] }, sessionId);
     if (options.seed) {
@@ -81,10 +82,14 @@ async function main() {
     await sleep(250);
 
     const errors = events
-        .filter((event) => event.method === 'Runtime.exceptionThrown' || (event.method === 'Runtime.consoleAPICalled' && event.params.type === 'error'))
-        .map((event) => event.method === 'Runtime.exceptionThrown'
-            ? event.params.exceptionDetails.text + ' ' + (event.params.exceptionDetails.exception?.description || '')
-            : event.params.args.map((arg) => arg.value ?? arg.description ?? '').join(' '));
+        .filter((event) => event.method === 'Runtime.exceptionThrown'
+            || (event.method === 'Runtime.consoleAPICalled' && event.params.type === 'error')
+            || (event.method === 'Log.entryAdded' && event.params.entry.level === 'error'))
+        .map((event) => {
+            if (event.method === 'Runtime.exceptionThrown') return event.params.exceptionDetails.text + ' ' + (event.params.exceptionDetails.exception?.description || '');
+            if (event.method === 'Log.entryAdded') return `${event.params.entry.source}: ${event.params.entry.text} ${event.params.entry.url || ''}`.trim();
+            return event.params.args.map((arg) => arg.value ?? arg.description ?? '').join(' ');
+        });
 
     const summary = await evaluate(sessionId, `(() => ({
         title: document.title,
