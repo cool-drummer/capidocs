@@ -28,7 +28,8 @@ const tokenSchema = z.string().min(20).max(200);
 const workspaceRoleSchema = z.enum(['admin', 'member']);
 
 export function memberRoutes(app: FastifyInstance, context: RouteContext) {
-  const { db, notify, config } = context;
+  const { db, notify, config, limiter } = context;
+  const entry = { config: { publicEntry: true }, onRequest: limiter.hook(config.rateLimits.auth) };
 
   app.get('/members', async (request) => {
     const user = await context.currentUser(request);
@@ -42,6 +43,7 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
   app.post('/members/invitations', async (request, reply) => {
     const user = await context.currentUser(request);
     assertCan(actorFor(user), 'member.invite', { workspaceId: user.workspaceId });
+    limiter.enforce(config.rateLimits.invitations, user.id, reply);
     const body = z.object({ email: emailSchema, role: workspaceRoleSchema }).parse(request.body);
     assertCanAssign(user.workspaceRole, body.role);
 
@@ -68,14 +70,14 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
     return { ok: true };
   });
 
-  app.post('/invitations/inspect', { config: { publicEntry: true } }, async (request) => {
+  app.post('/invitations/inspect', entry, async (request) => {
     const body = z.object({ token: tokenSchema }).parse(request.body);
     const invitation = await inspectInvitation(db, body.token);
     const workspace = await context.loadWorkspace(invitation.workspaceId);
     return { email: invitation.email, role: invitation.role, workspace: workspace.name };
   });
 
-  app.post('/invitations/accept', { config: { publicEntry: true } }, async (request, reply) => {
+  app.post('/invitations/accept', entry, async (request, reply) => {
     const body = z.object({ token: tokenSchema, name: personNameSchema, password: passwordSchema }).parse(request.body);
     const pending = await inspectInvitation(db, body.token);
     const workspace = await context.loadWorkspace(pending.workspaceId);

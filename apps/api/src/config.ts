@@ -18,6 +18,12 @@ export type StorageConfig =
   | { driver: 'local'; dir: string }
   | { driver: 's3'; endpoint: string; region: string; bucket: string; prefix: string; accessKeyId: string; secretAccessKey: string };
 
+export interface RateRuleConfig {
+  name: string;
+  max: number;
+  windowMs: number;
+}
+
 export interface Config {
   environment: Environment;
   databaseUrl: string;
@@ -33,6 +39,14 @@ export interface Config {
   runtimeDir: string;
   storage: StorageConfig;
   attachments: { maxBytes: number; previewTtlSeconds: number };
+  rateLimits: {
+    api: RateRuleConfig;
+    auth: RateRuleConfig;
+    loginPerEmail: RateRuleConfig;
+    forgotPerEmail: RateRuleConfig;
+    invitations: RateRuleConfig;
+    uploads: RateRuleConfig;
+  };
   publish: {
     publishRoot: string | null;
     wranglerBin: string | null;
@@ -153,6 +167,22 @@ export function loadConfig(env: Env = process.env): Config {
     attachments: {
       maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }),
       previewTtlSeconds: read.integer('PREVIEW_FILE_TTL_SECONDS', 600, { min: 30, max: 3600 }),
+    },
+    rateLimits: {
+      api: { name: 'api', max: read.integer('RATE_LIMIT_API_PER_MINUTE', 600, { min: 10, max: 100_000 }), windowMs: 60_000 },
+      auth: {
+        name: 'auth',
+        max: read.integer('RATE_LIMIT_AUTH_MAX', 30, { min: 1, max: 100_000 }),
+        windowMs: read.integer('RATE_LIMIT_AUTH_WINDOW_MINUTES', 15, { min: 1, max: 1440 }) * 60_000,
+      },
+      loginPerEmail: {
+        name: 'login-email',
+        max: read.integer('RATE_LIMIT_LOGIN_PER_EMAIL', 5, { min: 1, max: 100_000 }),
+        windowMs: read.integer('RATE_LIMIT_AUTH_WINDOW_MINUTES', 15, { min: 1, max: 1440 }) * 60_000,
+      },
+      forgotPerEmail: { name: 'forgot-email', max: read.integer('RATE_LIMIT_RESET_PER_EMAIL_HOUR', 3, { min: 1, max: 100_000 }), windowMs: 3_600_000 },
+      invitations: { name: 'invitations', max: read.integer('RATE_LIMIT_INVITATIONS_PER_HOUR', 20, { min: 1, max: 100_000 }), windowMs: 3_600_000 },
+      uploads: { name: 'uploads', max: read.integer('RATE_LIMIT_UPLOADS_PER_10_MINUTES', 30, { min: 1, max: 100_000 }), windowMs: 600_000 },
     },
     publish: {
       publishRoot: read.text('PUBLISH_ROOT') ? resolve(read.text('PUBLISH_ROOT')!) : null,

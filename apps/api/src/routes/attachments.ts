@@ -41,8 +41,9 @@ export function attachmentRoutes(app: FastifyInstance, context: RouteContext) {
     '/attachments',
     {
       bodyLimit: maxBytes + 1,
-      onRequest: async (request) => {
-        await context.currentUser(request);
+      onRequest: async (request, reply) => {
+        const user = await context.currentUser(request);
+        context.limiter.enforce(config.rateLimits.uploads, user.id, reply);
       },
       errorHandler: (error, request, reply) =>
         handleError(error.code === 'FST_ERR_CTP_BODY_TOO_LARGE' ? fileTooLarge(maxBytes) : error, request, reply),

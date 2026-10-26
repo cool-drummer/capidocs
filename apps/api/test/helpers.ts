@@ -15,8 +15,18 @@ export function testDatabaseUrl(name: string): string {
 
 export const ROOT = join(import.meta.dirname, '..', '..', '..');
 
+const RELAXED_LIMITS = {
+  RATE_LIMIT_API_PER_MINUTE: '100000',
+  RATE_LIMIT_AUTH_MAX: '100000',
+  RATE_LIMIT_LOGIN_PER_EMAIL: '100000',
+  RATE_LIMIT_RESET_PER_EMAIL_HOUR: '100000',
+  RATE_LIMIT_INVITATIONS_PER_HOUR: '100000',
+  RATE_LIMIT_UPLOADS_PER_10_MINUTES: '100000',
+};
+
 export function testConfig(databaseUrl: string, env: Record<string, string> = {}): Config {
   return loadConfig({
+    ...RELAXED_LIMITS,
     NODE_ENV: 'test',
     DATABASE_URL: databaseUrl,
     PUBLIC_URL: 'https://studio.test',
@@ -29,6 +39,7 @@ export const TEST_SETUP_TOKEN = 'setup-token-for-the-test-suite';
 
 export function productionConfig(databaseUrl: string, env: Record<string, string> = {}): Config {
   return loadConfig({
+    ...RELAXED_LIMITS,
     NODE_ENV: 'production',
     SETUP_TOKEN: TEST_SETUP_TOKEN,
     DATABASE_URL: databaseUrl,
@@ -78,10 +89,15 @@ export class Client {
 
   constructor(private readonly app: CapidocsApp) {}
 
-  request(method: Method, path: string, options: { payload?: unknown; headers?: Record<string, string> } = {}): Promise<InjectResponse> {
+  request(
+    method: Method,
+    path: string,
+    options: { payload?: unknown; headers?: Record<string, string>; remoteAddress?: string } = {},
+  ): Promise<InjectResponse> {
     return this.app.inject({
       method,
       url: `/api${path}`,
+      ...(options.remoteAddress ? { remoteAddress: options.remoteAddress } : {}),
       ...(options.payload === undefined ? {} : { payload: options.payload as never }),
       headers: {
         ...(this.cookie ? { cookie: this.cookie } : {}),

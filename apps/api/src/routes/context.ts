@@ -3,6 +3,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
+import type { RateLimiter } from '../lib/rate-limit.js';
 import { workspaces } from '../db/schema.js';
 import { notFound, unauthorized } from '../lib/errors.js';
 import type { Mailer, MailMessage } from '../lib/mail.js';
@@ -30,6 +31,7 @@ export interface SessionControl {
 
 export interface RouteContext {
   config: Config;
+  limiter: RateLimiter;
   db: Database;
   runtimeDir: string;
   studioUrl: string;
@@ -45,6 +47,7 @@ export const emailSchema = z.string().trim().toLowerCase().email();
 
 export function createRouteContext(input: {
   config: Config;
+  limiter: RateLimiter;
   db: Database;
   runtimeDir: string;
   studioUrl: string;
@@ -106,6 +109,7 @@ export function createRouteContext(input: {
 
   return {
     config: input.config,
+    limiter: input.limiter,
     db,
     runtimeDir: input.runtimeDir,
     studioUrl: input.studioUrl,

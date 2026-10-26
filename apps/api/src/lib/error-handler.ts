@@ -1,6 +1,7 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ApiError } from './errors.js';
+import { RateLimitedError } from './rate-limit.js';
 
 const FRAMEWORK_ERRORS: Record<string, { status: number; code: string; message: string }> = {
   FST_ERR_CTP_BODY_TOO_LARGE: { status: 413, code: 'payload_too_large', message: 'El contenido que enviaste es demasiado grande.' },
@@ -11,6 +12,7 @@ const FRAMEWORK_ERRORS: Record<string, { status: number; code: string; message: 
 
 export function handleError(error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) {
   if (error instanceof ApiError) {
+    if (error instanceof RateLimitedError) reply.header('Retry-After', String(error.retryAfterSeconds));
     return reply.status(error.statusCode).send({ error: error.code, message: error.message });
   }
   if (error instanceof z.ZodError) {

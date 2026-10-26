@@ -21,10 +21,12 @@ const invalidCredentials = () => new ApiError(401, 'invalid_credentials', 'Corre
 const setupClosed = () => new ApiError(403, 'setup_closed', 'La configuración inicial no está disponible en este servidor.');
 
 export function authRoutes(app: FastifyInstance, context: RouteContext) {
-  const { db, config } = context;
+  const { db, config, limiter } = context;
+  const rules = config.rateLimits;
+  const entry = { config: { publicEntry: true }, onRequest: limiter.hook(rules.auth) };
   const formatDate = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: config.mail.timeZone });
 
-  app.post('/auth/setup', { config: { publicEntry: true } }, async (request, reply) => {
+  app.post('/auth/setup', entry, async (request, reply) => {
     const existing = await db.select({ id: workspaces.id }).from(workspaces).limit(1);
     if (existing.length) throw conflict('Este espacio de trabajo ya está configurado.');
 
@@ -68,8 +70,9 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
     });
   });
 
-  app.post('/auth/login', { config: { publicEntry: true } }, async (request, reply) => {
+  app.post('/auth/login', entry, async (request, reply) => {
     const body = z.object({ email: emailSchema, password: passwordSchema }).parse(request.body);
+    limiter.enforce(rules.loginPerEmail, body.email, reply);
     const rows = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
     const user = rows[0];
     const ok = await verifyPassword(body.password, user?.passwordHash ?? null);
@@ -110,9 +113,10 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
     return { user, workspace, csrfToken: csrfTokenFor(context.sessions.tokenOf(request)!) };
   });
 
-  app.post('/auth/password/forgot', { config: { publicEntry: true } }, async (request, reply) => {
+  app.post('/auth/password/forgot', entry, async (request, reply) => {
     const body = z.object({ email: emailSchema }).parse(request.body);
     const ip = request.ip;
+    if (!limiter.hit(rules.forgotPerEmail, body.email).allowed) return reply.status(202).send({ ok: true });
     void (async () => {
       const rows = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
       const user = rows[0];
@@ -126,7 +130,7 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
     return reply.status(202).send({ ok: true });
   });
 
-  app.post('/auth/password/reset', { config: { publicEntry: true } }, async (request) => {
+  app.post('/auth/password/reset', entry, async (request) => {
     const body = z.object({ token: z.string().min(20).max(200), password: passwordSchema }).parse(request.body);
     const reset = await findPasswordReset(db, body.token);
     const membership = await loadMembership(db, reset.userId);

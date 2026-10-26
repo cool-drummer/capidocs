@@ -5,6 +5,7 @@ import type { Config } from './config.js';
 import { createDatabase, type Database } from './db/client.js';
 import { migrate } from './db/migrate.js';
 import { createCsrfGuard } from './lib/csrf.js';
+import { RateLimiter } from './lib/rate-limit.js';
 import { handleError } from './lib/error-handler.js';
 import { createMailer, type Mailer } from './lib/mail.js';
 import { createLocalStore, createS3Store, type AttachmentStore } from './lib/storage.js';
@@ -71,8 +72,10 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     });
 
   const signer = createUrlSigner(randomBytes(32), config.attachments.previewTtlSeconds);
+  const limiter = new RateLimiter();
   const context = createRouteContext({
     config,
+    limiter,
     db,
     runtimeDir: config.runtimeDir,
     studioUrl: config.publicUrl,
@@ -90,6 +93,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
 
   await app.register(
     async (api) => {
+      api.addHook('onRequest', limiter.hook(config.rateLimits.api));
       api.addHook('onRequest', createCsrfGuard({ allowedOrigins: [config.publicOrigin], sessionToken: context.sessions.tokenOf }));
       api.get('/health', async () => ({ status: 'ok' }));
       authRoutes(api, context);
@@ -111,6 +115,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     inject: app.inject.bind(app),
     listen: app.listen.bind(app),
     close: async () => {
+      limiter.close();
       await app.close();
       await close();
     },
