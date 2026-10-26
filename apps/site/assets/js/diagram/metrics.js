@@ -14,6 +14,7 @@ export const METRICS = {
         icon: 28,
         iconGap: 10,
         chevron: 16,
+        link: 14,
         statusDot: 6,
         title: { size: 13, weight: 600, line: 18, family: 'sans' },
         subtitle: { size: 11.5, weight: 400, line: 16, family: 'mono' },
@@ -186,7 +187,7 @@ export function isExpandable(node) {
 function cardSize(node, measure, expanded) {
     const m = METRICS.card;
     const iconSpace = node.icon ? m.icon + m.iconGap : 0;
-    const trailing = isExpandable(node) ? m.chevron + 8 : 0;
+    const trailing = (isExpandable(node) ? m.chevron + 8 : 0) + (node.link ? m.link + 6 : 0);
     const statusSpace = node.status ? m.statusDot + 6 : 0;
     const chrome = m.padX * 2 + iconSpace + trailing + statusSpace;
     const natural = Math.max(
@@ -227,7 +228,8 @@ function cardSize(node, measure, expanded) {
         }
         height += m.padY - m.row.gap;
     }
-    return { w: width, h: node.h ?? Math.ceil(height), text: { title, subtitle, props, preview } };
+    const badge = node.badge?.text ? { text: node.badge.text, w: Math.ceil(measure(node.badge.text, m.badge) + m.badge.padX * 2) } : null;
+    return { w: width, h: node.h ?? Math.ceil(height), text: { title, subtitle, props, preview, badge } };
 }
 
 function tableSize(node, measure) {
@@ -303,7 +305,7 @@ function textSize(node, measure) {
 }
 
 /**
- * @typedef {{ title: string[], subtitle: string[], props?: object[], preview?: object|null, fields?: object[], label?: { w: number, h: number }, body?: string[] }} NodeText
+ * @typedef {{ title: string[], subtitle: string[], props?: object[], preview?: object|null, badge?: { text: string, w: number }|null, fields?: object[], label?: { w: number, h: number }, body?: string[] }} NodeText
  * @returns {{ w: number, h: number, text: NodeText }}
  */
 export function nodeSize(node, { measure = approximateMeasure, expanded = false } = {}) {
