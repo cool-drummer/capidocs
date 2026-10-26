@@ -32,7 +32,7 @@ async function mount() {
     const explorer = mountExplorer(root, {
         set: result.set,
         source: 'embedded',
-        storage: null,
+        storages: null,
         features: { import: false, export: ['svg', 'png', 'jpg', 'pdf', 'json'], storage: false },
         services: { svgToRaster, buildPdf, downloadBlob }
     });
