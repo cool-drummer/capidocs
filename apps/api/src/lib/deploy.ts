@@ -3,6 +3,7 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { buildHeaders } from '@capidocs/compiler';
 import { z } from 'zod';
 import { ApiError, badRequest } from './errors.js';
 import type { PortalBuild } from '../modules/publish.js';
@@ -55,7 +56,7 @@ export const deployFailed = () =>
   new ApiError(502, 'deploy_failed', 'No se pudo publicar en el destino. Revisa la configuración del portal y vuelve a intentarlo.');
 const targetUnavailable = (what: string) => new ApiError(400, 'deploy_unavailable', `La publicación ${what} no está disponible en este servidor.`);
 
-const RUNTIME_ENTRIES = ['index.html', 'assets', 'logos'];
+const RUNTIME_ENTRIES = ['index.html', 'diagrams.html', 'assets', 'logos'];
 
 export function isRemoteRepository(repository: string): boolean {
   return !repository.startsWith('-') && REMOTE_REPOSITORY.test(repository);
@@ -91,7 +92,9 @@ export function stageBuild(outDir: string, builds: PortalBuild[], runtimeDir: st
       bytes += Buffer.byteLength(file.content);
     }
   }
-  return bytes;
+  const headers = buildHeaders(builds.map((build) => build.spec));
+  writeFileSync(join(outDir, '_headers'), headers);
+  return bytes + Buffer.byteLength(headers);
 }
 
 function confine(root: string, path: string): string {

@@ -201,6 +201,11 @@ describe('staging', () => {
     expect(stageBuild(out, builds, RUNTIME)).toBeGreaterThan(0);
     expect(existsSync(join(out, 'assets', 'css', 'capidocs.css'))).toBe(true);
     expect(existsSync(join(out, 'logos'))).toBe(true);
+    expect(existsSync(join(out, 'diagrams.html'))).toBe(true);
+    expect(existsSync(join(out, 'assets', 'vendor', 'prism', 'prism-core.min.js'))).toBe(true);
+    const headers = readFileSync(join(out, '_headers'), 'utf8');
+    expect(headers).toContain("script-src 'self'");
+    expect(headers).not.toContain('unsafe-inline');
   });
 
   it('refuses a compiled file that points outside the output', () => {
