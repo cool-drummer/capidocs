@@ -48,6 +48,9 @@ const HEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const VIEWBOX = /^-?\d+(?:\.\d+)?(?:[ ,]+-?\d+(?:\.\d+)?){3}$/;
 const PATH_DATA = /^[MmZzLlHhVvCcSsQqTtAa0-9eE+\-.,\s]+$/;
 const SAFE_HREF = /^(?:https?:\/\/|mailto:|#)[^\s<>"'`]*$/i;
+const LANGUAGE_TAG = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$/;
+
+export const RESERVED_IDS = Object.freeze(['__proto__', 'constructor', 'prototype']);
 
 class Collector {
     constructor() {
@@ -104,7 +107,27 @@ function id(c, path, value, { required = true } = {}) {
         c.add(path, 'Invalid identifier');
         return undefined;
     }
+    if (RESERVED_IDS.includes(value)) {
+        c.add(path, `"${value}" is a reserved identifier`);
+        return undefined;
+    }
     return value;
+}
+
+function language(c, path, value) {
+    const result = text(c, path, value, { max: 35 });
+    if (result === undefined) return 'es';
+    if (LANGUAGE_TAG.test(result)) {
+        try {
+            const [canonical] = Intl.getCanonicalLocales(result);
+            if (canonical) return canonical;
+        } catch {
+            c.add(path, 'Invalid language tag');
+            return 'es';
+        }
+    }
+    c.add(path, 'Invalid language tag');
+    return 'es';
 }
 
 function number(c, path, value, { min = -1e6, max = 1e6 } = {}) {
@@ -140,7 +163,7 @@ function list(c, path, value, max) {
 
 function iconRef(c, path, value) {
     if (value === undefined || value === null) return undefined;
-    if (typeof value !== 'string' || !ICON_REF.test(value)) {
+    if (typeof value !== 'string' || !ICON_REF.test(value) || RESERVED_IDS.includes(value)) {
         c.add(path, 'Invalid icon name');
         return undefined;
     }
@@ -618,7 +641,7 @@ export function validateDiagramSet(input) {
         : list(c, 'categories', input.categories, 24).map((entry, index) => normalizeCategory(c, `categories.${index}`, entry)).filter(Boolean);
     uniqueIds(c, 'categories', categories, 'category');
     categories.forEach((category, index) => {
-        if (category.icon && BUILTIN_ICONS[category.icon] === undefined && !(isObject(input.icons) && input.icons[category.icon])) {
+        if (category.icon && !Object.hasOwn(BUILTIN_ICONS, category.icon) && !(isObject(input.icons) && Object.hasOwn(input.icons, category.icon))) {
             c.add(`categories.${index}.icon`, `Unknown icon "${category.icon}"`);
         }
     });
@@ -631,7 +654,7 @@ export function validateDiagramSet(input) {
             const names = Object.keys(input.icons);
             if (names.length > LIMITS.icons) c.add('icons', `More than ${LIMITS.icons} icons`);
             names.slice(0, LIMITS.icons).forEach((name) => {
-                if (!ICON_REF.test(name) || name.startsWith('brand:')) {
+                if (!ICON_REF.test(name) || name.startsWith('brand:') || RESERVED_IDS.includes(name)) {
                     c.add(`icons.${name}`, 'Invalid icon name');
                     return;
                 }
@@ -645,7 +668,7 @@ export function validateDiagramSet(input) {
         version: DIAGRAM_VERSION,
         title: text(c, 'title', input.title, { required: true, max: 120 }),
         description: text(c, 'description', input.description, { max: LIMITS.longText }),
-        lang: text(c, 'lang', input.lang, { max: 12 }) ?? 'es',
+        lang: language(c, 'lang', input.lang),
         categories,
         icons,
         start: id(c, 'start', input.start, { required: false }),
@@ -671,7 +694,7 @@ export function validateDiagramSet(input) {
         diagram.groups.forEach((group, index) => check(group.link, `diagrams.${diagramIndex}.groups.${index}.link`));
         diagram.participants.forEach((participant, index) => check(participant.link, `diagrams.${diagramIndex}.participants.${index}.link`));
         const icon = (name, path) => {
-            if (name && set.icons[name] === undefined && BUILTIN_ICONS[name] === undefined) c.add(path, `Unknown icon "${name}"`);
+            if (name && !Object.hasOwn(set.icons, name) && !Object.hasOwn(BUILTIN_ICONS, name)) c.add(path, `Unknown icon "${name}"`);
         };
         diagram.nodes.forEach((node, index) => icon(node.icon, `diagrams.${diagramIndex}.nodes.${index}.icon`));
         diagram.groups.forEach((group, index) => icon(group.icon, `diagrams.${diagramIndex}.groups.${index}.icon`));
@@ -682,6 +705,11 @@ export function validateDiagramSet(input) {
     return c.issues.length ? { ok: false, set: null, issues: c.issues } : { ok: true, set, issues: [] };
 }
 
+export function describeJsonError(error) {
+    const position = /\bposition (\d+)/.exec(String(error?.message ?? ''));
+    return position ? `Invalid JSON at position ${position[1]}` : 'Invalid JSON';
+}
+
 export function parseDiagramSetJson(source) {
     if (typeof source !== 'string') return { ok: false, set: null, issues: [{ path: '(root)', message: 'Expected text' }] };
     if (source.length > LIMITS.fileBytes) return { ok: false, set: null, issues: [{ path: '(root)', message: 'File is too large' }] };
@@ -689,7 +717,7 @@ export function parseDiagramSetJson(source) {
     try {
         data = JSON.parse(source);
     } catch (error) {
-        return { ok: false, set: null, issues: [{ path: '(root)', message: `Invalid JSON: ${error.message}` }] };
+        return { ok: false, set: null, issues: [{ path: '(root)', message: describeJsonError(error) }] };
     }
     return validateDiagramSet(data);
 }
@@ -698,33 +726,43 @@ export function findDiagram(set, diagramId) {
     return set.diagrams.find((diagram) => diagram.id === diagramId) ?? null;
 }
 
+export function combineDiagramSets(sets, overrides = {}) {
+    if (!sets.length) return validateDiagramSet(null);
+    const taken = new Set();
+    const diagrams = [];
+    const categories = [];
+    const icons = {};
+    for (const set of sets) {
+        const renamed = new Map();
+        const own = set.diagrams.map((diagram) => {
+            let next = diagram.id;
+            let suffix = 2;
+            while (taken.has(next)) next = `${diagram.id}-${suffix++}`;
+            taken.add(next);
+            if (next !== diagram.id) renamed.set(diagram.id, next);
+            return { ...diagram, id: next };
+        });
+        const relink = (link) => (link?.diagram && renamed.has(link.diagram) ? { ...link, diagram: renamed.get(link.diagram) } : link);
+        for (const diagram of own) {
+            for (const key of ['nodes', 'groups', 'participants']) {
+                if (diagram[key]) diagram[key] = diagram[key].map((entry) => (entry.link ? { ...entry, link: relink(entry.link) } : entry));
+            }
+            diagrams.push(diagram);
+        }
+        for (const category of set.categories) {
+            if (!categories.some((entry) => entry.id === category.id)) categories.push(category);
+        }
+        for (const [name, icon] of Object.entries(set.icons)) {
+            if (!Object.hasOwn(icons, name)) icons[name] = icon;
+        }
+    }
+    const [first] = sets;
+    const base = { version: DIAGRAM_VERSION, title: first.title, description: first.description, lang: first.lang, start: first.start };
+    return validateDiagramSet({ ...base, ...overrides, categories, icons, diagrams });
+}
+
 export function mergeDiagramSets(base, incoming) {
-    const taken = new Set(base.diagrams.map((diagram) => diagram.id));
-    const renamed = new Map();
-    const diagrams = incoming.diagrams.map((diagram) => {
-        let next = diagram.id;
-        let suffix = 2;
-        while (taken.has(next)) next = `${diagram.id}-${suffix++}`;
-        taken.add(next);
-        if (next !== diagram.id) renamed.set(diagram.id, next);
-        return { ...diagram, id: next };
-    });
-    const relink = (link) => (link?.diagram && renamed.has(link.diagram) ? { ...link, diagram: renamed.get(link.diagram) } : link);
-    diagrams.forEach((diagram) => {
-        diagram.nodes = diagram.nodes.map((node) => ({ ...node, link: relink(node.link) }));
-        diagram.groups = diagram.groups.map((group) => ({ ...group, link: relink(group.link) }));
-        diagram.participants = diagram.participants.map((participant) => ({ ...participant, link: relink(participant.link) }));
-    });
-    const categories = [...base.categories];
-    incoming.categories.forEach((category) => {
-        if (!categories.some((entry) => entry.id === category.id)) categories.push(category);
-    });
-    return validateDiagramSet({
-        ...serializeDiagramSet(base),
-        categories,
-        icons: { ...incoming.icons, ...base.icons },
-        diagrams: [...base.diagrams, ...diagrams].map(serializeDiagram)
-    });
+    return combineDiagramSets([base, incoming]);
 }
 
 const EMPTY = (value) => value === undefined || value === null || value === false || (Array.isArray(value) && value.length === 0) || (isObject(value) && Object.keys(value).length === 0);

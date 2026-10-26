@@ -12,6 +12,12 @@ export class ImportError extends Error {
 
 const MAX_WARNINGS = 100;
 
+export const RESERVED_IDS = Object.freeze(['__proto__', 'constructor', 'prototype']);
+
+export function own(table, key) {
+    return typeof key === 'string' && Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
 export class Warnings {
     constructor() {
         this.list = [];
@@ -42,7 +48,7 @@ const FALLBACK_TEXT = {
 };
 
 export function fallbackText(lang, key) {
-    const table = FALLBACK_TEXT[String(lang || 'es').slice(0, 2).toLowerCase()] ?? FALLBACK_TEXT.es;
+    const table = own(FALLBACK_TEXT, String(lang || 'es').slice(0, 2).toLowerCase()) ?? FALLBACK_TEXT.es;
     return table[key];
 }
 
@@ -61,7 +67,7 @@ export function slugify(raw, fallback = 'item', { lower = false } = {}) {
 
 export function createIdFactory(fallback = 'item', options = {}) {
     const byKey = new Map();
-    const taken = new Set();
+    const taken = new Set(RESERVED_IDS);
     const claim = (base) => {
         let next = base;
         let suffix = 2;
@@ -147,7 +153,7 @@ function fromCodePoint(value) {
 }
 
 export function namedEntity(name) {
-    return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : undefined;
+    return own(NAMED_ENTITIES, name);
 }
 
 export function decodeHtmlEntities(value) {
@@ -156,7 +162,7 @@ export function decodeHtmlEntities(value) {
     return text.replace(ENTITY, (match, hex, decimal, name) => {
         if (hex) return fromCodePoint(parseInt(hex, 16));
         if (decimal) return fromCodePoint(parseInt(decimal, 10));
-        return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : match;
+        return own(NAMED_ENTITIES, name) ?? match;
     });
 }
 
@@ -235,7 +241,7 @@ const NAMED_COLORS = {
 export function parseColor(value) {
     const text = String(value ?? '').trim().toLowerCase();
     if (!text || text === 'none' || text === 'default' || text === 'transparent' || text === 'inherit') return null;
-    const named = NAMED_COLORS[text];
+    const named = own(NAMED_COLORS, text);
     const hex = /^#([0-9a-f]{3,8})$/.exec(named ?? text);
     if (hex) {
         const digits = hex[1];
@@ -289,7 +295,7 @@ export function parseCssDeclarations(text) {
         if (index === -1) continue;
         const key = part.slice(0, index).trim().toLowerCase();
         const value = part.slice(index + 1).trim();
-        if (key && value && !Object.prototype.hasOwnProperty.call(result, key)) result[key] = value;
+        if (key && value && !Object.hasOwn(result, key)) result[key] = value;
     }
     return result;
 }
