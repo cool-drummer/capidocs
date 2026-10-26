@@ -9,8 +9,10 @@ type InjectResponse = Awaited<ReturnType<CapidocsApp['inject']>>;
 
 export const TEST_DATABASE_ROOT = process.env.TEST_DATABASE_ROOT ?? 'postgres://capidocs:capidocs@127.0.0.1:55432';
 
+const TEST_DATABASE_NAMESPACE = process.env.TEST_DATABASE_NAMESPACE ?? 'capidocs_studio';
+
 export function testDatabaseUrl(name: string): string {
-  return `${TEST_DATABASE_ROOT}/${name}`;
+  return `${TEST_DATABASE_ROOT}/${name.replace(/^capidocs/, TEST_DATABASE_NAMESPACE)}`;
 }
 
 export const ROOT = join(import.meta.dirname, '..', '..', '..');
