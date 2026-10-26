@@ -10,7 +10,6 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 4;
 const FIT_PADDING = 32;
-const READABLE_ZOOM = 0.62;
 const DRAG_THRESHOLD = 4;
 const STEP_INTERVAL = 3200;
 const FONT_FACES = ['400 12px Geist', '500 12px Geist', '600 13px Geist', '400 12px "Geist Mono"'];
@@ -80,6 +79,32 @@ function button(doc, { className, icon, label, action, text }) {
     return element;
 }
 
+export const MIN_INITIAL_ZOOM = 0.4;
+
+export function initialCamera(scene, view, maxZoom = 1.25, padding = FIT_PADDING) {
+    const fitK = Math.min(maxZoom, (view.w - padding * 2) / scene.width, (view.h - padding * 2) / scene.height);
+    if (fitK >= MIN_INITIAL_ZOOM) {
+        return { k: fitK, x: view.w / 2 - (scene.width / 2) * fitK, y: view.h / 2 - (scene.height / 2) * fitK };
+    }
+    const k = MIN_INITIAL_ZOOM;
+    const start = scene.flowStart ?? (scene.kind === 'sequence' && scene.participants[0]
+        ? { x: scene.participants[0].x, y: scene.participants[0].y, w: scene.participants[0].w, h: scene.participants[0].h }
+        : { x: 0, y: 0, w: scene.width, h: scene.height });
+    const axis = (size, extent, from, length) => {
+        if (extent * k <= size - padding * 2) return (size - extent * k) / 2;
+        const centered = size / 2 - (from + length / 2) * k;
+        return Math.min(padding / 2, Math.max(size - padding / 2 - extent * k, centered));
+    };
+    const vertical = scene.direction === 'TB' || scene.direction === 'BT' || scene.kind === 'sequence';
+    const x = vertical
+        ? axis(view.w, scene.width, start.x, start.w)
+        : (scene.width * k <= view.w - padding * 2 ? (view.w - scene.width * k) / 2 : scene.direction === 'RL' ? view.w - padding / 2 - scene.width * k : padding / 2);
+    const y = vertical
+        ? (scene.height * k <= view.h - padding * 2 ? (view.h - scene.height * k) / 2 : scene.direction === 'BT' ? view.h - padding / 2 - scene.height * k : padding / 2)
+        : axis(view.h, scene.height, start.y, start.h);
+    return { k, x, y };
+}
+
 function sceneItems(scene) {
     if (scene.kind === 'sequence') {
         return {
@@ -87,9 +112,15 @@ function sceneItems(scene) {
             edges: scene.messages.map((message) => ({ id: message.id, from: message.from, to: message.to, source: message.source }))
         };
     }
+    const alias = new Map();
+    for (const edge of scene.edges) {
+        alias.set(edge.id, edge.id);
+        for (const merged of edge.merged ?? []) alias.set(merged, edge.id);
+    }
     return {
         nodes: [...scene.nodes, ...scene.groups.map((group) => ({ ...group, isGroup: true }))],
-        edges: scene.edges
+        edges: scene.edges,
+        alias
     };
 }
 
@@ -300,20 +331,7 @@ export function mountDiagram(container, options = {}) {
 
     const initialView = () => {
         if (!state.scene) return;
-        const whole = fitBox({ x: 0, y: 0, w: state.scene.width, h: state.scene.height });
-        if (whole.k >= READABLE_ZOOM) {
-            setCamera(whole, false);
-            state.userMoved = false;
-            return;
-        }
-        const view = viewportSize();
-        const k = READABLE_ZOOM;
-        const w = state.scene.width * k;
-        const h = state.scene.height * k;
-        const direction = state.scene.direction;
-        const alignX = w <= view.w - FIT_PADDING * 2 ? (view.w - w) / 2 : direction === 'RL' ? view.w - FIT_PADDING / 2 - w : FIT_PADDING / 2;
-        const alignY = h <= view.h - FIT_PADDING * 2 ? (view.h - h) / 2 : direction === 'BT' ? view.h - FIT_PADDING / 2 - h : FIT_PADDING / 2;
-        setCamera({ k, x: alignX, y: alignY }, false);
+        setCamera(initialCamera(state.scene, viewportSize(), maxInitialZoom), false);
         state.userMoved = false;
     };
 
@@ -378,7 +396,12 @@ export function mountDiagram(container, options = {}) {
 
     const applyHover = () => {
         if (state.hover && state.step < 0) {
-            markSet(neighbours(state.hover), 'dg-hl');
+            if (state.hover.startsWith('edge:')) {
+                const edge = state.items.edges.find((entry) => entry.id === state.hover.slice(5));
+                markSet(edge ? { nodes: new Set([edge.from, edge.to]), edges: new Set([edge.id]) } : {}, 'dg-hl');
+            } else {
+                markSet(neighbours(state.hover), 'dg-hl');
+            }
             root.classList.add('dg-hover-mode');
         } else {
             clearMarks('dg-hl');
@@ -428,7 +451,8 @@ export function mountDiagram(container, options = {}) {
             return;
         }
         const step = steps[state.step];
-        markSet({ nodes: new Set(step.nodes), edges: new Set(step.edges), groups: new Set(step.groups) }, 'dg-step');
+        const alias = state.items?.alias;
+        markSet({ nodes: new Set(step.nodes), edges: new Set(step.edges.map((id) => alias?.get(id) ?? id)), groups: new Set(step.groups) }, 'dg-step');
         player.querySelector('.dg-player-count').textContent = t('steps.counter', { current: state.step + 1, total: steps.length });
         player.querySelector('.dg-player-title').textContent = step.title;
         player.querySelector('.dg-player-desc').textContent = step.description ?? '';
@@ -443,8 +467,9 @@ export function mountDiagram(container, options = {}) {
         const step = steps[state.step];
         if (!step || !state.items) return;
         const ids = new Set([...step.nodes, ...step.groups]);
+        const wanted = new Set(step.edges.map((id) => state.items.alias?.get(id) ?? id));
         for (const edge of state.items.edges) {
-            if (step.edges.includes(edge.id)) {
+            if (wanted.has(edge.id)) {
                 ids.add(edge.from);
                 ids.add(edge.to);
             }
@@ -836,7 +861,8 @@ export function mountDiagram(container, options = {}) {
         }
         if (event.pointerType === 'mouse') {
             const target = event.target.closest?.('[data-node]');
-            const id = target?.dataset.node ?? null;
+            const edgeTarget = target ? null : event.target.closest?.('.dg-edge[data-edge], .dg-edge-label[data-edge]');
+            const id = target?.dataset.node ?? (edgeTarget ? `edge:${edgeTarget.dataset.edge}` : null);
             if (id !== state.hover) {
                 state.hover = id;
                 applyHover();

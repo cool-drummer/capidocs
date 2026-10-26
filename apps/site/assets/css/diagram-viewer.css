@@ -78,12 +78,23 @@
 
 .dg-node:focus-visible .dg-node-bg,
 .dg-node:focus-visible .dg-hit,
-.dg-node.dg-selected .dg-node-bg,
-.dg-node.dg-selected .dg-hit,
-.dg-group-chip:focus-visible .dg-chip-bg,
-.dg-group-chip.dg-selected .dg-chip-bg {
+.dg-group-chip:focus-visible .dg-chip-bg {
     stroke: var(--dg-accent);
     stroke-width: 2;
+}
+
+.dg-viewer .dg-node.dg-selected .dg-node-bg,
+.dg-viewer .dg-node.dg-selected .dg-tile-label,
+.dg-viewer .dg-group-chip.dg-selected .dg-chip-bg {
+    fill: var(--dg-accent-tint);
+}
+
+.dg-viewer .dg-node.dg-selected .dg-badge rect {
+    fill: var(--dg-accent-soft);
+}
+
+.dg-viewer .dg-node.dg-selected .dg-hit {
+    fill: var(--dg-accent-tint);
 }
 
 .dg-group-chip {
@@ -148,6 +159,11 @@
 .dg-edge-label.dg-step rect,
 .dg-edge-label.dg-selected rect {
     fill: var(--dg-accent);
+}
+
+.dg-viewer .dg-edge-label.dg-label-hidden:not(.dg-hl):not(.dg-selected):not(.dg-step) {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .dg-node.dg-step .dg-node-bg,
