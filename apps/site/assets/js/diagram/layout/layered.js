@@ -1,6 +1,9 @@
 const SWEEPS = 16;
 const PLACEMENT_PASSES = 8;
 const DUMMY_SIZE = 10;
+const ORDER_BUDGET = 3000000;
+const MAX_DUMMIES = 60000;
+const LARGE_GRAPH = 40000;
 
 function isHorizontal(direction) {
     return direction === 'LR' || direction === 'RL';
@@ -125,83 +128,138 @@ function balanceRanks(order, preds, succs, rank) {
     }
 }
 
-function countCrossings(upper, lower, links) {
-    const pos = new Map();
-    upper.forEach((id, index) => pos.set(id, index));
-    const lowerPos = new Map();
-    lower.forEach((id, index) => lowerPos.set(id, index));
-    const pairs = [];
-    for (const id of upper) {
-        for (const target of links.get(id) ?? []) {
-            if (lowerPos.has(target)) pairs.push([pos.get(id), lowerPos.get(target)]);
-        }
-    }
-    pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+function crossingsBetween(upper, lower, downIdx, pos) {
+    if (!upper.length || !lower.length) return 0;
+    let first = 1;
+    while (first < lower.length) first *= 2;
+    const tree = new Int32Array(first * 2 - 1);
+    const base = first - 1;
     let crossings = 0;
-    for (let i = 0; i < pairs.length; i += 1) {
-        for (let j = i + 1; j < pairs.length; j += 1) {
-            if (pairs[j][0] > pairs[i][0] && pairs[j][1] < pairs[i][1]) crossings += 1;
-        }
-    }
-    return crossings;
-}
-
-function totalCrossings(layers, down) {
-    let total = 0;
-    for (let r = 0; r + 1 < layers.length; r += 1) total += countCrossings(layers[r], layers[r + 1], down);
-    return total;
-}
-
-function barycenterSweep(layers, neighbours, fromAbove, laneKey) {
-    const range = fromAbove ? [...layers.keys()].slice(1) : [...layers.keys()].reverse().slice(1);
-    for (const r of range) {
-        const reference = layers[fromAbove ? r - 1 : r + 1];
-        const pos = new Map(reference.map((id, index) => [id, index]));
-        const layer = layers[r];
-        const keyed = layer.map((id, index) => {
-            const linked = (neighbours.get(id) ?? []).filter((n) => pos.has(n));
-            const value = linked.length ? linked.reduce((sum, n) => sum + pos.get(n), 0) / linked.length : index * (reference.length / Math.max(1, layer.length));
-            return { id, value, index };
-        });
-        keyed.sort((a, b) => (laneKey(a.id) - laneKey(b.id)) || (a.value - b.value) || (a.index - b.index));
-        layers[r] = keyed.map((entry) => entry.id);
-    }
-}
-
-function transpose(layers, down, up, laneKey) {
-    let improved = true;
-    let guard = 0;
-    while (improved && guard < 8) {
-        improved = false;
-        guard += 1;
-        for (let r = 0; r < layers.length; r += 1) {
-            const layer = layers[r];
-            for (let i = 0; i + 1 < layer.length; i += 1) {
-                const a = layer[i];
-                const b = layer[i + 1];
-                if (laneKey(a) !== laneKey(b)) continue;
-                const before = pairCrossings(a, b, layers, r, down, up);
-                const after = pairCrossings(b, a, layers, r, down, up);
-                if (after < before) {
-                    layer[i] = b;
-                    layer[i + 1] = a;
-                    improved = true;
-                }
+    const targets = [];
+    for (const node of upper) {
+        targets.length = 0;
+        for (const next of downIdx[node]) targets.push(pos[next]);
+        targets.sort((a, b) => a - b);
+        for (const target of targets) {
+            let index = target + base;
+            tree[index] += 1;
+            while (index > 0) {
+                if (index % 2) crossings += tree[index + 1];
+                index = (index - 1) >> 1;
+                tree[index] += 1;
             }
         }
     }
+    return crossings;
 }
 
-function pairCrossings(a, b, layers, r, down, up) {
+function pairCount(a, b) {
     let crossings = 0;
-    for (const [links, other] of [[up, layers[r - 1]], [down, layers[r + 1]]]) {
-        if (!other) continue;
-        const pos = new Map(other.map((id, index) => [id, index]));
-        const pa = (links.get(a) ?? []).filter((n) => pos.has(n)).map((n) => pos.get(n));
-        const pb = (links.get(b) ?? []).filter((n) => pos.has(n)).map((n) => pos.get(n));
-        for (const x of pa) for (const y of pb) if (x > y) crossings += 1;
+    let j = 0;
+    for (const x of a) {
+        while (j < b.length && b[j] < x) j += 1;
+        crossings += j;
     }
     return crossings;
+}
+
+function minimizeCrossings(layers, graph, budget) {
+    const { downIdx, upIdx, lane, pos } = graph;
+    const layerCount = layers.length;
+    const edgeCount = downIdx.reduce((sum, list) => sum + list.length, 0);
+    let work = 0;
+    const setPositions = (layer) => {
+        for (let i = 0; i < layer.length; i += 1) pos[layer[i]] = i;
+    };
+    const total = () => {
+        work += edgeCount + layerCount;
+        let sum = 0;
+        for (let r = 0; r + 1 < layerCount; r += 1) sum += crossingsBetween(layers[r], layers[r + 1], downIdx, pos);
+        return sum;
+    };
+    const sweep = (fromAbove) => {
+        const order = [];
+        for (let r = 1; r < layerCount; r += 1) order.push(fromAbove ? r : layerCount - 1 - r);
+        for (const r of order) {
+            const reference = layers[fromAbove ? r - 1 : r + 1].length;
+            const layer = layers[r];
+            const links = fromAbove ? upIdx : downIdx;
+            const keyed = layer.map((node, index) => {
+                const list = links[node];
+                let value = index * (reference / Math.max(1, layer.length));
+                if (list.length) {
+                    let sum = 0;
+                    for (const other of list) sum += pos[other];
+                    value = sum / list.length;
+                }
+                work += list.length + 1;
+                return { node, value, index };
+            });
+            keyed.sort((a, b) => (lane[a.node] - lane[b.node]) || (a.value - b.value) || (a.index - b.index));
+            for (let i = 0; i < keyed.length; i += 1) layer[i] = keyed[i].node;
+            setPositions(layer);
+        }
+    };
+    const transpose = () => {
+        let improved = true;
+        let rounds = 0;
+        while (improved && rounds < 8 && work < budget) {
+            improved = false;
+            rounds += 1;
+            for (let r = 0; r < layerCount; r += 1) {
+                const layer = layers[r];
+                if (layer.length < 2) continue;
+                const neighbours = (links) => layer.map((node) => {
+                    const values = links[node].map((other) => pos[other]);
+                    values.sort((a, b) => a - b);
+                    return values;
+                });
+                const above = r > 0 ? neighbours(upIdx) : null;
+                const below = r + 1 < layerCount ? neighbours(downIdx) : null;
+                for (let i = 0; i + 1 < layer.length; i += 1) {
+                    const a = layer[i];
+                    const b = layer[i + 1];
+                    if (lane[a] !== lane[b]) continue;
+                    let before = 0;
+                    let after = 0;
+                    if (above) {
+                        before += pairCount(above[i], above[i + 1]);
+                        after += pairCount(above[i + 1], above[i]);
+                        work += above[i].length + above[i + 1].length;
+                    }
+                    if (below) {
+                        before += pairCount(below[i], below[i + 1]);
+                        after += pairCount(below[i + 1], below[i]);
+                        work += below[i].length + below[i + 1].length;
+                    }
+                    work += 1;
+                    if (after < before) {
+                        layer[i] = b;
+                        layer[i + 1] = a;
+                        pos[a] = i + 1;
+                        pos[b] = i;
+                        if (above) [above[i], above[i + 1]] = [above[i + 1], above[i]];
+                        if (below) [below[i], below[i + 1]] = [below[i + 1], below[i]];
+                        improved = true;
+                    }
+                }
+            }
+        }
+    };
+
+    layers.forEach(setPositions);
+    let best = layers.map((layer) => layer.slice());
+    let bestCrossings = total();
+    for (let round = 0; round < SWEEPS && bestCrossings > 0 && work < budget; round += 1) {
+        sweep(round % 2 === 0);
+        transpose();
+        const crossings = total();
+        if (crossings < bestCrossings) {
+            bestCrossings = crossings;
+            best = layers.map((layer) => layer.slice());
+        }
+    }
+    return best;
 }
 
 function isotonic(targets, weights) {
@@ -246,116 +304,184 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
     for (const id of ids) rank.set(id, rank.get(id) - minRank);
     const rankCount = ids.length ? Math.max(...rank.values()) + 1 : 0;
 
-    const nodes = new Map(items.map((item) => [item.id, { id: item.id, real: true, cross: crossOf(item), main: mainOf(item), rank: rank.get(item.id) }]));
-    const down = new Map();
-    const up = new Map();
-    const weightOf = new Map();
+    const realCount = ids.length;
+    const index = new Map(ids.map((id, position) => [id, position]));
+    const crossList = items.map((item) => crossOf(item));
+    const mainList = items.map((item) => mainOf(item));
+    const rankList = ids.map((id) => rank.get(id));
+    const laneList = ids.map((id) => laneOf.get(id) ?? 0);
+    const downList = ids.map(() => []);
+    const upList = ids.map(() => []);
+    const downWeightList = ids.map(() => []);
+    const upWeightList = ids.map(() => []);
+    const pairWeight = new Map();
     const link = (a, b, weight) => {
-        if (!down.has(a)) down.set(a, []);
-        if (!up.has(b)) up.set(b, []);
-        down.get(a).push(b);
-        up.get(b).push(a);
-        weightOf.set(`${a}>${b}`, Math.max(weightOf.get(`${a}>${b}`) ?? 0, weight));
+        downList[a].push(b);
+        upList[b].push(a);
+        downWeightList[a].push(weight);
+        upWeightList[b].push(weight);
+        if (a < realCount && b < realCount) {
+            const key = a * 4194304 + b;
+            pairWeight.set(key, Math.max(pairWeight.get(key) ?? 0, weight));
+        }
     };
     const gapLabels = new Map();
     const gapEdges = new Map();
     const chains = new Map();
+    const spanOf = (edge) => rankList[index.get(edge.to)] - rankList[index.get(edge.from)];
+    const kept = new Set();
+    let dummyBudget = MAX_DUMMIES;
+    for (const edge of [...dag].sort((a, b) => spanOf(a) - spanOf(b) || a.key - b.key)) {
+        const extra = Math.max(0, spanOf(edge) - 1);
+        if (extra > dummyBudget) continue;
+        dummyBudget -= extra;
+        kept.add(edge.key);
+    }
     dag.forEach((edge) => {
-        const span = rank.get(edge.to) - rank.get(edge.from);
+        if (!kept.has(edge.key)) return;
+        const from = index.get(edge.from);
+        const to = index.get(edge.to);
+        const span = rankList[to] - rankList[from];
         if (span <= 0) return;
-        const labelGap = rank.get(edge.from);
+        const labelGap = rankList[from];
         if (edge.label) {
             const size = horizontal ? edge.label.w : edge.label.h;
             gapLabels.set(labelGap, Math.max(gapLabels.get(labelGap) ?? 0, size));
         }
-        for (let r = rank.get(edge.from); r < rank.get(edge.to); r += 1) gapEdges.set(r, (gapEdges.get(r) ?? 0) + 1);
-        let previous = edge.from;
+        for (let r = rankList[from]; r < rankList[to]; r += 1) gapEdges.set(r, (gapEdges.get(r) ?? 0) + 1);
+        let previous = from;
         const chain = [];
         chains.set(edge.key, { edge, chain });
-        for (let r = rank.get(edge.from) + 1; r < rank.get(edge.to); r += 1) {
-            const id = `\u0000${edge.key}:${r}`;
-            chain.push(id);
-            const slot = edge.label ? (horizontal ? edge.label.h : edge.label.w) + 6 : DUMMY_SIZE;
-            nodes.set(id, { id, real: false, cross: slot, main: 0, rank: r });
-            laneOf.set(id, laneOf.get(edge.from));
-            link(previous, id, previous === edge.from ? 2 : 8);
-            previous = id;
+        const slot = edge.label ? (horizontal ? edge.label.h : edge.label.w) + 6 : DUMMY_SIZE;
+        for (let r = rankList[from] + 1; r < rankList[to]; r += 1) {
+            const dummy = crossList.length;
+            chain.push(dummy);
+            crossList.push(slot);
+            mainList.push(0);
+            rankList.push(r);
+            laneList.push(laneList[from]);
+            downList.push([]);
+            upList.push([]);
+            downWeightList.push([]);
+            upWeightList.push([]);
+            link(previous, dummy, previous === from ? 2 : 8);
+            previous = dummy;
         }
-        link(previous, edge.to, previous === edge.from ? 1 : 2);
+        link(previous, to, previous === from ? 1 : 2);
     });
-
-    const discovery = new Map();
-    const discover = (id) => {
-        if (discovery.has(id)) return;
-        discovery.set(id, discovery.size);
-        for (const next of down.get(id) ?? []) discover(next);
-    };
-    const all = [...nodes.keys()];
-    for (const id of ids) if (!(up.get(id) ?? []).length) discover(id);
-    for (const id of all) discover(id);
-
-    const layers = Array.from({ length: rankCount }, () => []);
-    for (const id of all) layers[nodes.get(id).rank].push(id);
-    const laneKey = columnLanes ? (id) => laneOf.get(id) : () => 0;
-    for (const layer of layers) layer.sort((a, b) => (laneKey(a) - laneKey(b)) || (discovery.get(a) - discovery.get(b)));
-
-    let best = layers.map((layer) => [...layer]);
-    let bestCrossings = totalCrossings(layers, down);
-    for (let sweep = 0; sweep < SWEEPS && bestCrossings > 0; sweep += 1) {
-        barycenterSweep(layers, sweep % 2 === 0 ? up : down, sweep % 2 === 0, laneKey);
-        transpose(layers, down, up, laneKey);
-        const crossings = totalCrossings(layers, down);
-        if (crossings < bestCrossings) {
-            bestCrossings = crossings;
-            best = layers.map((layer) => [...layer]);
+    if (pairWeight.size) {
+        for (let a = 0; a < realCount; a += 1) {
+            const list = downList[a];
+            for (let i = 0; i < list.length; i += 1) {
+                if (list[i] >= realCount) continue;
+                const weight = pairWeight.get(a * 4194304 + list[i]);
+                downWeightList[a][i] = weight;
+            }
+        }
+        for (let b = 0; b < realCount; b += 1) {
+            const list = upList[b];
+            for (let i = 0; i < list.length; i += 1) {
+                if (list[i] >= realCount) continue;
+                upWeightList[b][i] = pairWeight.get(list[i] * 4194304 + b);
+            }
         }
     }
 
-    const center = new Map();
+    const count = crossList.length;
+    const crossSize = Float64Array.from(crossList);
+    const mainSize = Float64Array.from(mainList);
+    const isReal = new Uint8Array(count);
+    isReal.fill(1, 0, realCount);
+    const laneIdx = Int32Array.from(laneList);
+    const rankIdx = Int32Array.from(rankList);
+    const downIdx = downList;
+    const upIdx = upList;
+    const downWeight = downWeightList;
+    const upWeight = upWeightList;
+
+    const discovery = new Int32Array(count).fill(-1);
+    let discovered = 0;
+    const discover = (startNode) => {
+        if (discovery[startNode] >= 0) return;
+        const stack = [startNode];
+        while (stack.length) {
+            const node = stack.pop();
+            if (discovery[node] >= 0) continue;
+            discovery[node] = discovered;
+            discovered += 1;
+            const next = downIdx[node];
+            for (let i = next.length - 1; i >= 0; i -= 1) if (discovery[next[i]] < 0) stack.push(next[i]);
+        }
+    };
+    for (let node = 0; node < realCount; node += 1) if (!upIdx[node].length) discover(node);
+    for (let node = 0; node < count; node += 1) discover(node);
+
+    const layers = Array.from({ length: rankCount }, () => []);
+    for (let node = 0; node < count; node += 1) layers[rankIdx[node]].push(node);
+    const laneKey = columnLanes ? laneIdx : new Int32Array(count);
+    for (const layer of layers) layer.sort((a, b) => (laneKey[a] - laneKey[b]) || (discovery[a] - discovery[b]));
+
+    const best = minimizeCrossings(layers, { downIdx, upIdx, lane: laneKey, pos: new Int32Array(count) }, ORDER_BUDGET);
+
+    const center = new Float64Array(count);
     const separation = (a, b) => {
-        const na = nodes.get(a);
-        const nb = nodes.get(b);
         let gap = spacing.node;
-        if (!na.real && !nb.real) gap = 8;
-        else if (!na.real || !nb.real) gap = Math.max(14, spacing.node * 0.6);
-        if (columnLanes && laneOf.get(a) !== laneOf.get(b)) gap += columnLanes.pad * 2 + columnLanes.gap;
-        return (na.cross + nb.cross) / 2 + gap;
+        if (!isReal[a] && !isReal[b]) gap = 8;
+        else if (!isReal[a] || !isReal[b]) gap = Math.max(14, spacing.node * 0.6);
+        if (columnLanes && laneIdx[a] !== laneIdx[b]) gap += columnLanes.pad * 2 + columnLanes.gap;
+        return (crossSize[a] + crossSize[b]) / 2 + gap;
     };
     for (const layer of best) {
         let cursor = 0;
-        layer.forEach((id, index) => {
-            if (index) cursor += separation(layer[index - 1], id);
-            center.set(id, cursor);
+        layer.forEach((node, position) => {
+            if (position) cursor += separation(layer[position - 1], node);
+            center[node] = cursor;
         });
     }
-    const weight = (a, b) => weightOf.get(`${a}>${b}`) ?? weightOf.get(`${b}>${a}`) ?? 1;
-    const place = (layer, neighbourMaps) => {
-        const desired = layer.map((id) => {
+    const place = (layer, useUp, useDown) => {
+        const desired = new Float64Array(layer.length);
+        const weights = new Float64Array(layer.length);
+        const offsets = new Float64Array(layer.length);
+        layer.forEach((node, position) => {
             let sum = 0;
             let total = 0;
-            for (const map of neighbourMaps) {
-                for (const n of map.get(id) ?? []) {
-                    const w = weight(id, n);
-                    sum += center.get(n) * w;
-                    total += w;
+            if (useUp) {
+                const list = upIdx[node];
+                const w = upWeight[node];
+                for (let i = 0; i < list.length; i += 1) {
+                    sum += center[list[i]] * w[i];
+                    total += w[i];
                 }
             }
-            return total ? sum / total : center.get(id);
+            if (useDown) {
+                const list = downIdx[node];
+                const w = downWeight[node];
+                for (let i = 0; i < list.length; i += 1) {
+                    sum += center[list[i]] * w[i];
+                    total += w[i];
+                }
+            }
+            if (position) offsets[position] = offsets[position - 1] + separation(layer[position - 1], node);
+            desired[position] = (total ? sum / total : center[node]) - offsets[position];
+            weights[position] = isReal[node] ? 1 : 2;
         });
-        const offsets = [0];
-        for (let i = 1; i < layer.length; i += 1) offsets.push(offsets[i - 1] + separation(layer[i - 1], layer[i]));
-        const fitted = isotonic(desired.map((value, index) => value - offsets[index]), layer.map((id) => (nodes.get(id).real ? 1 : 2)));
-        layer.forEach((id, index) => center.set(id, fitted[index] + offsets[index]));
+        const fitted = isotonic(desired, weights);
+        layer.forEach((node, position) => { center[node] = fitted[position] + offsets[position]; });
     };
-    for (let pass = 0; pass < PLACEMENT_PASSES; pass += 1) {
-        if (pass % 2 === 0) for (let r = 1; r < best.length; r += 1) place(best[r], [up]);
-        else for (let r = best.length - 2; r >= 0; r -= 1) place(best[r], [down]);
+    const passes = count > LARGE_GRAPH ? 4 : PLACEMENT_PASSES;
+    for (let pass = 0; pass < passes; pass += 1) {
+        if (pass % 2 === 0) for (let r = 1; r < best.length; r += 1) place(best[r], true, false);
+        else for (let r = best.length - 2; r >= 0; r -= 1) place(best[r], false, true);
     }
     for (let pass = 0; pass < 2; pass += 1) {
-        for (let r = 0; r < best.length; r += 1) place(best[r], [up, down]);
+        for (let r = 0; r < best.length; r += 1) place(best[r], true, true);
     }
 
-    const thickness = best.map((layer) => Math.max(0, ...layer.map((id) => nodes.get(id).main)));
+    const thickness = best.map((layer) => {
+        let value = 0;
+        for (const node of layer) value = Math.max(value, mainSize[node]);
+        return value;
+    });
     const gapAfter = (r) => {
         const label = gapLabels.get(r) ?? 0;
         const channels = Math.min(gapEdges.get(r) ?? 0, 10);
@@ -365,8 +491,8 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
     };
     function rankLane(r) {
         const layer = best[r] ?? [];
-        const realId = layer.find((id) => nodes.get(id).real) ?? layer[0];
-        return realId === undefined ? -1 : laneOf.get(realId);
+        const real = layer.find((node) => isReal[node]) ?? layer[0];
+        return real === undefined ? -1 : laneIdx[real];
     }
 
     const rankStart = [];
@@ -416,31 +542,45 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
     if (columnLanes) {
         let cursor = 0;
         for (let lane = 0; lane < columnLanes.count; lane += 1) {
-            const members = all.filter((id) => laneOf.get(id) === lane);
-            const low = members.length ? Math.min(...members.map((id) => center.get(id) - nodes.get(id).cross / 2)) : 0;
-            const high = members.length ? Math.max(...members.map((id) => center.get(id) + nodes.get(id).cross / 2)) : 0;
+            let low = Infinity;
+            let high = -Infinity;
+            const members = [];
+            for (let node = 0; node < count; node += 1) {
+                if (laneIdx[node] !== lane) continue;
+                members.push(node);
+                low = Math.min(low, center[node] - crossSize[node] / 2);
+                high = Math.max(high, center[node] + crossSize[node] / 2);
+            }
+            if (!members.length) {
+                low = 0;
+                high = 0;
+            }
             const natural = (high - low) + columnLanes.pad * 2;
             const width = Math.max(natural, columnLanes.minWidths[lane] ?? 0);
             const offset = cursor + columnLanes.pad + (width - natural) / 2 - low;
-            for (const id of members) center.set(id, center.get(id) + offset);
+            for (const node of members) center[node] += offset;
             laneBands.push({ start: cursor, end: cursor + width });
             cursor += width + columnLanes.gap;
         }
     } else {
-        const shift = all.length ? -Math.min(...all.map((id) => center.get(id) - nodes.get(id).cross / 2)) : 0;
-        for (const id of all) center.set(id, center.get(id) + shift);
+        let low = Infinity;
+        for (let node = 0; node < count; node += 1) low = Math.min(low, center[node] - crossSize[node] / 2);
+        const shift = count ? -low : 0;
+        for (let node = 0; node < count; node += 1) center[node] += shift;
     }
 
-    const crossExtent = Math.max(0, ...all.map((id) => center.get(id) + nodes.get(id).cross / 2), ...laneBands.map((band) => (columnLanes ? band.end : 0)));
+    let crossExtent = 0;
+    for (let node = 0; node < count; node += 1) crossExtent = Math.max(crossExtent, center[node] + crossSize[node] / 2);
+    if (columnLanes) for (const band of laneBands) crossExtent = Math.max(crossExtent, band.end);
     const mainExtent = bandLanes && laneBands.length
         ? laneBands[laneBands.length - 1].end
         : (best.length ? rankStart[best.length - 1] + thickness[best.length - 1] : 0);
 
     const positions = new Map();
     for (const id of ids) {
-        const node = nodes.get(id);
-        const main = rankStart[node.rank] + (thickness[node.rank] - node.main) / 2;
-        const cross = center.get(id) - node.cross / 2;
+        const node = index.get(id);
+        const main = rankStart[rankIdx[node]] + (thickness[rankIdx[node]] - mainSize[node]) / 2;
+        const cross = center[node] - crossSize[node] / 2;
         positions.set(id, horizontal ? { x: main, y: cross } : { x: cross, y: main });
     }
     const width = horizontal ? mainExtent : crossExtent;
@@ -478,7 +618,7 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
     for (const { edge, chain } of chains.values()) {
         const fromRank = rank.get(edge.from);
         const toRank = rank.get(edge.to);
-        const via = chain.map((id) => toPoint(rankStart[nodes.get(id).rank] + thickness[nodes.get(id).rank] / 2, center.get(id)));
+        const via = chain.map((node) => toPoint(rankStart[rankIdx[node]] + thickness[rankIdx[node]] / 2, center[node]));
         const gaps = [];
         for (let r = fromRank; r < toRank; r += 1) {
             const a = rankBands[r];
