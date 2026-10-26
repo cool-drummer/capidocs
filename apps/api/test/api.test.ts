@@ -262,6 +262,18 @@ describe('portal, space and pages', () => {
     expect(response.status).toBe(400);
   });
 
+  it('refuses a parent page that lives in another space', async () => {
+    const other = await call('POST', '/spaces', { name: 'Otra', slug: 'otra', audience: 'internal' });
+    const foreign = await call('POST', `/spaces/${other.body.space.id}/pages`, { title: 'Ajena' });
+
+    const created = await call('POST', `/spaces/${ids.space}/pages`, { title: 'Hija', parentPageId: foreign.body.page.id });
+    expect(created.status).toBe(400);
+    expect(created.body.message).toBe('La página padre no existe en este espacio.');
+
+    const moved = await call('POST', `/pages/${ids.first}/move`, { parentPageId: foreign.body.page.id, index: 0 });
+    expect(moved.status).toBe(400);
+  });
+
   it('snapshots a version only when the content changed', async () => {
     const first = await call('POST', `/pages/${ids.first}/versions`, { locale: 'es' });
     expect(first.body.version.version).toBe(1);

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import type { Database } from '../db/client.js';
 import { pageContents, pages, pageVersions } from '../db/schema.js';
@@ -42,6 +42,15 @@ export async function siblingPositions(
   return rows.map((row) => row.position);
 }
 
+async function assertParentInSpace(db: Database, spaceId: string, parentPageId: string): Promise<void> {
+  const parent = await db
+    .select({ id: pages.id })
+    .from(pages)
+    .where(and(eq(pages.id, parentPageId), eq(pages.spaceId, spaceId), isNull(pages.deletedAt)))
+    .limit(1);
+  if (!parent.length) throw badRequest('La página padre no existe en este espacio.');
+}
+
 export async function nextPosition(db: Database, spaceId: string, parentPageId: string | null): Promise<string> {
   const positions = await siblingPositions(db, spaceId, parentPageId);
   const last = positions[positions.length - 1] ?? null;
@@ -70,10 +79,7 @@ export async function createPage(db: Database, input: CreatePageInput) {
   const kind = input.kind ?? 'page';
   const parentPageId = input.parentPageId ?? null;
 
-  if (parentPageId) {
-    const parent = await db.select({ id: pages.id }).from(pages).where(eq(pages.id, parentPageId)).limit(1);
-    if (!parent.length) throw badRequest('La página padre no existe.');
-  }
+  if (parentPageId) await assertParentInSpace(db, input.spaceId, parentPageId);
 
   const document = input.document ?? (kind === 'hero' ? { version: 1, hero: { title: input.title } } : { version: 1, sections: [] });
   const parsed = parseDocument(document, kind === 'hero' ? 'hero' : 'page');
@@ -239,6 +245,7 @@ export async function movePage(
   if (!isValidPosition(target.position)) throw badRequest('Posición inválida.');
   if (target.parentPageId) {
     if (target.parentPageId === pageId) throw badRequest('Una página no puede ser su propia madre.');
+    await assertParentInSpace(db, page.spaceId, target.parentPageId);
     const descendants = await descendantIds(db, pageId);
     if (descendants.includes(target.parentPageId)) throw badRequest('No puedes mover una página dentro de sí misma.');
   }
@@ -284,18 +291,22 @@ export async function spaceTree(db: Database, spaceId: string, locale: string, f
     .where(and(eq(pages.spaceId, spaceId), isNull(pages.deletedAt)))
     .orderBy(asc(sql`${pages.position} COLLATE "C"`));
 
+  const ids = rows.map((row) => row.id);
+  if (!ids.length) return [];
+
   const contents = await db
     .select({ pageId: pageContents.pageId, locale: pageContents.locale, title: pageContents.title })
-    .from(pageContents);
+    .from(pageContents)
+    .where(inArray(pageContents.pageId, ids));
   const titleFor = (pageId: string) => {
     const forPage = contents.filter((row) => row.pageId === pageId);
     return (forPage.find((row) => row.locale === locale) ?? forPage.find((row) => row.locale === fallback))?.title ?? '';
   };
 
   const published = await db
-    .select({ pageId: pageVersions.pageId, content: pageVersions.content })
+    .select({ pageId: pageVersions.pageId })
     .from(pageVersions)
-    .where(eq(pageVersions.published, true));
+    .where(and(eq(pageVersions.published, true), inArray(pageVersions.pageId, ids)));
 
   const nodes = new Map<string, TreeNode>();
   for (const row of rows) {
