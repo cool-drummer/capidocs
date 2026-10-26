@@ -235,6 +235,33 @@ describe('portal, space and pages', () => {
     expect(response.body.message).toBe('Revisa los datos e inténtalo de nuevo.');
   });
 
+  it('accepts a diagram block with an embedded set and rejects broken or external ones', async () => {
+    const set = {
+      version: 1,
+      title: 'Arquitectura',
+      diagrams: [{ id: 'overview', title: 'Panorama', nodes: [{ id: 'web', title: 'Sitio' }, { id: 'api', title: 'API' }], edges: [{ from: 'web', to: 'api' }] }],
+    };
+    const save = (diagram: unknown) =>
+      call('PUT', `/pages/${ids.second}/content`, {
+        locale: 'es',
+        title: 'Seguridad',
+        document: { version: 1, sections: [{ title: 'Diagrama', diagram }] },
+      });
+
+    expect((await save({ set, diagram: 'overview', caption: 'Vista general' })).status).toBe(200);
+
+    const broken = await save({ set: { ...set, diagrams: [{ ...set.diagrams[0], edges: [{ from: 'web', to: 'missing' }] }] } });
+    expect(broken.status).toBe(400);
+    expect(broken.body.message).toBe('El diagrama no es válido. Vuelve a importarlo e inténtalo de nuevo.');
+
+    expect((await save({ set, diagram: 'missing' })).status).toBe(400);
+    expect((await save({ src: '../../../etc/passwd' })).status).toBe(400);
+    expect((await save({ set: { ...set, diagrams: [{ ...set.diagrams[0], nodes: [{ id: 'x', title: 'X', link: { href: 'javascript:alert(1)' } }], edges: [] }] } })).status).toBe(400);
+
+    const cleared = await call('PUT', `/pages/${ids.second}/content`, { locale: 'es', title: 'Seguridad', document: { version: 1, sections: [] } });
+    expect(cleared.status).toBe(200);
+  });
+
   it('returns the tree in position order', async () => {
     const response = await call('GET', `/spaces/${ids.space}/tree`);
     expect(response.status).toBe(200);

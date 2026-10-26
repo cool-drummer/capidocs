@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 import type { Database } from '../db/client.js';
 import { pageContents, pages, pageVersions } from '../db/schema.js';
-import { documentText, parseDocument, type HeroDocument, type PageDocument } from '../lib/document.js';
+import { assertDocumentDiagrams, documentText, parseDocument, type HeroDocument, type PageDocument } from '../lib/document.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { isValidPosition, POSITION_START, positionBetween } from '../lib/position.js';
 
@@ -83,6 +83,7 @@ export async function createPage(db: Database, input: CreatePageInput) {
 
   const document = input.document ?? (kind === 'hero' ? { version: 1, hero: { title: input.title } } : { version: 1, sections: [] });
   const parsed = parseDocument(document, kind === 'hero' ? 'hero' : 'page');
+  await assertDocumentDiagrams(parsed);
   const position = await nextPosition(db, input.spaceId, parentPageId);
 
   const [page] = await db
@@ -122,6 +123,7 @@ export async function saveContent(
 ) {
   const page = await getPage(db, pageId);
   const parsed = parseDocument(document, page.kind === 'hero' ? 'hero' : 'page');
+  await assertDocumentDiagrams(parsed);
   const text = documentText(parsed);
 
   const existing = await db

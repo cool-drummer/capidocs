@@ -1,5 +1,7 @@
+import { validateSpecDiagrams } from '@capidocs/compiler';
 import { sectionSchema, type Section } from '@capidocs/spec';
 import { z } from 'zod';
+import { badRequest } from './errors.js';
 
 export const documentSchema = z
   .object({
@@ -90,4 +92,19 @@ export function parseDocument(value: unknown, kind: 'page' | 'hero'): PageDocume
 
 export function documentText(value: PageDocument | HeroDocument): string {
   return 'hero' in value ? heroToText(value) : documentToText(value);
+}
+
+const noFiles = async (): Promise<string> => {
+  throw new Error('Diagram sources are not available in the studio');
+};
+
+export async function assertDocumentDiagrams(document: PageDocument | HeroDocument): Promise<void> {
+  if (!('sections' in document)) return;
+  const blocks = document.sections.filter((section) => section.diagram);
+  if (!blocks.length) return;
+  if (blocks.some((section) => section.diagram?.src !== undefined)) {
+    throw badRequest('Los diagramas se importan como archivo dentro del bloque; no se admiten rutas.');
+  }
+  const issues = await validateSpecDiagrams({ sections: blocks }, { baseDir: '/', readFile: noFiles });
+  if (issues.length) throw badRequest('El diagrama no es válido. Vuelve a importarlo e inténtalo de nuevo.');
 }
