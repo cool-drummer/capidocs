@@ -97,6 +97,10 @@
         {
           "text": "Webhooks",
           "href": "#webhooks"
+        },
+        {
+          "text": "Diagrams",
+          "href": "diagrams.html"
         }
       ],
       "cta": {
@@ -156,7 +160,10 @@
       "not_found_title": "We could not find this page",
       "not_found_desc": "The link may have changed or no longer exists. Start from the home page or search for what you need.",
       "back_home": "Back to home",
-      "error_hint": "Technical details were logged to the console."
+      "error_hint": "Technical details were logged to the console.",
+      "open_in_explorer": "Open in the explorer",
+      "diagram_loading": "Loading diagram…",
+      "diagram_error": "The diagram could not be loaded."
     },
     "languages": [
       {
@@ -807,6 +814,12 @@
                 "type": "string",
                 "required": false,
                 "description": "Warning in a box with an alert border."
+              },
+              {
+                "name": "diagram",
+                "type": "object",
+                "required": false,
+                "description": "Interactive diagram taken from a JSON set (src) or declared inline (set)."
               }
             ]
           },
@@ -1039,6 +1052,16 @@
                 "link": "#features"
               }
             ]
+          },
+          {
+            "title": "Interactive diagrams",
+            "content": "The diagram block embeds a diagram from the explorer in any page. It can be panned, zoomed, expanded and opened in the explorer to see it in full.",
+            "diagram": {
+              "src": "config/diagrams/capidocs.json",
+              "diagram": "architecture",
+              "height": 460,
+              "caption": "capidocs architecture"
+            }
           }
         ]
       }

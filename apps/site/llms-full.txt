@@ -137,6 +137,7 @@ Las páginas de tipo content se componen de secciones. Cada sección admite esto
 - `steps` (array) — Pasos numerados con título, descripción y enlace opcional.
 - `note` (string) — Nota informativa en caja sutil.
 - `warning` (string) — Advertencia en caja con borde de alerta.
+- `diagram` (object) — Diagrama interactivo tomado de un conjunto JSON (src) o declarado en línea (set).
 
 ## Callouts
 
@@ -310,6 +311,12 @@ Guían al lector por un proceso ordenado. Cada paso admite number, title, descri
 2. Edita la configuración: Describe tu API y tus páginas en config/api-spec.json.
 
 3. Publica: Sube los archivos a cualquier hosting estático. No hay paso de compilación.
+
+## Diagramas interactivos
+
+El bloque diagram inserta un diagrama del explorador en cualquier página. Se puede mover, acercar, expandir y abrir en el explorador para verlo completo.
+
+> Diagram: Arquitectura de capidocs (config/diagrams/capidocs.json#architecture)
 
 ---
 

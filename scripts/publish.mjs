@@ -9,6 +9,7 @@ const outDir = resolve(outArg);
 
 const PUBLISHABLE = new Set([
   'index.html',
+  'diagrams.html',
   'assets',
   'config',
   'logos',
