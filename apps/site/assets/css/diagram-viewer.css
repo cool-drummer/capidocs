@@ -334,6 +334,23 @@
     bottom: 84px;
 }
 
+.dg-wheel-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--dg-label-bg);
+    color: var(--dg-label-text);
+    font-size: 12.5px;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.dg-wheel-hint[hidden] {
+    display: none;
+}
+
 .dg-sr-only {
     position: absolute;
     width: 1px;

@@ -49,6 +49,11 @@ export async function createCapidocs({ spec, assetBase = '', searchIndexUrl = 's
             core.enhanceCodeBlocks(container);
             highlight(container);
             toc.refresh(route);
+            if (container.querySelector('[data-diagram-block]')) {
+                import('./diagram/blocks.js')
+                    .then((module) => module.mountDiagramBlocks(container, { t }))
+                    .catch((error) => console.error('capidocs: diagram blocks failed', error));
+            }
         }
     });
 

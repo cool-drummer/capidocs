@@ -953,11 +953,12 @@ body {
     display: grid;
     grid-template-columns: minmax(84px, 38%) 1fr;
     gap: 12px;
-    padding: 7px 0;
+    padding: 6px 8px;
+    border-radius: 8px;
 }
 
-.dx-props > div + div {
-    border-top: 1px solid var(--ui-rule);
+.dx-props > div:nth-child(odd) {
+    background: var(--ui-panel);
 }
 
 .dx-props dt {

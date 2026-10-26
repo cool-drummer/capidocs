@@ -96,6 +96,19 @@ export const imageSchema = z
   })
   .strict();
 
+export const diagramBlockSchema = z
+  .object({
+    src: nonEmpty.optional(),
+    set: anyValue.optional(),
+    diagram: nonEmpty.optional(),
+    height: z.number().int().min(160).max(2000).optional(),
+    caption: z.string().optional(),
+  })
+  .strict()
+  .refine((block) => (block.src !== undefined) !== (block.set !== undefined), {
+    message: 'A diagram block needs either "src" or "set"',
+  });
+
 export const sectionSchema = z
   .object({
     title: nonEmpty,
@@ -114,6 +127,7 @@ export const sectionSchema = z
     code_group: z.array(codeGroupItemSchema).optional(),
     fields: z.array(fieldSchema).optional(),
     image: imageSchema.optional(),
+    diagram: diagramBlockSchema.optional(),
   })
   .strict();
 

@@ -3,9 +3,9 @@ import { mountExplorer, readStoredSet, safeStorage } from './explorer.js';
 import { createDiagramTranslator, friendlyError } from './i18n.js';
 import { escapeHtml } from '../escape.js';
 import { applyTheme } from './theme.js';
+import { HANDOFF_KEY } from './blocks.js';
 
 const DEFAULT_SOURCE = 'config/diagrams/capidocs.json';
-export const HANDOFF_KEY = 'capidocs.diagrams.handoff';
 
 const fail = (code) => Object.assign(new Error(code), { code });
 

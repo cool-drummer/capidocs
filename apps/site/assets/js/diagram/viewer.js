@@ -166,6 +166,18 @@ export function mountDiagram(container, options = {}) {
     trailBar.hidden = true;
     root.appendChild(trailBar);
 
+    const wheelHint = doc.createElement('div');
+    wheelHint.className = 'dg-wheel-hint';
+    wheelHint.hidden = true;
+    wheelHint.textContent = t('viewer.wheelHint');
+    root.appendChild(wheelHint);
+    let wheelHintTimer = null;
+    const showWheelHint = () => {
+        wheelHint.hidden = false;
+        clearTimeout(wheelHintTimer);
+        wheelHintTimer = setTimeout(() => { wheelHint.hidden = true; }, 1400);
+    };
+
     let zoomLabel = null;
     if (controls && interactive) {
         const bar = doc.createElement('div');
@@ -897,7 +909,10 @@ export function mountDiagram(container, options = {}) {
         const rect = viewport.getBoundingClientRect();
         const zoomGesture = event.ctrlKey || event.metaKey;
         const mouseWheel = event.deltaMode === 1 || (event.deltaX === 0 && Math.abs(event.deltaY) >= 50 && Number.isInteger(event.deltaY));
-        if (wheel === 'ctrl' && !zoomGesture) return;
+        if (wheel === 'ctrl' && !zoomGesture) {
+            showWheelHint();
+            return;
+        }
         event.preventDefault();
         if (zoomGesture || (wheel === 'zoom' && mouseWheel)) {
             const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
@@ -1029,6 +1044,7 @@ export function mountDiagram(container, options = {}) {
         },
         destroy() {
             state.destroyed = true;
+            clearTimeout(wheelHintTimer);
             stopPlaying();
             if (cameraAnimation) cancelAnimationFrame(cameraAnimation);
             if (flipFrame) cancelAnimationFrame(flipFrame);
