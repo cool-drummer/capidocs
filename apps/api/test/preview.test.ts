@@ -142,6 +142,8 @@ describe('preview frame', () => {
     const response = await app.inject({ method: 'GET', url: '/api/preview/frame' });
     expect(response.body).toContain('event.source !== window.parent');
     expect(response.body).toContain('data.channel !== channel');
+    expect(response.body).toContain("new URLSearchParams(location.search).get('channel')");
+    expect(response.body).not.toContain('location.hash');
   });
 });
 

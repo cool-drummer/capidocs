@@ -60,7 +60,7 @@ export function PreviewPanel({ portalId }: { portalId: string }) {
         title="Vista previa del portal"
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
-        src={`/api/preview/frame#${channel}`}
+        src={`/api/preview/frame?channel=${channel}`}
       />
     </div>
   );

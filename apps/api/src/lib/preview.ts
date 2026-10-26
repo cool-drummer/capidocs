@@ -71,7 +71,7 @@ export function previewFrame(): { html: string; nonce: string } {
 <script nonce="${nonce}" src="${CDN}/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-SkmBfuA2hqjzEVpmnMt/LINrjop3GKWqsuLSSB3e7iBmYK7JuWw4ldmmxwD9mdm2IRTTi0OxSAfEGvgEi0i2Kw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="module" nonce="${nonce}">
 import { createCapidocs } from '/site/assets/js/app.js';
-const channel = location.hash.slice(1);
+const channel = new URLSearchParams(location.search).get('channel') || '';
 let rendered = false;
 window.addEventListener('message', async (event) => {
   if (event.source !== window.parent || rendered) return;
