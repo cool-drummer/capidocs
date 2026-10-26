@@ -67,6 +67,7 @@ function readRecord(area) {
 }
 
 export function readSavedRecord(areas, now = Date.now()) {
+    removeKey(areas.local, LEGACY_KEY);
     const session = readRecord(areas.session);
     if (session) return { ...session, remember: false, area: 'session' };
     const local = readRecord(areas.local);

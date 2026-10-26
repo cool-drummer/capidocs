@@ -167,6 +167,12 @@ describe('mountExplorer', () => {
     expect(storages.local.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it('drops the unexpiring record left by earlier versions', () => {
+    storages.local.setItem('capidocs.diagrams.set.v1', JSON.stringify({ set: sample }));
+    expect(readSavedRecord(storages)).toBeNull();
+    expect(storages.local.getItem('capidocs.diagrams.set.v1')).toBeNull();
+  });
+
   it('never keeps a record that is not marked as remembered in local storage', () => {
     storages.local.setItem(STORAGE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), set: { title: 'x' } }));
     expect(readSavedRecord(storages)).toBeNull();
