@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, clientError, friendlyError, type Portal, type Space, type TreeNode } from '../api';
 import { PageEditor } from './page-editor';
+import { AccountPanel } from './account';
 import { PreviewPanel } from './preview';
 import { SpaceMembersPanel, TeamPanel } from './team';
 import { Field, Select, TextArea, TextInput } from '../components/fields';
@@ -369,7 +370,7 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [pageId, setPageId] = useState<string | null>(null);
   const [locale, setLocale] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'none' | 'space' | 'portals' | 'team' | 'import' | 'access' | 'preview'>('none');
+  const [panel, setPanel] = useState<'none' | 'space' | 'portals' | 'team' | 'import' | 'access' | 'preview' | 'account'>('none');
   const [previewPortal, setPreviewPortal] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const showError = (err: unknown) => setNotice(friendlyError(err));
@@ -426,7 +427,9 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
           <button type="button" className="button button-quiet" onClick={() => setPanel(panel === 'portals' ? 'none' : 'portals')}>
             Portales
           </button>
-          <span className="who">{me.data?.user.name}</span>
+          <button type="button" className="button button-quiet who" onClick={() => setPanel(panel === 'account' ? 'none' : 'account')}>
+            {me.data?.user.name}
+          </button>
           <button type="button" className="button button-quiet" onClick={onLogout}>
             Salir
           </button>
@@ -500,6 +503,7 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
           ) : null}
           {panel === 'space' ? <NewSpaceForm onDone={() => setPanel('none')} /> : null}
           {panel === 'team' ? <TeamPanel /> : null}
+          {panel === 'account' ? <AccountPanel /> : null}
           {panel === 'import' ? <ImportPanel onDone={() => setPanel('none')} /> : null}
           {panel === 'access' && activeSpace ? <SpaceMembersPanel spaceId={activeSpace.id} /> : null}
           {panel === 'portals' ? (

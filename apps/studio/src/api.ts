@@ -189,6 +189,10 @@ export const api = {
   setup: (body: Record<string, unknown>) => request<{ workspace: Workspace }>('POST', '/auth/setup', body),
   login: (email: string, password: string) =>
     request<{ user: SessionUser; csrfToken: string }>('POST', '/auth/login', { email, password }).then(remember),
+  forgotPassword: (email: string) => request<{ ok: boolean }>('POST', '/auth/password/forgot', { email }),
+  resetPassword: (token: string, password: string) => request<{ ok: boolean }>('POST', '/auth/password/reset', { token, password }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: boolean }>('POST', '/auth/password', { currentPassword, newPassword }),
   logout: () =>
     request<{ ok: boolean }>('POST', '/auth/logout').finally(() => {
       csrfToken = '';
