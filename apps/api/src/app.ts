@@ -3,6 +3,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { createDatabase, type Database } from './db/client.js';
+import { createMailer, templates, type Mailer, type MailMessage } from './lib/mail.js';
 import { migrate } from './db/migrate.js';
 import { members, portals, sessions, spaceMembers, spaces, users, workspaces } from './db/schema.js';
 import { assertCan } from './lib/access.js';
@@ -10,6 +11,19 @@ import { cookieOptions, createSessionToken, hashPassword, hashToken, SESSION_COO
 import { writeBuild } from './lib/deploy.js';
 import { ApiError, badRequest, conflict, forbidden, notFound, unauthorized } from './lib/errors.js';
 import { actorFor, loadMembership, loadSpaceSubject, spaceRoleFor, visibleSpaceIds, type SessionUser } from './modules/context.js';
+import {
+  acceptInvitation,
+  createInvitation,
+  inspectInvitation,
+  listInvitations,
+  listMembers,
+  listSpaceMembers,
+  removeMember,
+  removeSpaceMember,
+  revokeInvitation,
+  setSpaceMember,
+  updateMemberRole,
+} from './modules/members.js';
 import {
   contentOrFallback,
   createPage,
@@ -30,6 +44,9 @@ export interface AppOptions {
   runtimeDir: string;
   secureCookies?: boolean;
   logger?: boolean;
+  studioUrl?: string;
+  mailer?: Mailer;
+  mail?: { apiKey?: string; from?: string };
 }
 
 declare module 'fastify' {
@@ -43,6 +60,7 @@ const emailSchema = z.string().trim().toLowerCase().email();
 export interface CapidocsApp {
   fastify: FastifyInstance;
   db: Database;
+  mailer: Mailer;
   inject: FastifyInstance['inject'];
   listen: FastifyInstance['listen'];
   close: () => Promise<void>;
@@ -54,6 +72,22 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
 
   const app = Fastify({ logger: options.logger ?? false });
   await app.register(cookie);
+
+  const studioUrl = (options.studioUrl ?? 'http://localhost:5190').replace(/\/$/, '');
+  const mailer =
+    options.mailer ??
+    createMailer({
+      ...(options.mail?.apiKey ? { apiKey: options.mail.apiKey } : {}),
+      ...(options.mail?.from ? { from: options.mail.from } : {}),
+      logger: (message) => app.log.warn(message),
+    });
+  const notify = async (to: string, template: Omit<MailMessage, 'to'>) => {
+    try {
+      await mailer.send({ to, ...template });
+    } catch (error) {
+      app.log.error({ err: error }, 'mail delivery failed');
+    }
+  };
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
@@ -324,6 +358,104 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
     return { removed };
   });
 
+  app.get('/members', async (request) => {
+    const user = await currentUser(request);
+    return { members: await listMembers(db, user.workspaceId), invitations: await listInvitations(db, user.workspaceId) };
+  });
+
+  app.post('/members/invitations', async (request, reply) => {
+    const user = await currentUser(request);
+    assertCan(actorFor(user), 'member.invite', { workspaceId: user.workspaceId });
+    const body = z.object({ email: emailSchema, role: z.enum(['admin', 'member']) }).parse(request.body);
+    const { invitation, token } = await createInvitation(db, user.workspaceId, user.id, body.email, body.role);
+    const workspace = (await db.select().from(workspaces).where(eq(workspaces.id, user.workspaceId)).limit(1))[0]!;
+    await notify(
+      body.email,
+      templates.invitation({
+        workspace: workspace.name,
+        inviter: user.name,
+        role: body.role === 'admin' ? 'administrador' : 'miembro',
+        url: `${studioUrl}/?invitation=${token}`,
+      }),
+    );
+    return reply.status(201).send({ invitation: { id: invitation.id, email: invitation.email, role: invitation.role, expiresAt: invitation.expiresAt } });
+  });
+
+  app.delete('/members/invitations/:invitationId', async (request) => {
+    const user = await currentUser(request);
+    assertCan(actorFor(user), 'member.invite', { workspaceId: user.workspaceId });
+    const params = z.object({ invitationId: z.string().uuid() }).parse(request.params);
+    await revokeInvitation(db, user.workspaceId, params.invitationId);
+    return { ok: true };
+  });
+
+  app.get('/invitations/:token', async (request) => {
+    const params = z.object({ token: z.string().min(10) }).parse(request.params);
+    const invitation = await inspectInvitation(db, params.token);
+    const workspace = (await db.select().from(workspaces).where(eq(workspaces.id, invitation.workspaceId)).limit(1))[0]!;
+    return { email: invitation.email, role: invitation.role, workspace: workspace.name };
+  });
+
+  app.post('/invitations/:token/accept', async (request, reply) => {
+    const params = z.object({ token: z.string().min(10) }).parse(request.params);
+    const body = z.object({ name: z.string().trim().min(2), password: z.string().min(10) }).parse(request.body);
+    const { userId, invitation } = await acceptInvitation(db, params.token, body.name, body.password);
+
+    const workspace = (await db.select().from(workspaces).where(eq(workspaces.id, invitation.workspaceId)).limit(1))[0]!;
+    const inviter = (await db.select().from(users).where(eq(users.id, invitation.invitedById)).limit(1))[0];
+    if (inviter) await notify(inviter.email, templates.invitationAccepted({ workspace: workspace.name, who: body.name }));
+    await notify(invitation.email, templates.welcome({ workspace: workspace.name, url: studioUrl }));
+
+    const { token, tokenHash } = createSessionToken();
+    await db.insert(sessions).values({ userId, tokenHash, expiresAt: sessionExpiry(), userAgent: request.headers['user-agent'] ?? null });
+    reply.setCookie(SESSION_COOKIE, token, cookieOptions(options.secureCookies ?? false));
+    return reply.status(201).send({ workspace: workspace.name });
+  });
+
+  app.put('/members/:userId', async (request) => {
+    const user = await currentUser(request);
+    assertCan(actorFor(user), 'member.update', { workspaceId: user.workspaceId });
+    const params = z.object({ userId: z.string().uuid() }).parse(request.params);
+    const body = z.object({ role: z.enum(['admin', 'member']) }).parse(request.body);
+    await updateMemberRole(db, user.workspaceId, params.userId, body.role, user.id);
+    return { ok: true };
+  });
+
+  app.delete('/members/:userId', async (request) => {
+    const user = await currentUser(request);
+    assertCan(actorFor(user), 'member.remove', { workspaceId: user.workspaceId });
+    const params = z.object({ userId: z.string().uuid() }).parse(request.params);
+    await removeMember(db, user.workspaceId, params.userId, user.id);
+    return { ok: true };
+  });
+
+  app.get('/spaces/:spaceId/members', async (request) => {
+    const user = await currentUser(request);
+    const params = z.object({ spaceId: z.string().uuid() }).parse(request.params);
+    const subject = await loadSpaceSubject(db, user.workspaceId, params.spaceId, user.id);
+    assertCan(actorFor(user), 'page.read', subject);
+    return { members: await listSpaceMembers(db, params.spaceId) };
+  });
+
+  app.put('/spaces/:spaceId/members/:userId', async (request) => {
+    const user = await currentUser(request);
+    const params = z.object({ spaceId: z.string().uuid(), userId: z.string().uuid() }).parse(request.params);
+    const body = z.object({ role: z.enum(['admin', 'writer', 'reader']) }).parse(request.body);
+    const subject = await loadSpaceSubject(db, user.workspaceId, params.spaceId, user.id);
+    assertCan(actorFor(user), 'space.members', subject);
+    await setSpaceMember(db, params.spaceId, params.userId, body.role, user.id);
+    return { ok: true };
+  });
+
+  app.delete('/spaces/:spaceId/members/:userId', async (request) => {
+    const user = await currentUser(request);
+    const params = z.object({ spaceId: z.string().uuid(), userId: z.string().uuid() }).parse(request.params);
+    const subject = await loadSpaceSubject(db, user.workspaceId, params.spaceId, user.id);
+    assertCan(actorFor(user), 'space.members', subject);
+    await removeSpaceMember(db, params.spaceId, params.userId);
+    return { ok: true };
+  });
+
   app.get('/portals', async (request) => {
     const user = await currentUser(request);
     const rows = await db.select().from(portals).where(eq(portals.workspaceId, user.workspaceId)).orderBy(asc(portals.name));
@@ -437,6 +569,7 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
   return {
     fastify: app,
     db,
+    mailer,
     inject: app.inject.bind(app),
     listen: app.listen.bind(app),
     close: async () => {

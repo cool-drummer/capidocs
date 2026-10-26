@@ -266,3 +266,22 @@ export const auditLog = pgTable(
   },
   (table) => [index('audit_workspace_idx').on(table.workspaceId, table.createdAt)],
 );
+
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: id(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 320 }).notNull(),
+    role: varchar('role', { length: 20 }).notNull().default('member'),
+    tokenHash: text('token_hash').notNull().unique(),
+    invitedById: uuid('invited_by_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (table) => [index('invitations_workspace_idx').on(table.workspaceId)],
+);

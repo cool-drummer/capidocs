@@ -180,6 +180,19 @@ const STATEMENTS = [
      ip varchar(64),
      created_at timestamptz NOT NULL DEFAULT now())`,
   `CREATE INDEX IF NOT EXISTS audit_workspace_idx ON audit_log(workspace_id, created_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS invitations (
+     id uuid PRIMARY KEY DEFAULT gen_uuid_v7(),
+     workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+     email varchar(320) NOT NULL,
+     role varchar(20) NOT NULL DEFAULT 'member',
+     token_hash text NOT NULL UNIQUE,
+     invited_by_id uuid NOT NULL,
+     expires_at timestamptz NOT NULL,
+     accepted_at timestamptz,
+     revoked_at timestamptz,
+     created_at timestamptz NOT NULL DEFAULT now())`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS invitations_workspace_email_idx ON invitations(workspace_id, lower(email)) WHERE accepted_at IS NULL AND revoked_at IS NULL`,
 ];
 
 export async function migrate(sql: Sql): Promise<number> {
