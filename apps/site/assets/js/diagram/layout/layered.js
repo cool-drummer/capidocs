@@ -1,6 +1,6 @@
 const SWEEPS = 16;
 const PLACEMENT_PASSES = 8;
-const DUMMY_SIZE = 8;
+const DUMMY_SIZE = 10;
 
 function isHorizontal(direction) {
     return direction === 'LR' || direction === 'RL';
@@ -96,7 +96,33 @@ function assignRanks(ids, dag, laneOf, laneCount) {
         const value = Math.min(...succs.get(id).map((s) => rank.get(s))) - 1;
         if (value > rank.get(id)) rank.set(id, value);
     }
+    balanceRanks(order, preds, succs, rank);
     return rank;
+}
+
+function balanceRanks(order, preds, succs, rank) {
+    for (let pass = 0; pass < 8; pass += 1) {
+        let moved = false;
+        const sequence = pass % 2 === 0 ? order : [...order].reverse();
+        for (const id of sequence) {
+            const before = preds.get(id);
+            const after = succs.get(id);
+            if (!before.length && !after.length) continue;
+            const low = before.length ? Math.max(...before.map((p) => rank.get(p))) + 1 : -Infinity;
+            const high = after.length ? Math.min(...after.map((s) => rank.get(s))) - 1 : Infinity;
+            if (low > high) continue;
+            const wishes = [...before.map((p) => rank.get(p) + 1), ...after.map((s) => rank.get(s) - 1)].sort((a, b) => a - b);
+            const middle = wishes.length % 2
+                ? wishes[(wishes.length - 1) / 2]
+                : Math.round((wishes[wishes.length / 2 - 1] + wishes[wishes.length / 2]) / 2 - 0.01);
+            const target = Math.min(high, Math.max(low, middle));
+            if (target !== rank.get(id)) {
+                rank.set(id, target);
+                moved = true;
+            }
+        }
+        if (!moved) break;
+    }
 }
 
 function countCrossings(upper, lower, links) {
@@ -233,6 +259,7 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
     };
     const gapLabels = new Map();
     const gapEdges = new Map();
+    const chains = new Map();
     dag.forEach((edge) => {
         const span = rank.get(edge.to) - rank.get(edge.from);
         if (span <= 0) return;
@@ -243,9 +270,13 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
         }
         for (let r = rank.get(edge.from); r < rank.get(edge.to); r += 1) gapEdges.set(r, (gapEdges.get(r) ?? 0) + 1);
         let previous = edge.from;
+        const chain = [];
+        chains.set(edge.key, { edge, chain });
         for (let r = rank.get(edge.from) + 1; r < rank.get(edge.to); r += 1) {
             const id = `\u0000${edge.key}:${r}`;
-            nodes.set(id, { id, real: false, cross: DUMMY_SIZE, main: 0, rank: r });
+            chain.push(id);
+            const slot = edge.label ? (horizontal ? edge.label.h : edge.label.w) + 6 : DUMMY_SIZE;
+            nodes.set(id, { id, real: false, cross: slot, main: 0, rank: r });
             laneOf.set(id, laneOf.get(edge.from));
             link(previous, id, previous === edge.from ? 2 : 8);
             previous = id;
@@ -285,8 +316,8 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
         const na = nodes.get(a);
         const nb = nodes.get(b);
         let gap = spacing.node;
-        if (!na.real && !nb.real) gap = 6;
-        else if (!na.real || !nb.real) gap = Math.max(10, spacing.node / 2);
+        if (!na.real && !nb.real) gap = 8;
+        else if (!na.real || !nb.real) gap = Math.max(14, spacing.node * 0.6);
         if (columnLanes && laneOf.get(a) !== laneOf.get(b)) gap += columnLanes.pad * 2 + columnLanes.gap;
         return (na.cross + nb.cross) / 2 + gap;
     };
@@ -430,5 +461,32 @@ export function layered({ items, edges, direction = 'LR', spacing, lanes = null 
         }
     }
 
-    return { positions, width, height, laneBands, ranks: rank, reversed };
+    const toPoint = (main, cross) => {
+        let x = horizontal ? main : cross;
+        let y = horizontal ? cross : main;
+        if (direction === 'RL') x = width - x;
+        if (direction === 'BT') y = height - y;
+        return { x, y };
+    };
+    const rankBands = best.map((layer, r) => {
+        const a = toPoint(rankStart[r], 0);
+        const b = toPoint(rankStart[r] + thickness[r], 0);
+        const [start, end] = horizontal ? [a.x, b.x] : [a.y, b.y];
+        return { start: Math.min(start, end), end: Math.max(start, end) };
+    });
+    const paths = new Map();
+    for (const { edge, chain } of chains.values()) {
+        const fromRank = rank.get(edge.from);
+        const toRank = rank.get(edge.to);
+        const via = chain.map((id) => toPoint(rankStart[nodes.get(id).rank] + thickness[nodes.get(id).rank] / 2, center.get(id)));
+        const gaps = [];
+        for (let r = fromRank; r < toRank; r += 1) {
+            const a = rankBands[r];
+            const b = rankBands[r + 1];
+            gaps.push((Math.max(a.start, b.start) + Math.min(a.end, b.end)) / 2);
+        }
+        paths.set(edge.id, { reversed: Boolean(edge.reversed), via, gaps });
+    }
+
+    return { positions, width, height, laneBands, ranks: rank, reversed, paths, rankBands };
 }

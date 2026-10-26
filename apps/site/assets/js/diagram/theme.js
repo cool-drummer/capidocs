@@ -162,6 +162,7 @@ export function themeTokens(theme = 'light', accent = DEFAULT_ACCENT) {
         theme: mode,
         accent: accentHex,
         accentTint: mixColor(SURFACES[mode].surface, accentHex, mode === 'dark' ? 0.2 : 0.14),
+        accentSoft: mixColor(SURFACES[mode].surface, accentHex, mode === 'dark' ? 0.34 : 0.26),
         ...SURFACES[mode],
         ui: UI[mode],
         colors
@@ -188,6 +189,7 @@ export function cssVariables(tokens) {
     const vars = {
         '--dg-accent': tokens.accent,
         '--dg-accent-tint': tokens.accentTint,
+        '--dg-accent-soft': tokens.accentSoft,
         '--dg-canvas': tokens.canvas,
         '--dg-surface': tokens.surface,
         '--dg-raised': tokens.raised,
