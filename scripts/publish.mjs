@@ -18,6 +18,7 @@ const PUBLISHABLE = new Set([
   'llms-full.txt',
   'sitemap.xml',
   'robots.txt',
+  '_headers',
 ]);
 
 const result = await buildSite(siteDir);

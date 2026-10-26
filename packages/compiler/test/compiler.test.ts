@@ -164,7 +164,7 @@ describe('openapi import', () => {
 });
 
 describe('build', () => {
-  it('writes the five artifacts next to the spec', async () => {
+  it('writes the six artifacts next to the spec', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'capidocs-build-'));
     try {
       await mkdir(join(dir, 'config'), { recursive: true });
@@ -178,8 +178,10 @@ describe('build', () => {
         'llms-full.txt',
         'sitemap.xml',
         'robots.txt',
+        '_headers',
       ]);
       expect(await readFile(join(dir, 'robots.txt'), 'utf8')).toContain('https://docs.example.com/sitemap.xml');
+      expect(await readFile(join(dir, '_headers'), 'utf8')).toContain("script-src 'self'");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

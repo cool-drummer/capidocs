@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { assertSpec, type Spec } from '@capidocs/spec';
 import { resolveCodeFiles } from './resolve.js';
 import { buildOutputs } from './outputs.js';
+import { buildHeaders } from './headers.js';
 import { validateSpecDiagrams, type DiagramBlockIssue } from './spec-diagrams.js';
 
 export interface BuildResult {
@@ -25,11 +26,34 @@ export async function loadSpecFile(
   return { spec, missingFiles: missing, diagramIssues };
 }
 
+async function loadRelatedSpecs(root: string, spec: Spec, specFile: string): Promise<Spec[]> {
+  const site = spec.site_config;
+  const files = new Set(
+    [...(site.languages ?? []).map((entry) => entry.spec), ...(site.versions ?? []).map((entry) => entry.spec)]
+      .filter((file): file is string => typeof file === 'string' && !/^[a-z]+:/i.test(file) && file !== specFile),
+  );
+  const specs: Spec[] = [];
+  for (const file of files) {
+    const path = resolve(root, file);
+    if (!path.startsWith(`${root}/`)) continue;
+    let raw: string;
+    try {
+      raw = await readFile(path, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
+    specs.push(assertSpec(JSON.parse(raw) as unknown, path));
+  }
+  return specs;
+}
+
 export async function buildSite(siteDir: string, specFile = 'config/api-spec.json'): Promise<BuildResult> {
   const root = resolve(siteDir);
   const specPath = join(root, specFile);
   const { spec, missingFiles, diagramIssues } = await loadSpecFile(specPath);
   const outputs = buildOutputs(spec);
+  const related = await loadRelatedSpecs(root, spec, specFile);
 
   const files: { path: string; content: string }[] = [
     { path: join(root, 'search-index.json'), content: JSON.stringify(outputs.searchIndex) },
@@ -37,6 +61,7 @@ export async function buildSite(siteDir: string, specFile = 'config/api-spec.jso
     { path: join(root, 'llms-full.txt'), content: outputs.llmsFull },
     { path: join(root, 'sitemap.xml'), content: outputs.sitemap },
     { path: join(root, 'robots.txt'), content: outputs.robots },
+    { path: join(root, '_headers'), content: buildHeaders([spec, ...related]) },
   ];
 
   const written: { path: string; bytes: number }[] = [];
