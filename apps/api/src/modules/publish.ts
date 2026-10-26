@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { buildOutputs } from '@capidocs/compiler';
 import type { Database } from '../db/client.js';
 import { pages, portals, publishJobs, spaces, workspaces } from '../db/schema.js';
@@ -114,7 +114,7 @@ export async function recordPublish(
     .select({ checksum: publishJobs.checksum })
     .from(publishJobs)
     .where(and(eq(publishJobs.portalId, portalId), eq(publishJobs.status, 'done')))
-    .orderBy(publishJobs.createdAt)
+    .orderBy(desc(publishJobs.createdAt))
     .limit(1);
 
   const [job] = await db
@@ -122,7 +122,7 @@ export async function recordPublish(
     .values({ portalId, requestedById: userId, status: 'running', checksum, startedAt: new Date() })
     .returning();
 
-  if (previous.length && previous[previous.length - 1]?.checksum === checksum) {
+  if (previous[0]?.checksum === checksum) {
     await db
       .update(publishJobs)
       .set({ status: 'unchanged', finishedAt: new Date(), log: 'Sin cambios desde la última publicación.' })

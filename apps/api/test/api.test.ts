@@ -321,6 +321,22 @@ describe('portal, space and pages', () => {
     expect(response.body.status).toBe('unchanged');
   });
 
+  it('compares with the latest publish, not the first one', async () => {
+    const edit = (content: string) =>
+      call('PUT', `/pages/${ids.first!}/content`, {
+        locale: 'es',
+        title: 'Primeros pasos',
+        document: { version: 1, sections: [{ title: 'Resumen', content }] },
+      });
+    await edit('Una versión distinta.');
+    await call('POST', `/pages/${ids.first!}/publish`, { locale: 'es' });
+    expect((await call('POST', `/portals/${ids.portal}/publish`)).body.status).toBe('done');
+
+    await edit('Contenido listo para publicar.');
+    await call('POST', `/pages/${ids.first!}/publish`, { locale: 'es' });
+    expect((await call('POST', `/portals/${ids.portal}/publish`)).body.status).toBe('done');
+  });
+
   it('writes a runnable site when the portal has a directory target', async () => {
     const portal = await call('POST', '/portals', {
       name: 'Globex',
