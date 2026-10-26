@@ -76,6 +76,9 @@ importers:
 
   apps/studio:
     dependencies:
+      '@capidocs/site':
+        specifier: workspace:*
+        version: link:../site
       '@tanstack/react-query':
         specifier: ^5.105.0
         version: 5.105.0(@types/react@19.3.0)(react@19.3.1)

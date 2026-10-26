@@ -12,6 +12,7 @@ export type BlockKind =
   | 'tabs'
   | 'code_group'
   | 'image'
+  | 'diagram'
   | 'note'
   | 'warning';
 
@@ -36,6 +37,7 @@ export const BLOCKS: BlockDefinition[] = [
   { kind: 'accordion', label: 'Acordeón', hint: 'Preguntas frecuentes', create: () => [{ title: '', content: '' }] },
   { kind: 'tabs', label: 'Pestañas', hint: 'Contenido alternativo', create: () => [{ label: 'Opción', content: '' }] },
   { kind: 'image', label: 'Imagen', hint: 'Captura con pie', create: () => ({ src: '', alt: '', caption: '' }) },
+  { kind: 'diagram', label: 'Diagrama', hint: 'JSON, Mermaid, draw.io o HTML exportado', create: () => ({}) },
   { kind: 'note', label: 'Nota', hint: 'Recuadro breve', create: () => '' },
   { kind: 'warning', label: 'Advertencia', hint: 'Recuadro de cuidado', create: () => '' },
 ];

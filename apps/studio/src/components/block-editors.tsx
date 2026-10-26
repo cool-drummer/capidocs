@@ -42,6 +42,127 @@ function ImageUpload({ spaceId, onUploaded }: { spaceId: string; onUploaded: (ur
 
 type Row = Record<string, unknown>;
 
+const DIAGRAM_ERRORS: Record<string, string> = {
+  unsupported_format: 'Ese formato no se puede importar. Usa JSON, Markdown con Mermaid, draw.io o un HTML exportado por capidocs.',
+  invalid_json: 'El archivo JSON no es válido. Revisa que esté completo.',
+  invalid_model: 'El archivo no tiene la estructura de un diagrama. Revisa los identificadores y las conexiones.',
+  too_large: 'El archivo es demasiado grande. El máximo es de 5 MB.',
+  empty: 'El archivo está vacío.',
+  parse_error: 'No pudimos leer el diagrama. Revisa el archivo e inténtalo de nuevo.',
+};
+
+const DIAGRAM_ACCEPT = '.json,.md,.markdown,.mmd,.drawio,.xml,.html,.htm,.svg';
+
+interface DiagramChoice {
+  id: string;
+  title: string;
+}
+
+function diagramChoices(set: unknown): DiagramChoice[] {
+  const diagrams = (set as { diagrams?: unknown } | undefined)?.diagrams;
+  return Array.isArray(diagrams)
+    ? diagrams.flatMap((entry) => (entry && typeof entry === 'object' && 'id' in entry ? [{ id: String(entry.id), title: String((entry as Row).title ?? entry.id) }] : []))
+    : [];
+}
+
+function DiagramBlockEditor({ value, onChange }: { value: Row; onChange: (value: unknown) => void }) {
+  const input = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const choices = diagramChoices(value.set);
+  const setTitle = (value.set as { title?: unknown } | undefined)?.title;
+
+  const importFile = async (file: File) => {
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const [{ importDiagramFile }, { serializeDiagramSet }] = await Promise.all([
+        import('@capidocs/site/diagram/import'),
+        import('@capidocs/site/diagram/model'),
+      ]);
+      const result = await importDiagramFile({ name: file.name, text: await file.text() });
+      if (!result.ok) {
+        setError(DIAGRAM_ERRORS[result.error.code] ?? 'No pudimos importar el diagrama. Inténtalo de nuevo en un momento.');
+        return;
+      }
+      const set = serializeDiagramSet(result.set);
+      onChange({ ...value, set, diagram: result.set.diagrams[0]?.id });
+      setNotice(result.warnings.length ? 'Importado. Algunas figuras decorativas del archivo se omitieron.' : 'Importado.');
+    } catch {
+      setError('No pudimos importar el diagrama. Inténtalo de nuevo en un momento.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="grid-2">
+      <div className="grid-span">
+        <div className="upload">
+          <input
+            ref={input}
+            type="file"
+            accept={DIAGRAM_ACCEPT}
+            hidden
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) await importFile(file);
+            }}
+          />
+          <button type="button" className="button button-quiet" disabled={busy} onClick={() => input.current?.click()}>
+            {busy ? 'Importando…' : choices.length ? 'Reemplazar diagrama' : 'Importar diagrama'}
+          </button>
+          {error ? <span className="status status-error">{error}</span> : null}
+          {notice && !error ? <span className="status">{notice}</span> : null}
+        </div>
+        {choices.length ? (
+          <p className="status">
+            {String(setTitle ?? 'Conjunto importado')}: {choices.length} {choices.length === 1 ? 'diagrama' : 'diagramas'}. La vista previa muestra cómo se verá.
+          </p>
+        ) : (
+          <p className="status">Acepta JSON de capidocs, Markdown o archivos .mmd con Mermaid, draw.io y HTML exportado por el explorador.</p>
+        )}
+      </div>
+      {choices.length > 1 ? (
+        <Field label="Diagrama que se muestra">
+          <Select
+            value={String(value.diagram ?? choices[0]!.id)}
+            onChange={(next) => onChange({ ...value, diagram: next })}
+            options={choices.map((choice) => ({ value: choice.id, label: choice.title }))}
+          />
+        </Field>
+      ) : null}
+      <Field label="Altura en píxeles">
+        <TextInput
+          value={value.height === undefined ? '' : String(value.height)}
+          onChange={(next) => {
+            const height = Number.parseInt(next, 10);
+            const rest = { ...value };
+            delete rest.height;
+            onChange(Number.isFinite(height) && height > 0 ? { ...rest, height: Math.min(height, 2000) } : rest);
+          }}
+          placeholder="480"
+        />
+      </Field>
+      <div className="grid-span">
+        <Field label="Pie del diagrama">
+          <TextInput
+            value={String(value.caption ?? '')}
+            onChange={(next) => {
+              const rest = { ...value };
+              delete rest.caption;
+              onChange(next ? { ...rest, caption: next } : rest);
+            }}
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
 function asRows(value: unknown): Row[] {
   return Array.isArray(value) ? (value as Row[]) : [];
 }
@@ -354,6 +475,10 @@ export function BlockEditor({
         )}
       />
     );
+  }
+
+  if (kind === 'diagram') {
+    return <DiagramBlockEditor value={(value ?? {}) as Row} onChange={onChange} />;
   }
 
   if (kind === 'image') {
