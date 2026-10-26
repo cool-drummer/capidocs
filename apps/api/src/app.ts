@@ -56,7 +56,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
   const app = Fastify({
     logger: overrides.logger ? { level: config.server.logLevel } : false,
     trustProxy: (_address: string, hop: number) => hop < config.server.trustProxyHops,
-    bodyLimit: 12 * 1024 * 1024,
+    bodyLimit: config.limits.bodyBytes,
   });
   await app.register(cookie);
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));

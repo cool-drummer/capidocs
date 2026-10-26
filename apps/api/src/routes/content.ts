@@ -1,9 +1,10 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { spaceMembers, spaces } from '../db/schema.js';
+import { portals, spaceMembers, spaces } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
 import { badRequest } from '../lib/errors.js';
+import { assertWorkspaceLocale, displayNameSchema, iconSchema, localeSchema, slugSchema, titleSchema } from '../lib/validation.js';
 import { actorFor, loadSpaceSubject, spaceRoleFor, visibleSpaceIds } from '../modules/context.js';
 import {
   contentOrFallback,
@@ -47,16 +48,24 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
     assertCan(actorFor(user), 'space.create', { workspaceId: user.workspaceId });
     const body = z
       .object({
-        name: z.string().trim().min(2),
-        slug: z.string().trim().regex(/^[a-z0-9-]{2,50}$/),
+        name: displayNameSchema,
+        slug: slugSchema,
         audience: z.enum(['public', 'customers', 'internal']),
         portalId: z.string().uuid().nullable().optional(),
-        icon: z.string().optional(),
+        icon: iconSchema.optional(),
       })
       .parse(request.body);
 
     if (body.audience !== 'internal' && !body.portalId) {
       throw badRequest('Un espacio público o de clientes necesita un portal.');
+    }
+    if (body.portalId) {
+      const owned = await db
+        .select({ id: portals.id })
+        .from(portals)
+        .where(and(eq(portals.id, body.portalId), eq(portals.workspaceId, user.workspaceId)))
+        .limit(1);
+      if (!owned.length) throw badRequest('Ese portal no existe.');
     }
 
     const [space] = await db
@@ -77,11 +86,12 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
   app.get('/spaces/:spaceId/tree', async (request) => {
     const user = await context.currentUser(request);
     const params = z.object({ spaceId: z.string().uuid() }).parse(request.params);
-    const query = z.object({ locale: z.string().optional() }).parse(request.query);
+    const query = z.object({ locale: localeSchema.optional() }).parse(request.query);
     const subject = await loadSpaceSubject(db, user.workspaceId, params.spaceId, user.id);
     assertCan(actorFor(user), 'page.read', subject);
     const workspace = await context.loadWorkspace(user.workspaceId);
     const locale = query.locale ?? workspace.defaultLocale;
+    assertWorkspaceLocale(workspace.locales, locale);
     return { tree: await spaceTree(db, params.spaceId, locale, workspace.defaultLocale), locale, locales: workspace.locales };
   });
 
@@ -90,16 +100,17 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
     const params = z.object({ spaceId: z.string().uuid() }).parse(request.params);
     const body = z
       .object({
-        title: z.string().trim().min(1),
+        title: titleSchema,
         kind: z.enum(['page', 'hero', 'endpoint', 'feature']).optional(),
         parentPageId: z.string().uuid().nullable().optional(),
-        icon: z.string().optional(),
-        locale: z.string().optional(),
+        icon: iconSchema.optional(),
+        locale: localeSchema.optional(),
       })
       .parse(request.body);
     const subject = await loadSpaceSubject(db, user.workspaceId, params.spaceId, user.id);
     assertCan(actorFor(user), 'page.create', subject);
     const workspace = await context.loadWorkspace(user.workspaceId);
+    if (body.locale) assertWorkspaceLocale(workspace.locales, body.locale);
 
     const page = await createPage(db, {
       workspaceId: user.workspaceId,
@@ -117,26 +128,26 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
   app.get('/pages/:pageId', async (request) => {
     const user = await context.currentUser(request);
     const params = z.object({ pageId: z.string().uuid() }).parse(request.params);
-    const query = z.object({ locale: z.string().optional() }).parse(request.query);
+    const query = z.object({ locale: localeSchema.optional() }).parse(request.query);
     const page = await getPage(db, params.pageId);
     const subject = await loadSpaceSubject(db, user.workspaceId, page.spaceId, user.id);
     assertCan(actorFor(user), 'page.read', subject);
     const workspace = await context.loadWorkspace(user.workspaceId);
     const locale = query.locale ?? workspace.defaultLocale;
+    assertWorkspaceLocale(workspace.locales, locale);
     const content = await contentOrFallback(db, page.id, locale, workspace.defaultLocale);
     return { page, content, locale, locales: workspace.locales, canEdit: subject.spaceRole !== 'reader' };
   });
 
-  app.put('/pages/:pageId/content', async (request) => {
+  app.put('/pages/:pageId/content', { bodyLimit: context.config.limits.contentBytes }, async (request) => {
     const user = await context.currentUser(request);
     const params = z.object({ pageId: z.string().uuid() }).parse(request.params);
-    const body = z
-      .object({ locale: z.string().min(2), title: z.string().trim().min(1), document: z.unknown() })
-      .parse(request.body);
+    const body = z.object({ locale: localeSchema, title: titleSchema, document: z.unknown() }).parse(request.body);
     const page = await getPage(db, params.pageId);
     if (page.isLocked) throw badRequest('Esta página está bloqueada.');
     const subject = await loadSpaceSubject(db, user.workspaceId, page.spaceId, user.id);
     assertCan(actorFor(user), 'page.update', subject);
+    assertWorkspaceLocale((await context.loadWorkspace(user.workspaceId)).locales, body.locale);
     const saved = await saveContent(db, page.id, body.locale, body.title, body.document, user.id);
     return { ok: true, ...saved };
   });
@@ -144,10 +155,11 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
   app.post('/pages/:pageId/versions', async (request) => {
     const user = await context.currentUser(request);
     const params = z.object({ pageId: z.string().uuid() }).parse(request.params);
-    const body = z.object({ locale: z.string().min(2) }).parse(request.body);
+    const body = z.object({ locale: localeSchema }).parse(request.body);
     const page = await getPage(db, params.pageId);
     const subject = await loadSpaceSubject(db, user.workspaceId, page.spaceId, user.id);
     assertCan(actorFor(user), 'page.update', subject);
+    assertWorkspaceLocale((await context.loadWorkspace(user.workspaceId)).locales, body.locale);
     const version = await snapshotVersion(db, page.id, body.locale, user.id);
     return { version };
   });
@@ -155,10 +167,11 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
   app.post('/pages/:pageId/publish', async (request) => {
     const user = await context.currentUser(request);
     const params = z.object({ pageId: z.string().uuid() }).parse(request.params);
-    const body = z.object({ locale: z.string().min(2) }).parse(request.body);
+    const body = z.object({ locale: localeSchema }).parse(request.body);
     const page = await getPage(db, params.pageId);
     const subject = await loadSpaceSubject(db, user.workspaceId, page.spaceId, user.id);
     assertCan(actorFor(user), 'page.publish', subject);
+    assertWorkspaceLocale((await context.loadWorkspace(user.workspaceId)).locales, body.locale);
     const version = await publishVersion(db, page.id, body.locale, user.id);
     return { version: { id: version.id, version: version.version } };
   });
@@ -167,7 +180,7 @@ export function contentRoutes(app: FastifyInstance, context: RouteContext) {
     const user = await context.currentUser(request);
     const params = z.object({ pageId: z.string().uuid() }).parse(request.params);
     const body = z
-      .object({ parentPageId: z.string().uuid().nullable(), index: z.number().int().min(0) })
+      .object({ parentPageId: z.string().uuid().nullable(), index: z.number().int().min(0).max(10_000) })
       .parse(request.body);
     const page = await getPage(db, params.pageId);
     const subject = await loadSpaceSubject(db, user.workspaceId, page.spaceId, user.id);

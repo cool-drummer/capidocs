@@ -43,7 +43,7 @@ export interface RouteContext {
   notify: (to: string, template: Omit<MailMessage, 'to'>) => Promise<void>;
 }
 
-export const emailSchema = z.string().trim().toLowerCase().email();
+export const emailSchema = z.string().trim().toLowerCase().max(320).email();
 
 export function createRouteContext(input: {
   config: Config;

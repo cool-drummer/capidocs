@@ -39,6 +39,7 @@ export interface Config {
   runtimeDir: string;
   storage: StorageConfig;
   attachments: { maxBytes: number; previewTtlSeconds: number };
+  limits: { bodyBytes: number; contentBytes: number; importBytes: number };
   rateLimits: {
     api: RateRuleConfig;
     auth: RateRuleConfig;
@@ -167,6 +168,11 @@ export function loadConfig(env: Env = process.env): Config {
     attachments: {
       maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }),
       previewTtlSeconds: read.integer('PREVIEW_FILE_TTL_SECONDS', 600, { min: 30, max: 3600 }),
+    },
+    limits: {
+      bodyBytes: read.integer('BODY_LIMIT_BYTES', 256 * 1024, { min: 16 * 1024, max: 10 * 1024 * 1024 }),
+      contentBytes: read.integer('CONTENT_BODY_LIMIT_BYTES', 2 * 1024 * 1024, { min: 64 * 1024, max: 20 * 1024 * 1024 }),
+      importBytes: read.integer('IMPORT_BODY_LIMIT_BYTES', 8 * 1024 * 1024, { min: 256 * 1024, max: 50 * 1024 * 1024 }),
     },
     rateLimits: {
       api: { name: 'api', max: read.integer('RATE_LIMIT_API_PER_MINUTE', 600, { min: 10, max: 100_000 }), windowMs: 60_000 },

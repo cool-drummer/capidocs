@@ -5,6 +5,7 @@ import { portals } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
 import { deploy, deployTargetSchema } from '../lib/deploy.js';
 import { notFound } from '../lib/errors.js';
+import { accessConfigSchema, brandSchema, displayNameSchema, localeSchema, slugSchema, webUrlSchema } from '../lib/validation.js';
 import { templates } from '../lib/mail-templates.js';
 import type { UrlSigner } from '../lib/preview.js';
 import { actorFor, visibleSpaceIds } from '../modules/context.js';
@@ -26,12 +27,12 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext, signer
     assertCan(actorFor(user), 'portal.create', { workspaceId: user.workspaceId });
     const body = z
       .object({
-        name: z.string().trim().min(2),
-        slug: z.string().trim().regex(/^[a-z0-9-]{2,50}$/),
-        siteUrl: z.string().url().optional(),
-        locales: z.array(z.string().min(2)).min(1).optional(),
+        name: displayNameSchema,
+        slug: slugSchema,
+        siteUrl: webUrlSchema.optional(),
+        locales: z.array(localeSchema).min(1).max(10).optional(),
         accessMode: z.enum(['open', 'gate', 'accounts']).optional(),
-        brand: z.record(z.string(), z.unknown()).optional(),
+        brand: brandSchema.optional(),
         deployTarget: deployTargetSchema.optional(),
       })
       .parse(request.body);
@@ -58,12 +59,12 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext, signer
     const params = z.object({ portalId: z.string().uuid() }).parse(request.params);
     const body = z
       .object({
-        name: z.string().trim().min(2).optional(),
-        siteUrl: z.string().url().nullable().optional(),
-        locales: z.array(z.string().min(2)).min(1).optional(),
+        name: displayNameSchema.optional(),
+        siteUrl: webUrlSchema.nullable().optional(),
+        locales: z.array(localeSchema).min(1).max(10).optional(),
         accessMode: z.enum(['open', 'gate', 'accounts']).optional(),
-        brand: z.record(z.string(), z.unknown()).optional(),
-        accessConfig: z.record(z.string(), z.unknown()).optional(),
+        brand: brandSchema.optional(),
+        accessConfig: accessConfigSchema.optional(),
         deployTarget: deployTargetSchema.optional(),
       })
       .parse(request.body);
@@ -83,12 +84,10 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext, signer
     return { portal };
   });
 
-  app.post('/portals/import', async (request, reply) => {
+  app.post('/portals/import', { bodyLimit: config.limits.importBytes }, async (request, reply) => {
     const user = await context.currentUser(request);
     assertCan(actorFor(user), 'portal.create', { workspaceId: user.workspaceId });
-    const body = z
-      .object({ spec: z.unknown(), name: z.string().trim().min(2).optional(), publish: z.boolean().optional() })
-      .parse(request.body);
+    const body = z.object({ spec: z.unknown(), name: displayNameSchema.optional(), publish: z.boolean().optional() }).parse(request.body);
     const result = await importPortal(db, user.workspaceId, user.id, body.spec, {
       label: 'spec importado',
       ...(body.name ? { portalName: body.name } : {}),
