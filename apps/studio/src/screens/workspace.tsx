@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import type { ApiError} from '../api';
-import { api, type Portal, type Space, type TreeNode } from '../api';
+import { api, clientError, friendlyError, type Portal, type Space, type TreeNode } from '../api';
 import { PageEditor } from './page-editor';
 import { PreviewPanel } from './preview';
 import { SpaceMembersPanel, TeamPanel } from './team';
@@ -79,7 +78,7 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
       void client.invalidateQueries({ queryKey: ['spaces'] });
       onDone();
     },
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   return (
@@ -156,6 +155,7 @@ function PortalRow({
   const [repository, setRepository] = useState(target.repository ?? '');
   const [subdirectory, setSubdirectory] = useState(target.subdirectory ?? 'docs');
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState('');
 
   const deployTarget = () => {
     if (kind === 'directory') return { kind, path };
@@ -168,8 +168,10 @@ function PortalRow({
     mutationFn: () => api.updatePortal(portal.id, { deployTarget: deployTarget() }),
     onSuccess: () => {
       setOpen(false);
+      setError('');
       void client.invalidateQueries({ queryKey: ['portals'] });
     },
+    onError: (err) => setError(friendlyError(err)),
   });
 
   return (
@@ -230,6 +232,7 @@ function PortalRow({
           </button>
         </div>
       ) : null}
+      {error ? <p className="status status-error">{error}</p> : null}
       {!target.kind || target.kind === 'none' ? <p className="status">Sin destino: al publicar solo se compila.</p> : null}
     </div>
   );
@@ -248,7 +251,7 @@ function ImportPanel({ onDone }: { onDone: () => void }) {
       try {
         spec = JSON.parse(raw);
       } catch {
-        throw new Error('Ese texto no es un JSON válido.');
+        throw clientError('invalid_json');
       }
       return api.importPortal(spec, name || undefined);
     },
@@ -261,7 +264,7 @@ function ImportPanel({ onDone }: { onDone: () => void }) {
       setRaw('');
       void client.invalidateQueries();
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   return (
@@ -309,7 +312,7 @@ function PortalsPanel({ onPreview }: { onPreview: (portalId: string) => void }) 
       setMessage('Portal creado.');
       void client.invalidateQueries({ queryKey: ['portals'] });
     },
-    onError: (error: ApiError) => setMessage(error.message),
+    onError: (error) => setMessage(friendlyError(error)),
   });
 
   const publish = useMutation({
@@ -321,7 +324,7 @@ function PortalsPanel({ onPreview }: { onPreview: (portalId: string) => void }) 
           : `Publicado: ${result.routes} páginas. ${result.output.detail ?? ''}`.trim(),
       );
     },
-    onError: (error: ApiError) => setMessage(error.message),
+    onError: (error) => setMessage(friendlyError(error)),
   });
 
   return (
@@ -368,6 +371,8 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const [locale, setLocale] = useState<string | null>(null);
   const [panel, setPanel] = useState<'none' | 'space' | 'portals' | 'team' | 'import' | 'access' | 'preview'>('none');
   const [previewPortal, setPreviewPortal] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const showError = (err: unknown) => setNotice(friendlyError(err));
 
   const activeSpace = spaces.data?.spaces.find((space) => space.id === spaceId) ?? spaces.data?.spaces[0] ?? null;
   const activeLocale = locale ?? me.data?.workspace.defaultLocale ?? 'es';
@@ -385,12 +390,14 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
       setPageId(result.page.id);
       void client.invalidateQueries({ queryKey: ['tree'] });
     },
+    onError: showError,
   });
 
   const move = useMutation({
     mutationFn: ({ id, parentPageId, index }: { id: string; parentPageId: string | null; index: number }) =>
       api.movePage(id, parentPageId, index),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['tree'] }),
+    onError: showError,
   });
 
   const remove = useMutation({
@@ -399,6 +406,7 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
       setPageId(null);
       void client.invalidateQueries({ queryKey: ['tree'] });
     },
+    onError: showError,
   });
 
   return (
@@ -482,6 +490,14 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
         </aside>
 
         <main className="main">
+          {notice ? (
+            <div className="notice" role="alert">
+              <span>{notice}</span>
+              <button type="button" className="link-button" onClick={() => setNotice('')}>
+                Cerrar
+              </button>
+            </div>
+          ) : null}
           {panel === 'space' ? <NewSpaceForm onDone={() => setPanel('none')} /> : null}
           {panel === 'team' ? <TeamPanel /> : null}
           {panel === 'import' ? <ImportPanel onDone={() => setPanel('none')} /> : null}

@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { api } from './api';
+import { api, whenSessionEnds } from './api';
 import { LoginScreen, SetupScreen } from './screens/access';
 import { WorkspaceScreen } from './screens/workspace';
 import './styles.css';
 
 const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+whenSessionEnds(() => void client.invalidateQueries({ queryKey: ['me'] }));
 
 function Root() {
   const queryClient = useQueryClient();

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ApiError } from '../api';
-import { api } from '../api';
+import { api, friendlyError } from '../api';
 import { emptySection, type Section } from '../blocks';
 import { SectionList } from '../components/section-editor';
 import { Field, TextArea, TextInput } from '../components/fields';
@@ -101,7 +100,7 @@ export function PageEditor({ pageId, spaceId, locale, onLocale }: { pageId: stri
       setStatus('Guardado');
       void client.invalidateQueries({ queryKey: ['tree'] });
     },
-    onError: (error: ApiError) => setStatus(error.message),
+    onError: (error) => setStatus(friendlyError(error)),
   });
 
   const publish = useMutation({
@@ -113,11 +112,11 @@ export function PageEditor({ pageId, spaceId, locale, onLocale }: { pageId: stri
       setStatus(`Publicada la versión ${result.version.version}`);
       void client.invalidateQueries({ queryKey: ['tree'] });
     },
-    onError: (error: ApiError) => setStatus(error.message),
+    onError: (error) => setStatus(friendlyError(error)),
   });
 
   if (query.isLoading) return <div className="placeholder">Cargando…</div>;
-  if (query.error) return <div className="placeholder">{(query.error as ApiError).message}</div>;
+  if (query.error) return <div className="placeholder">{friendlyError(query.error)}</div>;
   if (!query.data) return null;
 
   const canEdit = query.data.canEdit;

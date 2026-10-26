@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import type { ApiError } from '../api';
-import { api } from '../api';
+import { api, friendlyError } from '../api';
 import { Field, Select, TextInput } from '../components/fields';
 
 const ROLE_LABEL: Record<string, string> = { owner: 'Dueña', admin: 'Administra', member: 'Miembro' };
@@ -21,24 +20,25 @@ export function TeamPanel() {
       setMessage('Invitación enviada por correo.');
       void client.invalidateQueries({ queryKey: ['members'] });
     },
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   const revoke = useMutation({
     mutationFn: (id: string) => api.revokeInvitation(id),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['members'] }),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   const changeRole = useMutation({
     mutationFn: ({ userId, next }: { userId: string; next: 'admin' | 'member' }) => api.setMemberRole(userId, next),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['members'] }),
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   const remove = useMutation({
     mutationFn: (userId: string) => api.removeMember(userId),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['members'] }),
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   return (
@@ -126,12 +126,13 @@ export function SpaceMembersPanel({ spaceId }: { spaceId: string }) {
   const grant = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: 'admin' | 'writer' | 'reader' }) => api.setSpaceMember(spaceId, userId, role),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['space-members', spaceId] }),
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   const revoke = useMutation({
     mutationFn: (userId: string) => api.removeSpaceMember(spaceId, userId),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['space-members', spaceId] }),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   const assigned = new Map((spaceMembers.data?.members ?? []).filter((member) => member.userId).map((member) => [member.userId!, member.role]));

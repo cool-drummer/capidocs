@@ -88,16 +88,54 @@ export interface PageContent {
   content: unknown;
 }
 
+const GENERIC_ERROR = 'Algo salió mal, inténtalo de nuevo en un momento.';
+
+const MESSAGE_BY_CODE: Record<string, string> = {
+  network: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  invalid_json: 'Ese texto no es un JSON válido.',
+};
+
+const MESSAGE_BY_STATUS: Record<number, string> = {
+  401: 'Tu sesión terminó. Inicia sesión de nuevo.',
+  403: 'No tienes permiso para hacer esto.',
+  404: 'No encontramos lo que buscas.',
+  409: 'Ese valor ya está en uso. Elige otro.',
+  413: 'El archivo o el contenido es demasiado grande.',
+  429: 'Hiciste demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+};
+
 export class ApiError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  readonly code: string;
+  constructor(status: number, code: string, message: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
+}
+
+export function clientError(code: keyof typeof MESSAGE_BY_CODE): ApiError {
+  return new ApiError(0, code, MESSAGE_BY_CODE[code] ?? GENERIC_ERROR);
+}
+
+export function friendlyError(error: unknown): string {
+  return error instanceof ApiError ? error.message : GENERIC_ERROR;
+}
+
+function errorFrom(status: number, payload: Record<string, unknown>): ApiError {
+  const structured = typeof payload.error === 'string' && typeof payload.message === 'string';
+  const code = structured ? String(payload.error) : `http_${status}`;
+  const message = MESSAGE_BY_CODE[code] ?? (structured && status < 500 ? String(payload.message) : undefined) ?? MESSAGE_BY_STATUS[status] ?? GENERIC_ERROR;
+  return new ApiError(status, code, message);
 }
 
 const BASE = '/api';
 let csrfToken = '';
+let sessionEnded: (() => void) | null = null;
+
+export function whenSessionEnds(handler: () => void): void {
+  sessionEnded = handler;
+}
 
 function remember<T>(payload: T): T {
   const token = (payload as { csrfToken?: unknown }).csrfToken;
@@ -112,19 +150,37 @@ function headersFor(method: string, contentType?: string): Record<string, string
   return headers;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(BASE + path, {
-    method,
-    credentials: 'same-origin',
-    headers: headersFor(method, body ? 'application/json' : undefined),
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await response.text();
-  const payload = text ? (JSON.parse(text) as Record<string, unknown>) : {};
-  if (!response.ok) {
-    const message = typeof payload.message === 'string' ? payload.message : 'Algo salió mal, inténtalo de nuevo en un momento.';
-    throw new ApiError(response.status, message);
+function parseJson(text: string): Record<string, unknown> {
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return {};
   }
+}
+
+async function send(path: string, init: RequestInit): Promise<Record<string, unknown>> {
+  let response: Response;
+  try {
+    response = await fetch(BASE + path, { credentials: 'same-origin', ...init });
+  } catch {
+    throw clientError('network');
+  }
+  const text = await response.text();
+  const payload = parseJson(text);
+  if (!response.ok) {
+    if (response.status === 401 && path !== '/me' && !path.startsWith('/auth/') && !path.startsWith('/invitations/')) sessionEnded?.();
+    throw errorFrom(response.status, payload);
+  }
+  return payload;
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const payload = await send(path, {
+    method,
+    headers: headersFor(method, body ? 'application/json' : undefined),
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
   return payload as T;
 }
 
@@ -197,16 +253,11 @@ export const api = {
   attachments: (spaceId: string) => request<{ attachments: Attachment[] }>('GET', `/attachments?spaceId=${spaceId}`),
   deleteAttachment: (key: string) => request<{ ok: boolean }>('DELETE', `/attachments/${key}`),
   async upload(spaceId: string, file: File): Promise<Attachment> {
-    const response = await fetch(`${BASE}/attachments?spaceId=${spaceId}&name=${encodeURIComponent(file.name)}`, {
+    const payload = await send(`/attachments?spaceId=${spaceId}&name=${encodeURIComponent(file.name)}`, {
       method: 'POST',
-      credentials: 'same-origin',
       headers: headersFor('POST', 'application/octet-stream'),
       body: await file.arrayBuffer(),
     });
-    const payload = (await response.json()) as Record<string, unknown>;
-    if (!response.ok) {
-      throw new ApiError(response.status, typeof payload.message === 'string' ? payload.message : 'No se pudo subir el archivo.');
-    }
     return (payload as { attachment: Attachment }).attachment;
   },
 };

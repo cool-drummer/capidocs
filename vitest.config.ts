@@ -22,6 +22,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'studio',
+          include: ['apps/studio/test/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
+        test: {
           name: 'site',
           include: ['apps/site/test/**/*.test.js'],
           environment: 'jsdom',

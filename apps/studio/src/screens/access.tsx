@@ -1,7 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import type { ApiError } from '../api';
-import { api } from '../api';
+import { api, friendlyError } from '../api';
 import { Field, TextInput } from '../components/fields';
 
 function PasswordInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -16,7 +15,7 @@ export function LoginScreen({ onDone, onSetup }: { onDone: () => void; onSetup: 
   const login = useMutation({
     mutationFn: () => api.login(email, password),
     onSuccess: onDone,
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   return (
@@ -72,7 +71,7 @@ export function SetupScreen({ onDone, onCancel }: { onDone: () => void; onCancel
       return api.login(email, password);
     },
     onSuccess: onDone,
-    onError: (err: ApiError) => setError(err.message),
+    onError: (err) => setError(friendlyError(err)),
   });
 
   return (

@@ -30,7 +30,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/studio/src/**/*.{ts,tsx}'],
+    files: ['apps/studio/src/**/*.{ts,tsx}', 'apps/studio/test/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

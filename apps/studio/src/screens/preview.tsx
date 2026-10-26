@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ApiError } from '../api';
-import { api } from '../api';
+import { api, friendlyError } from '../api';
 
 function newChannel(): string {
   const bytes = new Uint8Array(16);
@@ -32,7 +31,7 @@ export function PreviewPanel({ portalId }: { portalId: string }) {
   }, [active, channel]);
 
   if (preview.isLoading) return <div className="placeholder">Compilando la vista previa…</div>;
-  if (preview.error) return <div className="placeholder">{(preview.error as ApiError).message}</div>;
+  if (preview.error) return <div className="placeholder">{friendlyError(preview.error)}</div>;
 
   return (
     <div className="preview">

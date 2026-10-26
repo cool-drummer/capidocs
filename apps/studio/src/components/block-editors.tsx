@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
 import type { BlockKind } from '../blocks';
 import { moveItem } from '../blocks';
-import type { ApiError } from '../api';
-import { api } from '../api';
+import { api, friendlyError } from '../api';
 import { Field, RowActions, Select, TextArea, TextInput, Toggle } from './fields';
 
 function ImageUpload({ spaceId, onUploaded }: { spaceId: string; onUploaded: (url: string, name: string) => void }) {
@@ -15,7 +14,7 @@ function ImageUpload({ spaceId, onUploaded }: { spaceId: string; onUploaded: (ur
       <input
         ref={input}
         type="file"
-        accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+        accept="image/png,image/jpeg,image/gif,image/webp"
         hidden
         onChange={async (event) => {
           const file = event.target.files?.[0];
@@ -26,7 +25,7 @@ function ImageUpload({ spaceId, onUploaded }: { spaceId: string; onUploaded: (ur
             const attachment = await api.upload(spaceId, file);
             onUploaded(attachment.url, attachment.fileName);
           } catch (err) {
-            setError((err as ApiError).message);
+            setError(friendlyError(err));
           } finally {
             setBusy(false);
             event.target.value = '';
