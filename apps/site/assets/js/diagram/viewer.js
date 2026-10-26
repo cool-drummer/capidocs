@@ -32,9 +32,16 @@ export function ensureFonts(doc = globalThis.document) {
 
 export function ensureStylesheet(doc = globalThis.document) {
     if (!doc?.head || doc.querySelector('[data-dg-styles]')) return;
+    let href;
+    try {
+        href = new URL('../../css/diagram-viewer.css', import.meta.url);
+    } catch {
+        return;
+    }
+    if (!/^(?:https?|file):$/.test(href.protocol)) return;
     const link = doc.createElement('link');
     link.rel = 'stylesheet';
-    link.href = new URL('../../css/diagram-viewer.css', import.meta.url).href;
+    link.href = href.href;
     link.dataset.dgStyles = '';
     doc.head.appendChild(link);
 }

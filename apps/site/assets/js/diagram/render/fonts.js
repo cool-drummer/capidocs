@@ -21,7 +21,7 @@ export function exportFontCss() {
 }
 
 export function setExportFontCss(css) {
-    cached = typeof css === 'string' ? css : '';
+    cached = typeof css === 'string' ? css : null;
     pending = null;
 }
 
@@ -31,12 +31,22 @@ async function fetchBinary(url) {
     return new Uint8Array(await response.arrayBuffer());
 }
 
+function inlineFaces(doc) {
+    const faces = [];
+    for (const style of doc?.querySelectorAll?.('style') ?? []) {
+        for (const match of style.textContent.matchAll(/@font-face\s*\{[^}]*\}/g)) {
+            if (/Geist/.test(match[0]) && /url\(\s*["']?data:/.test(match[0])) faces.push(match[0]);
+        }
+    }
+    return faces.length ? faces.join('') : null;
+}
+
 export function loadExportFonts({ readBinary, doc = globalThis.document } = {}) {
     if (cached !== null) return Promise.resolve(cached);
     if (pending) return pending;
-    const embedded = doc?.querySelector?.('style[data-dg-fonts]');
+    const embedded = doc?.querySelector?.('style[data-dg-fonts]')?.textContent ?? inlineFaces(doc);
     if (embedded) {
-        cached = embedded.textContent;
+        cached = embedded;
         return Promise.resolve(cached);
     }
     const read = readBinary ?? ((file) => fetchBinary(new URL(`../../../fonts/${file}`, import.meta.url)));

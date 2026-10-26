@@ -9,7 +9,7 @@ export const STANDALONE_IDS = {
 };
 
 export const STANDALONE_ASSETS = {
-    stylesheet: 'assets/css/diagrams.css',
+    stylesheets: ['assets/css/diagram-viewer.css', 'assets/css/diagrams.css'],
     fonts: [
         { family: 'Geist', file: 'assets/fonts/geist-sans.woff2' },
         { family: 'Geist Mono', file: 'assets/fonts/geist-mono.woff2' }
@@ -93,11 +93,13 @@ async function buildStyles({ readText, readBinary }) {
             continue;
         }
     }
-    try {
-        const css = await readText(STANDALONE_ASSETS.stylesheet);
-        parts.push(await inlineUrls(css, STANDALONE_ASSETS.stylesheet, readBinary));
-    } catch {
-        parts.push('');
+    for (const stylesheet of STANDALONE_ASSETS.stylesheets) {
+        try {
+            const css = await readText(stylesheet);
+            parts.push(await inlineUrls(css, stylesheet, readBinary));
+        } catch {
+            parts.push('');
+        }
     }
     return parts.join('\n').replace(/\r\n?/g, '\n').replace(/<\/(style)/gi, '<\\/$1');
 }
