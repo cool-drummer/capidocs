@@ -7,6 +7,7 @@ import {
 
 export const DRAWIO_LIMITS = {
     inflatedBytes: 32 * 1024 * 1024,
+    xmlNodes: 500000,
     cells: 20000
 };
 
@@ -64,8 +65,14 @@ async function inflateRaw(bytes, limit) {
     }
 }
 
-async function inflatePage(text) {
-    const inflated = await inflateRaw(base64ToBytes(text), DRAWIO_LIMITS.inflatedBytes);
+function createBudget() {
+    return { bytes: DRAWIO_LIMITS.inflatedBytes, nodes: DRAWIO_LIMITS.xmlNodes };
+}
+
+async function inflatePage(text, budget) {
+    if (budget.bytes <= 0) throw new ImportError('too_large', 'Compressed pages expand beyond the limit');
+    const inflated = await inflateRaw(base64ToBytes(text), budget.bytes);
+    budget.bytes -= inflated.byteLength;
     const encoded = new TextDecoder('utf-8').decode(inflated);
     try {
         return decodeURIComponent(encoded);
@@ -74,13 +81,20 @@ async function inflatePage(text) {
     }
 }
 
-function parseDocument(text) {
+function parseDocument(text, budget) {
+    if (budget.nodes <= 0) throw new ImportError('too_large', 'The document has too many XML nodes');
+    let document;
     try {
-        return parseXml(text, { maxLength: DRAWIO_LIMITS.inflatedBytes });
+        document = parseXml(text, { maxLength: DRAWIO_LIMITS.inflatedBytes, maxNodes: budget.nodes });
     } catch (error) {
-        if (error instanceof XmlError) throw new ImportError(error.code === 'too_large' ? 'too_large' : 'parse_error', error.detail);
+        if (error instanceof XmlError) {
+            const tooLarge = error.code === 'too_large' || error.code === 'too_many_nodes';
+            throw new ImportError(tooLarge ? 'too_large' : 'parse_error', error.detail);
+        }
         throw error;
     }
+    budget.nodes -= document.nodeCount;
+    return document;
 }
 
 function parseStyle(text) {
@@ -657,25 +671,25 @@ function isSequencePage(cells, page) {
     return joined.length * 2 >= edges.length;
 }
 
-async function readPages(document) {
+function listPages(document) {
     const root = rootElement(document);
     if (!root) throw new ImportError('parse_error', 'Empty XML document');
-    if (root.name === 'mxGraphModel') return [{ name: undefined, id: undefined, model: root }];
+    if (root.name === 'mxGraphModel') return [{ name: undefined, id: undefined, model: root, element: null }];
     if (root.name !== 'mxfile') throw new ImportError('unsupported_format', 'Not a draw.io document');
-    const pages = [];
-    for (const diagram of childElements(root, 'diagram')) {
-        let model = firstChild(diagram, 'mxGraphModel');
-        if (!model) {
-            const packed = textContent(diagram).trim();
-            if (packed) {
-                const inner = rootElement(parseDocument(await inflatePage(packed)));
-                if (inner?.name === 'mxGraphModel') model = inner;
-            }
-        }
-        pages.push({ name: attribute(diagram, 'name'), id: attribute(diagram, 'id'), model });
-        if (pages.length > LIMITS.diagrams) break;
-    }
-    return pages;
+    return childElements(root, 'diagram').map((element) => ({
+        name: attribute(element, 'name'),
+        id: attribute(element, 'id'),
+        model: firstChild(element, 'mxGraphModel'),
+        element
+    }));
+}
+
+async function loadModel(page, budget) {
+    if (page.model || !page.element) return page.model;
+    const packed = textContent(page.element).trim();
+    if (!packed) return null;
+    const inner = rootElement(parseDocument(await inflatePage(packed, budget), budget));
+    return inner?.name === 'mxGraphModel' ? inner : null;
 }
 
 export function isDrawioText(text) {
@@ -686,7 +700,8 @@ export async function parseDrawio(text, options = {}) {
     const warnings = new Warnings();
     const layout = options.layout === 'auto' ? 'auto' : 'keep';
     const lang = options.lang ?? 'es';
-    const pages = await readPages(parseDocument(text));
+    const budget = createBudget();
+    const pages = listPages(parseDocument(text, budget));
     if (pages.length > LIMITS.diagrams) warnings.add('limit_exceeded', `Only the first ${LIMITS.diagrams} pages were kept`);
     const pageIds = createIdFactory('diagram', { lower: true });
     const kept = pages.slice(0, LIMITS.diagrams).map((entry, index) => ({ ...entry, diagramId: pageIds.id(entry.id ?? entry.name ?? `page-${index + 1}`) }));
@@ -695,11 +710,12 @@ export async function parseDrawio(text, options = {}) {
     const diagrams = [];
     const pageLinks = [];
     for (const [index, entry] of kept.entries()) {
-        if (!entry.model) {
+        const model = await loadModel(entry, budget);
+        if (!model) {
             warnings.add('empty_page', 'A page without content was skipped');
             continue;
         }
-        const cells = readCells(entry.model, warnings);
+        const cells = readCells(model, warnings);
         const page = analysePage(cells);
         const context = { warnings, layout, lang, pageLinks: [] };
         const built = isSequencePage(cells, page) ? buildSequence(cells, page, context) : buildGraph(cells, page, context);
