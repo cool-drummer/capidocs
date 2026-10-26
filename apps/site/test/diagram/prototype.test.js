@@ -18,7 +18,7 @@ function prototypeSet() {
   const result = validateDiagramSet({
     title: 'Prototipo',
     diagrams: [{
-      id: 'constructor',
+      id: 'toLocaleString',
       title: 'Prototipo',
       groups: [{ id: 'toString', title: 'Grupo' }],
       nodes: [
@@ -97,7 +97,7 @@ describe('prototype-named catalog entries', () => {
     const set = prototypeSet();
     host = document.createElement('div');
     document.body.appendChild(host);
-    const viewer = mountDiagram(host, { set, diagramId: 'constructor', theme: 'light' });
+    const viewer = mountDiagram(host, { set, diagramId: 'toLocaleString', theme: 'light' });
     viewer.select({ type: 'node', id: 'hasOwnProperty' });
     expect(host.querySelector('[data-node="hasOwnProperty"]').classList.contains('dg-selected')).toBe(true);
     expect(viewer.search('dos').map((entry) => entry.id)).toEqual(['valueOf']);
