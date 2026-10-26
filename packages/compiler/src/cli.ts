@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
 import { validateSpec } from '@capidocs/spec';
 import { buildSite, loadSpecFile } from './build.js';
+import { commandDiagrams } from './diagrams.js';
 import { fromOpenApi } from './openapi.js';
 
 const USAGE = `capidocs <command>
@@ -10,6 +11,7 @@ const USAGE = `capidocs <command>
   build [siteDir] [--spec=config/api-spec.json]   Write search-index.json, llms.txt, llms-full.txt, sitemap.xml, robots.txt
   validate <specFile...>                          Validate one or more spec files against the schema
   import-openapi <openapi.json> [output.json]     Convert an OpenAPI 3.x document into a capidocs spec
+  diagrams <validate|import|bundle> ...           Validate, import and bundle diagram sets
 `;
 
 function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string> } {
@@ -91,6 +93,7 @@ const commands: Record<string, (args: string[]) => Promise<number>> = {
   build: commandBuild,
   validate: commandValidate,
   'import-openapi': commandImportOpenApi,
+  diagrams: commandDiagrams,
 };
 
 if (!command || !commands[command]) {
