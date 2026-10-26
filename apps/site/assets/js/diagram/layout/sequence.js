@@ -1,4 +1,5 @@
 import { METRICS, approximateMeasure, wrapText } from '../metrics.js';
+import { extremes } from './bounds.js';
 
 const KIND_ICONS = { actor: 'user', store: 'database', queue: 'inbox', external: 'globe' };
 const LABEL_FONT = { size: 12, weight: 500, line: 16, family: 'sans' };
@@ -21,7 +22,7 @@ function walk(items, visit, depth = 0) {
 }
 
 export function participantIcon(participant) {
-    return participant.icon ?? KIND_ICONS[participant.kind];
+    return participant.icon ?? (Object.hasOwn(KIND_ICONS, participant.kind) ? KIND_ICONS[participant.kind] : undefined);
 }
 
 export function layoutSequence(diagram, { measure = approximateMeasure } = {}) {
@@ -241,8 +242,8 @@ export function layoutSequence(diagram, { measure = approximateMeasure } = {}) {
             return message.labelBox ? { lo: Math.min(ext.lo, message.labelBox.x), hi: Math.max(ext.hi, message.labelBox.x + message.labelBox.w) } : ext;
         })
     ];
-    const minX = Math.min(...extents.map((e) => e.lo));
-    const maxX = Math.max(...extents.map((e) => e.hi));
+    const minX = extremes(extents.map((e) => e.lo)).min;
+    const maxX = extremes(extents.map((e) => e.hi)).max;
     const shift = padding - minX;
     if (Math.abs(shift) > 0.01) {
         for (const p of participants) { p.x += shift; p.lifeline.x += shift; }

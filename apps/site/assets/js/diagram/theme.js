@@ -153,10 +153,11 @@ const cache = new Map();
 
 export function themeTokens(theme = 'light', accent = DEFAULT_ACCENT) {
     const mode = theme === 'dark' ? 'dark' : 'light';
-    const accentHex = (accent && accent[mode]) || DEFAULT_ACCENT[mode];
+    const requested = accent && Object.hasOwn(accent, mode) ? accent[mode] : null;
+    const accentHex = typeof requested === 'string' && /^#(?:[0-9a-f]{3}){1,2}$/i.test(requested) ? requested : DEFAULT_ACCENT[mode];
     const key = `${mode}|${accentHex}`;
     if (cache.has(key)) return cache.get(key);
-    const colors = {};
+    const colors = Object.create(null);
     for (const name of COLORS) colors[name] = colorTokens(name, mode);
     const tokens = {
         theme: mode,
@@ -172,11 +173,11 @@ export function themeTokens(theme = 'light', accent = DEFAULT_ACCENT) {
 }
 
 export function colorOf(tokens, name) {
-    return tokens.colors[name] ?? tokens.colors.neutral;
+    return (typeof name === 'string' && Object.hasOwn(tokens.colors, name) ? tokens.colors[name] : null) ?? tokens.colors.neutral;
 }
 
 export function statusColor(status) {
-    return STATUS_COLORS[status] ?? 'neutral';
+    return (typeof status === 'string' && Object.hasOwn(STATUS_COLORS, status) ? STATUS_COLORS[status] : null) ?? 'neutral';
 }
 
 export function brandIconColor(tokens, hex) {

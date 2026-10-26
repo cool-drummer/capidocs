@@ -162,8 +162,9 @@ describe('mountDiagram', () => {
     const svg = viewer.toSvg({ embedFontCss: '' });
     expect(svg.startsWith('<svg')).toBe(true);
     expect(svg).toContain('Peticiones por minuto');
-    expect(svg).toContain('id="capidocs-diagram"');
+    expect(svg).not.toContain('<metadata');
     expect(svg).not.toMatch(/\sstyle=/);
+    expect(viewer.toSvg({ embedFontCss: '', metadata: true })).toContain('id="capidocs-diagram"');
   });
 
   it('cleans up after itself', () => {

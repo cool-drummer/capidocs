@@ -4,6 +4,18 @@ import { brandIconColor, colorOf, statusColor, themeTokens } from '../theme.js';
 import { serializeDiagramSet } from '../model.js';
 import { exportFontCss } from './fonts.js';
 
+const own = (table, key) => (typeof key === 'string' && Object.hasOwn(table, key) ? table[key] : undefined);
+
+function ownEntries(table) {
+    const result = Object.create(null);
+    if (!table || typeof table !== 'object') return result;
+    for (const key of Object.keys(table)) {
+        const value = table[key];
+        if (value && typeof value === 'object' && Array.isArray(value.paths)) result[key] = value;
+    }
+    return result;
+}
+
 const XML_ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const BLOCK_COLORS = { loop: 'blue', alt: 'violet', opt: 'teal', par: 'indigo', critical: 'red', break: 'orange' };
 const KEY_ICONS = { pk: ['key', 'amber'], fk: ['link', 'blue'], uk: ['fingerprint', 'violet'] };
@@ -66,7 +78,7 @@ function createContext({ mode, theme, set, accent }) {
         mode,
         interactive: mode !== 'export',
         tokens,
-        icons: { ...BUILTIN_ICONS, ...(set?.icons ?? {}) },
+        icons: Object.assign(Object.create(null), BUILTIN_ICONS, ownEntries(set?.icons)),
         texts: [],
         origin: { x: 0, y: 0 }
     };
@@ -102,8 +114,8 @@ function lines(ctx, list, { x, top, font, fill, anchor, className }) {
 }
 
 export function iconMarkup(ctx, name, { x, y, size, color, strokeWidth = 2 }) {
-    const icon = ctx.icons[name];
-    if (!icon) return '';
+    const icon = typeof name === 'string' ? ctx.icons[name] : undefined;
+    if (!icon || !Array.isArray(icon.paths)) return '';
     const viewBox = icon.viewBox ?? '0 0 24 24';
     const paint = icon.stroke
         ? attrs({ fill: 'none', stroke: color, 'stroke-width': strokeWidth, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })
@@ -191,7 +203,7 @@ function renderBadge(ctx, node, w) {
 }
 
 function iconTile(ctx, name, { x, y, size, color }) {
-    const icon = ctx.icons[name];
+    const icon = typeof name === 'string' ? ctx.icons[name] : undefined;
     if (!icon) return '';
     const tokens = colorOf(ctx.tokens, color);
     const fill = icon.stroke ? tokens.tint : ctx.tokens.inset;
@@ -340,8 +352,8 @@ function shapeTable(ctx, node) {
     node.text.fields.forEach((field, index) => {
         const top = m.header + 3 + index * m.row;
         if (index > 0) markup += `<line${attrs({ x1: m.padX, x2: w - m.padX, y1: top, y2: top, stroke: ctx.tokens.divider, 'stroke-width': 1, class: 'dg-divider' })}/>`;
-        if (field.key && KEY_ICONS[field.key]) {
-            const [icon, keyColor] = KEY_ICONS[field.key];
+        if (own(KEY_ICONS, field.key)) {
+            const [icon, keyColor] = own(KEY_ICONS, field.key);
             markup += iconMarkup(ctx, icon, { x: m.padX, y: top + (m.row - 12) / 2, size: 12, color: colorOf(ctx.tokens, keyColor).solid });
         }
         markup += text(ctx, { x: m.padX + m.key, y: baseline(top, m.row, m.field.size), size: m.field.size, weight: field.key === 'pk' ? 600 : 400, family: 'mono', fill: ctx.tokens.ink, content: field.name });
@@ -464,7 +476,7 @@ function withOrigin(ctx, x, y, render) {
 }
 
 function renderNode(ctx, node) {
-    const body = withOrigin(ctx, node.x, node.y, () => (SHAPES[node.shape] ?? shapeCard)(ctx, node));
+    const body = withOrigin(ctx, node.x, node.y, () => (own(SHAPES, node.shape) ?? shapeCard)(ctx, node));
     const source = node.source;
     const classes = ['dg-node', `dg-shape-${node.shape}`];
     if (source.link) classes.push('dg-has-link');
@@ -647,7 +659,7 @@ function renderMessage(ctx, message, autonumber) {
 
 function renderBlock(ctx, block) {
     const m = METRICS.sequence.block;
-    const color = colorOf(ctx.tokens, BLOCK_COLORS[block.kind] ?? 'neutral');
+    const color = colorOf(ctx.tokens, own(BLOCK_COLORS, block.kind) ?? 'neutral');
     let markup = `<rect${attrs({ x: block.x, y: block.y, width: block.w, height: block.h, rx: 10, fill: color.solid, 'fill-opacity': ctx.tokens.theme === 'dark' ? 0.07 : 0.05 })}/>`;
     markup += `<rect${attrs({ x: block.header.x, y: block.header.y, width: block.header.w, height: block.header.h, rx: 6, fill: color.tint })}/>`;
     markup += text(ctx, { x: block.header.x + block.header.w / 2, y: baseline(block.header.y, block.header.h, m.label.size), size: m.label.size, weight: m.label.weight, fill: color.text, anchor: 'middle', content: block.kind });

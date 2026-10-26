@@ -163,7 +163,7 @@ const header = [
 ].join('\n');
 
 const body = Object.keys(icons).sort().map((name) => `    ${JSON.stringify(name)}: ${JSON.stringify(icons[name])}`).join(',\n');
-writeFileSync(output, `${header}\nexport const BUILTIN_ICONS = {\n${body}\n};\n`);
+writeFileSync(output, `${header}\nexport const BUILTIN_ICONS = Object.freeze(Object.assign(Object.create(null), {\n${body}\n}));\n`);
 
 process.stdout.write(`icons: ${Object.keys(icons).length} written to ${output}\n`);
 if (skipped.length) process.stdout.write(`brands not available in this Simple Icons release: ${skipped.join(', ')}\n`);

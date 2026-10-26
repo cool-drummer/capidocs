@@ -1,3 +1,5 @@
+import { boundsOf, extremes, segmentArea, spatialIndex } from './bounds.js';
+
 const MARGIN = 10;
 const BEND = 40;
 const CROSS = 18;
@@ -11,6 +13,9 @@ const OUTWARD = { E: 0, S: 1, W: 2, N: 3 };
 const PORT_GAP = 14;
 const MIN_PORT_GAP = 9;
 const MAX_GRID_POINTS = 400000;
+const SEARCH_EXPANSIONS = 30000;
+const PASS_EXPANSIONS = 1200000;
+const HEURISTIC_WEIGHT = 1.2;
 
 const reverse = (dir) => (dir + 2) % 4;
 const horizontalSide = (side) => side === 'E' || side === 'W';
@@ -136,6 +141,8 @@ class Grid {
         this.ny = this.ys.length;
         const size = this.nx * this.ny;
         this.size = size;
+        this.tooLarge = size > MAX_GRID_POINTS;
+        if (this.tooLarge) return;
         this.blockedPoint = new Uint8Array(size);
         this.blockedH = new Uint8Array(size);
         this.blockedV = new Uint8Array(size);
@@ -197,12 +204,27 @@ function maskHas(mask, related) {
     return false;
 }
 
-function search(grid, starts, goals, related, usage, bounds = null) {
+function searchBuffers(grid) {
+    if (!grid.buffers) {
+        const states = grid.size * 4;
+        grid.buffers = { cost: new Float64Array(states), from: new Int32Array(states), seen: new Uint32Array(states), closed: new Uint32Array(states), stamp: 0 };
+    }
+    grid.buffers.stamp += 1;
+    return grid.buffers;
+}
+
+function search(grid, starts, goals, related, usage, bounds = null, budget = { left: Infinity }) {
     const { nx, ny, xs, ys } = grid;
-    const states = grid.size * 4;
-    const cost = new Float64Array(states).fill(Infinity);
-    const from = new Int32Array(states).fill(-1);
-    const closed = new Uint8Array(states);
+    const buffers = searchBuffers(grid);
+    const { stamp, seen, closed } = buffers;
+    const costs = buffers.cost;
+    const parents = buffers.from;
+    const costOf = (state) => (seen[state] === stamp ? costs[state] : Infinity);
+    const setCost = (state, value, parent) => {
+        seen[state] = stamp;
+        costs[state] = value;
+        parents[state] = parent;
+    };
     const heap = new Heap();
     const goalByPoint = new Map();
     for (const goal of goals) {
@@ -217,19 +239,20 @@ function search(grid, starts, goals, related, usage, bounds = null) {
         for (const goal of goalCoords) {
             const dx = Math.abs(goal.x - x);
             const dy = Math.abs(goal.y - y);
-            best = Math.min(best, dx + dy);
+            best = Math.min(best, dx + dy + (dx > 0.5 && dy > 0.5 ? BEND : 0));
         }
-        return best;
+        return best * HEURISTIC_WEIGHT;
     };
     for (const start of starts) {
         const state = start.point * 4 + start.dir;
-        if (start.cost < cost[state]) {
-            cost[state] = start.cost;
+        if (start.cost < costOf(state)) {
+            setCost(state, start.cost, -1);
             heap.push(state, start.cost + heuristic(start.point));
         }
     }
     let bestGoal = null;
     let bestTotal = Infinity;
+    let expansions = 0;
     const foreignCache = new Map();
     const foreign = (mask) => {
         if (!mask) return false;
@@ -238,9 +261,12 @@ function search(grid, starts, goals, related, usage, bounds = null) {
     };
     while (heap.size) {
         const state = heap.pop();
-        if (closed[state]) continue;
-        closed[state] = 1;
-        const g = cost[state];
+        if (closed[state] === stamp) continue;
+        closed[state] = stamp;
+        expansions += 1;
+        budget.left -= 1;
+        if (expansions > SEARCH_EXPANSIONS || budget.left < 0) break;
+        const g = costOf(state);
         if (g + 0 >= bestTotal) break;
         const point = state >> 2;
         const dir = state & 3;
@@ -286,9 +312,8 @@ function search(grid, starts, goals, related, usage, bounds = null) {
             }
             const nextState = target * 4 + next;
             const value = g + step;
-            if (value < cost[nextState]) {
-                cost[nextState] = value;
-                from[nextState] = state;
+            if (value < costOf(nextState)) {
+                setCost(nextState, value, state);
                 heap.push(nextState, value + heuristic(target));
             }
         }
@@ -298,7 +323,7 @@ function search(grid, starts, goals, related, usage, bounds = null) {
     let state = bestGoal.state;
     while (state >= 0) {
         pointsList.push(state >> 2);
-        state = from[state];
+        state = parents[state];
     }
     pointsList.reverse();
     return { points: pointsList.map((point) => ({ x: xs[point % nx], y: ys[Math.floor(point / nx)] })), raw: pointsList, goal: bestGoal.goal };
@@ -592,17 +617,21 @@ function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixe
         return { edge, source, target, starts, ends, bounds: commonContainer(source, target, groups) };
     });
     const all = [...inflated, ...groups.map((group) => group.box)];
-    const minX = Math.min(...all.map((box) => box.x), ...extraX) - MARGIN * 4;
-    const minY = Math.min(...all.map((box) => box.y), ...extraY) - MARGIN * 4;
-    const maxX = Math.max(...all.map((box) => box.x + box.w), ...extraX) + MARGIN * 4;
-    const maxY = Math.max(...all.map((box) => box.y + box.h), ...extraY) + MARGIN * 4;
+    const boxes = boundsOf(all) ?? { x: 0, y: 0, w: 0, h: 0 };
+    const spanX = extremes(extraX);
+    const spanY = extremes(extraY);
+    const minX = Math.min(boxes.x, spanX.min) - MARGIN * 4;
+    const minY = Math.min(boxes.y, spanY.min) - MARGIN * 4;
+    const maxX = Math.max(boxes.x + boxes.w, spanX.max) + MARGIN * 4;
+    const maxY = Math.max(boxes.y + boxes.h, spanY.max) + MARGIN * 4;
     const frame = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
     const grid = new Grid({ obstacles: inflated, groups: groups.map((group) => group.box), xs: extraX, ys: extraY, frame });
     const groupIndex = new Map(groups.map((group, index) => [group.id, index]));
-    const usage = { h: new Uint8Array(grid.size), v: new Uint8Array(grid.size) };
-    for (const route of prerouted.values()) markUsage(grid, usage, route.points);
-    const tooLarge = grid.size > MAX_GRID_POINTS;
+    const tooLarge = grid.tooLarge;
+    const usage = tooLarge ? null : { h: new Uint8Array(grid.size), v: new Uint8Array(grid.size) };
+    if (!tooLarge) for (const route of prerouted.values()) markUsage(grid, usage, route.points);
     const results = new Map();
+    const budget = { left: PASS_EXPANSIONS };
     const order = plans.map((plan, index) => ({ plan, index }))
         .sort((a, b) => {
             const da = Math.abs(centerOf(a.plan.source.box).x - centerOf(a.plan.target.box).x) + Math.abs(centerOf(a.plan.source.box).y - centerOf(a.plan.target.box).y);
@@ -623,7 +652,7 @@ function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixe
             }
         }
         const related = relatedMask(groupIndex, [...plan.source.ancestors, ...plan.target.ancestors]);
-        const found = starts.length && goals.length ? search(grid, starts, goals, related, usage, plan.bounds) : null;
+        const found = starts.length && goals.length && budget.left > 0 ? search(grid, starts, goals, related, usage, plan.bounds, budget) : null;
         let points;
         let sides;
         if (found) {
@@ -639,7 +668,7 @@ function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixe
                 ? fallbackFixed(fixed.get(plan.edge.id))
                 : fallbackRoute(plan.source, plan.target, sides);
         }
-        markUsage(grid, usage, points);
+        if (!tooLarge) markUsage(grid, usage, points);
         results.set(plan.edge.id, { points, sides });
     }
     return results;
@@ -719,7 +748,8 @@ function segmentHitsBox(a, b, box) {
 }
 
 function nudge(routes, obstacles) {
-    const blocked = obstacles.map((box) => inflate(box, 3));
+    const blocked = spatialIndex(obstacles.map((box) => inflate(box, 3)));
+    const hits = (a, b) => blocked.any(segmentArea(a, b), (box) => segmentHitsBox(a, b, box));
     for (const axis of ['h', 'v']) {
         const segments = [];
         for (const [id, route] of routes) {
@@ -756,10 +786,7 @@ function nudge(routes, obstacles) {
             const clusters = [];
             for (const segment of list) {
                 const cluster = clusters[clusters.length - 1];
-                if (cluster && segment.lo < cluster.hi - 1 && cluster.items.some((item) => item.id !== segment.id)) {
-                    cluster.items.push(segment);
-                    cluster.hi = Math.max(cluster.hi, segment.hi);
-                } else if (cluster && segment.lo < cluster.hi - 1) {
+                if (cluster && segment.lo < cluster.hi - 1) {
                     cluster.items.push(segment);
                     cluster.hi = Math.max(cluster.hi, segment.hi);
                 } else {
@@ -779,7 +806,7 @@ function nudge(routes, obstacles) {
                         const a = { ...oldA };
                         const b = { ...oldB };
                         if (axis === 'h') { a.y = value; b.y = value; } else { a.x = value; b.x = value; }
-                        return !blocked.some((box) => segmentHitsBox(a, b, box) || segmentHitsBox(oldA, a, box) || segmentHitsBox(oldB, b, box));
+                        return !hits(a, b) && !hits(oldA, a) && !hits(oldB, b);
                     });
                     if (!fits) continue;
                     for (const { item, value } of moves) {
@@ -801,6 +828,7 @@ function nudge(routes, obstacles) {
 
 function centerSegments(routes, obstacles, groups, endpoints, edges) {
     const blocked = obstacles.map((box) => inflate(box, MARGIN));
+    if (routes.size > 400) return;
     const edgeById = new Map(edges.map((edge) => [edge.id, edge]));
     const minLeg = 12;
     for (const [id, route] of routes) {
@@ -864,14 +892,39 @@ function pathLength(points) {
     return total;
 }
 
+const LABEL_SEGMENTS = 8;
+
+function labelSegments(points) {
+    const count = points.length - 1;
+    if (count <= LABEL_SEGMENTS) return new Set(Array.from({ length: Math.max(0, count) }, (_, index) => index));
+    const chosen = new Set([0, 1, 2, count - 2, count - 1]);
+    const lengths = [];
+    for (let index = 0; index < count; index += 1) {
+        lengths.push({ index, length: Math.abs(points[index + 1].x - points[index].x) + Math.abs(points[index + 1].y - points[index].y) });
+    }
+    lengths.sort((a, b) => b.length - a.length || a.index - b.index);
+    for (const entry of lengths) {
+        if (chosen.size >= LABEL_SEGMENTS + 3) break;
+        chosen.add(entry.index);
+    }
+    return chosen;
+}
+
 export function placeLabels(edges, routes, obstacles, chips, direction) {
-    const placed = [];
     const boxes = new Map();
     const preferHorizontal = direction === 'LR' || direction === 'RL';
     const allSegments = [];
     for (const [id, route] of routes) {
-        for (let index = 0; index + 1 < route.points.length; index += 1) allSegments.push({ id, a: route.points[index], b: route.points[index + 1] });
+        for (let index = 0; index + 1 < route.points.length; index += 1) {
+            const a = route.points[index];
+            const b = route.points[index + 1];
+            allSegments.push({ id, a, b, ...segmentArea(a, b) });
+        }
     }
+    const segmentIndex = spatialIndex(allSegments);
+    const obstacleIndex = spatialIndex(obstacles.map((box) => inflate(box, 3)));
+    const chipIndex = spatialIndex(chips);
+    const placedIndex = spatialIndex([]);
     for (const edge of edges) {
         if (!edge.labelSize) continue;
         const route = routes.get(edge.id);
@@ -881,10 +934,15 @@ export function placeLabels(edges, routes, obstacles, chips, direction) {
         const total = pathLength(points);
         let travelled = 0;
         let best = null;
+        const candidates = labelSegments(points);
         for (let index = 0; index + 1 < points.length; index += 1) {
             const a = points[index];
             const b = points[index + 1];
             const length = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+            if (!candidates.has(index)) {
+                travelled += length;
+                continue;
+            }
             const horizontal = Math.abs(a.y - b.y) < 0.5;
             const offsets = horizontal ? [[0, 0], [0, -(h / 2 + 3)], [0, h / 2 + 3]] : [[0, 0], [-(w / 2 + 3), 0], [w / 2 + 3, 0]];
             for (const [fraction, [dx, dy]] of [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9].flatMap((value) => offsets.map((offset) => [value, offset]))) {
@@ -897,23 +955,22 @@ export function placeLabels(edges, routes, obstacles, chips, direction) {
                 const room = horizontal ? length - w : length - h;
                 if (room < 0) score += Math.min(60, -room);
                 if (along < 18 || total - along < 18) score += 80;
-                for (const obstacle of obstacles) if (overlapArea(box, inflate(obstacle, 3)) > 0) score += 400;
-                for (const chip of chips) if (overlapArea(box, chip) > 0) score += 300;
-                for (const other of placed) if (overlapArea(box, inflate(other, 3)) > 0) score += 500;
-                for (const segment of allSegments) {
-                    if (segment.id === edge.id) continue;
-                    if (segmentHitsBox(segment.a, segment.b, box)) score += 24;
-                }
+                obstacleIndex.each(box, (obstacle) => { if (overlapArea(box, obstacle) > 0) score += 400; });
+                chipIndex.each(box, (chip) => { if (overlapArea(box, chip) > 0) score += 300; });
+                placedIndex.each(inflate(box, 3), (other) => { if (overlapArea(box, inflate(other, 3)) > 0) score += 500; });
+                segmentIndex.each(box, (segment) => {
+                    if (segment.id !== edge.id && segmentHitsBox(segment.a, segment.b, box)) score += 24;
+                });
                 if (!best || score < best.score - 0.001) best = { score, box };
             }
             travelled += length;
         }
         if (best) {
             const box = { x: Math.round(best.box.x * 2) / 2, y: Math.round(best.box.y * 2) / 2, w, h };
-            const clash = placed.some((other) => overlapArea(box, inflate(other, 2)) > 0)
-                || obstacles.some((obstacle) => overlapArea(box, inflate(obstacle, 1)) > 0)
-                || chips.some((chip) => overlapArea(box, chip) > 0);
-            if (!clash) placed.push(box);
+            const clash = placedIndex.any(inflate(box, 3), (other) => overlapArea(box, inflate(other, 2)) > 0)
+                || obstacleIndex.any(box, (obstacle) => overlapArea(box, inflate(obstacle, -2)) > 0)
+                || chipIndex.any(box, (chip) => overlapArea(box, chip) > 0);
+            if (!clash) placedIndex.add(box);
             boxes.set(edge.id, { box, hidden: clash });
         }
     }
@@ -957,8 +1014,10 @@ export function routeEdges({ edges, endpoints, obstacles, groups, direction, man
     const second = free.length ? routeAll({ edges: free, endpoints, obstacles, groups, direction, manual, fixed, prerouted: laid }) : new Map();
     for (const edge of searchable) routes.set(edge.id, laid.get(edge.id) ?? second.get(edge.id) ?? first.get(edge.id));
     const ordered = new Map(edges.filter((edge) => routes.has(edge.id)).map((edge) => [edge.id, routes.get(edge.id)]));
-    const searched = new Map([...ordered].filter(([id]) => free.some((edge) => edge.id === id)));
-    const all = new Map([...ordered].filter(([id]) => searchable.some((edge) => edge.id === id)));
+    const freeIds = new Set(free.map((edge) => edge.id));
+    const searchableIds = new Set(searchable.map((edge) => edge.id));
+    const searched = new Map([...ordered].filter(([id]) => freeIds.has(id)));
+    const all = new Map([...ordered].filter(([id]) => searchableIds.has(id)));
     centerSegments(searched, obstacles, groups, endpoints, edges);
     nudge(all, obstacles);
     return ordered;

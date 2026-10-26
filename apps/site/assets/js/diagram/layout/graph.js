@@ -1,6 +1,7 @@
 import { METRICS, approximateMeasure, edgeLabelSize, groupChipSize, nodeSize } from '../metrics.js';
 import { layered } from './layered.js';
 import { placeLabels, routeEdges } from './route.js';
+import { boundsOf } from './bounds.js';
 
 const ROOT = '\u0000root';
 const CHIP_INSET = 14;
@@ -150,7 +151,7 @@ function liftEdges(edges, structure, containerOf) {
 
 function autoLayout(diagram, context) {
     const { structure, sizes, edges, measure, collapsed } = context;
-    const spacing = METRICS.spacing[diagram.density] ?? METRICS.spacing.compact;
+    const spacing = Object.hasOwn(METRICS.spacing, diagram.density) ? METRICS.spacing[diagram.density] : METRICS.spacing.compact;
     const gm = METRICS.group;
     const chipH = gm.chip.height;
     const children = new Map([[ROOT, []]]);
@@ -278,7 +279,8 @@ function autoLayout(diagram, context) {
 
     let lanes = [];
     if (hasLanes) {
-        const contentBottom = Math.max(laneTop, ...[...boxes.values()].map((box) => box.y + box.h), ...[...groupBoxes.values()].map((entry) => entry.box.y + entry.box.h));
+        const content = boundsOf([...boxes.values(), ...[...groupBoxes.values()].map((entry) => entry.box)]);
+        const contentBottom = Math.max(laneTop, content ? content.y + content.h : 0);
         const height = contentBottom + METRICS.lane.pad;
         lanes = diagram.lanes.map((lane, index) => {
             const band = root.laneBands[index] ?? { start: 0, end: laneHeaderWidth(lane, measure) };
@@ -342,11 +344,8 @@ function manualLayout(diagram, context) {
         if (group.x !== undefined && group.y !== undefined && group.w !== undefined && group.h !== undefined) {
             box = { x: group.x, y: group.y, w: group.w, h: group.h };
         } else if (members.length) {
-            const minX = Math.min(...members.map((m) => m.x));
-            const minY = Math.min(...members.map((m) => m.y));
-            const maxX = Math.max(...members.map((m) => m.x + m.w));
-            const maxY = Math.max(...members.map((m) => m.y + m.h));
-            box = { x: minX - gm.pad, y: minY - gm.pad - chipH / 2, w: maxX - minX + gm.pad * 2, h: maxY - minY + gm.pad * 2 + chipH / 2 };
+            const inner = boundsOf(members);
+            box = { x: inner.x - gm.pad, y: inner.y - gm.pad - chipH / 2, w: inner.w + gm.pad * 2, h: inner.h + gm.pad * 2 + chipH / 2 };
         } else {
             box = { x: group.x ?? 0, y: group.y ?? 0, w: group.w ?? 160, h: group.h ?? 80 };
         }
@@ -364,9 +363,10 @@ function manualLayout(diagram, context) {
     if (diagram.lanes.length) {
         const m = METRICS.lane;
         const all = [...boxes.values(), ...[...groupBoxes.values()].map((entry) => entry.box)];
-        const top = Math.min(...all.map((box) => box.y)) - m.pad - m.header;
-        const bottom = Math.max(...all.map((box) => box.y + box.h)) + m.pad;
-        let cursor = Math.min(...all.map((box) => box.x)) - m.pad;
+        const area = boundsOf(all);
+        const top = area.y - m.pad - m.header;
+        const bottom = area.y + area.h + m.pad;
+        let cursor = area.x - m.pad;
         lanes = diagram.lanes.map((lane) => {
             const members = diagram.nodes.filter((node) => node.lane === lane.id && boxes.has(node.id)).map((node) => boxes.get(node.id));
             const start = members.length ? Math.max(cursor, Math.min(...members.map((box) => box.x)) - m.pad) : cursor;
@@ -436,12 +436,7 @@ export function layoutGraph(diagram, { measure = approximateMeasure, expanded, c
     const routes = routeEdges({ edges, endpoints, obstacles, groups: routedGroups, direction: diagram.direction, manual });
     const labelBoxes = placeLabels(edges, routes, obstacles, chips, diagram.direction);
     const startItems = flowItems.length ? flowItems : [...boxes.values()].sort((a, b) => (diagram.direction === 'TB' || diagram.direction === 'BT' ? a.y - b.y : a.x - b.x)).slice(0, 1);
-    const flowStart = startItems.length ? {
-        x: Math.min(...startItems.map((box) => box.x)),
-        y: Math.min(...startItems.map((box) => box.y)),
-        w: Math.max(...startItems.map((box) => box.x + box.w)) - Math.min(...startItems.map((box) => box.x)),
-        h: Math.max(...startItems.map((box) => box.y + box.h)) - Math.min(...startItems.map((box) => box.y))
-    } : null;
+    const flowStart = boundsOf(startItems);
 
     const scene = {
         kind: 'graph',
@@ -512,14 +507,11 @@ export function layoutGraph(diagram, { measure = approximateMeasure, expanded, c
         add(edge.labelBox);
     }
     const padding = METRICS.padding;
-    if (extents.length) {
-        const minX = Math.min(...extents.map((box) => box.x));
-        const minY = Math.min(...extents.map((box) => box.y));
-        const maxX = Math.max(...extents.map((box) => box.x + box.w));
-        const maxY = Math.max(...extents.map((box) => box.y + box.h));
-        translate(scene, padding - minX, padding - minY);
-        scene.width = Math.ceil(maxX - minX + padding * 2);
-        scene.height = Math.ceil(maxY - minY + padding * 2);
+    const frame = boundsOf(extents);
+    if (frame) {
+        translate(scene, padding - frame.x, padding - frame.y);
+        scene.width = Math.ceil(frame.w + padding * 2);
+        scene.height = Math.ceil(frame.h + padding * 2);
     } else {
         scene.width = padding * 2;
         scene.height = padding * 2;
