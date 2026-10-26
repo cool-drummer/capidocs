@@ -1,0 +1,1268 @@
+{
+  "version": 1,
+  "title": "Diagramas de capidocs",
+  "description": "Cómo está hecho capidocs, cómo se publica una documentación y qué gana cada equipo al usarlo. Navega por categoría, abre un diagrama y sigue los enlaces para bajar de nivel.",
+  "lang": "es",
+  "start": "architecture",
+  "diagrams": [
+    {
+      "id": "architecture",
+      "title": "Arquitectura de capidocs",
+      "description": "Las piezas del monorepo y cómo se conectan: el sitio estático que lee el spec en el navegador, los paquetes que lo validan y compilan, el studio con su API y el despliegue en Cloudflare Pages.",
+      "category": "technical",
+      "direction": "LR",
+      "tags": [
+        "monorepo"
+      ],
+      "groups": [
+        {
+          "id": "studio",
+          "title": "Studio",
+          "icon": "layout-dashboard",
+          "color": "blue",
+          "description": "Backoffice para editar espacios y páginas sin tocar JSON."
+        },
+        {
+          "id": "site",
+          "title": "Sitio estático",
+          "icon": "globe",
+          "color": "teal",
+          "description": "HTML, CSS y módulos ES servidos tal cual, sin paso de build."
+        },
+        {
+          "id": "packages",
+          "title": "Paquetes",
+          "icon": "package",
+          "color": "violet",
+          "description": "Código compartido entre el sitio, el studio y el compilador."
+        },
+        {
+          "id": "deploy",
+          "title": "Despliegue",
+          "icon": "cloud",
+          "color": "orange"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "author",
+          "title": "Autor",
+          "shape": "actor",
+          "description": "Quien escribe y publica la documentación."
+        },
+        {
+          "id": "reader",
+          "title": "Lector",
+          "shape": "actor"
+        },
+        {
+          "id": "studio-ui",
+          "title": "Studio",
+          "subtitle": "apps/studio",
+          "icon": "layout-dashboard",
+          "color": "blue",
+          "group": "studio",
+          "badge": {
+            "text": "React",
+            "color": "sky"
+          },
+          "tags": [
+            "frontend"
+          ],
+          "description": "Interfaz para crear espacios, páginas y publicar versiones."
+        },
+        {
+          "id": "api",
+          "title": "API del studio",
+          "subtitle": "apps/api",
+          "icon": "server",
+          "color": "blue",
+          "group": "studio",
+          "badge": {
+            "text": "Node",
+            "color": "green"
+          },
+          "status": "ok",
+          "tags": [
+            "backend"
+          ],
+          "description": "Guarda el contenido en PostgreSQL y compila un portal a partir de la base.",
+          "props": [
+            {
+              "label": "Autenticación",
+              "value": "Sesión propia con cookie firmada"
+            },
+            {
+              "label": "Persistencia",
+              "value": "PostgreSQL 16"
+            },
+            {
+              "label": "Ruta clave",
+              "value": "POST /spaces/:id/publish",
+              "mono": true
+            },
+            {
+              "label": "Estado",
+              "value": "Estable",
+              "status": "ok"
+            }
+          ],
+          "preview": {
+            "type": "sparkline",
+            "title": "Publicaciones por semana",
+            "values": [
+              2,
+              4,
+              3,
+              6,
+              5,
+              8,
+              7,
+              9,
+              12,
+              10,
+              13,
+              15
+            ]
+          }
+        },
+        {
+          "id": "db",
+          "title": "PostgreSQL",
+          "subtitle": "documentos y versiones",
+          "shape": "cylinder",
+          "icon": "brand:postgresql",
+          "group": "studio",
+          "tags": [
+            "backend"
+          ]
+        },
+        {
+          "id": "runtime",
+          "title": "Runtime de módulos",
+          "subtitle": "assets/js",
+          "icon": "code",
+          "color": "teal",
+          "group": "site",
+          "badge": "Sin build",
+          "tags": [
+            "frontend"
+          ],
+          "link": {
+            "diagram": "boot-sequence",
+            "label": "Ver el arranque"
+          },
+          "description": "main.js carga el spec, crea la aplicación y marca la página como lista."
+        },
+        {
+          "id": "spec-json",
+          "title": "api-spec.json",
+          "subtitle": "config/",
+          "icon": "file-json",
+          "color": "teal",
+          "group": "site",
+          "tags": [
+            "frontend"
+          ],
+          "link": {
+            "diagram": "spec-model",
+            "label": "Ver el modelo del spec"
+          },
+          "description": "Un spec por idioma; el sitio lo descarga al arrancar."
+        },
+        {
+          "id": "explorer",
+          "title": "Explorador de diagramas",
+          "subtitle": "diagrams.html",
+          "icon": "workflow",
+          "color": "teal",
+          "group": "site",
+          "tags": [
+            "frontend"
+          ],
+          "link": {
+            "diagram": "import-flow",
+            "label": "Ver cómo se importa"
+          }
+        },
+        {
+          "id": "compiler",
+          "title": "@capidocs/compiler",
+          "subtitle": "packages/compiler",
+          "icon": "cpu",
+          "color": "violet",
+          "group": "packages",
+          "tags": [
+            "build"
+          ],
+          "link": {
+            "diagram": "publish-pipeline",
+            "label": "Ver la publicación"
+          },
+          "description": "Genera el índice de búsqueda, llms.txt, sitemap y robots, e importa OpenAPI."
+        },
+        {
+          "id": "spec",
+          "title": "@capidocs/spec",
+          "subtitle": "packages/spec",
+          "icon": "shield-check",
+          "color": "violet",
+          "group": "packages",
+          "badge": {
+            "text": "zod",
+            "color": "violet"
+          },
+          "tags": [
+            "build"
+          ],
+          "description": "Esquema estricto del spec: una clave desconocida falla y la navegación debe apuntar a páginas que existen.",
+          "props": [
+            {
+              "label": "Validación",
+              "value": "strict() en todos los objetos"
+            },
+            {
+              "label": "Integridad",
+              "value": "Navegación, sidebar y tabs"
+            },
+            {
+              "label": "Salida",
+              "value": "Tipos y validador",
+              "mono": false
+            }
+          ]
+        },
+        {
+          "id": "pages",
+          "title": "Cloudflare Pages",
+          "shape": "tile",
+          "icon": "brand:cloudflare",
+          "color": "orange",
+          "group": "deploy",
+          "link": {
+            "href": "https://pages.cloudflare.com/",
+            "label": "Sitio de Cloudflare Pages"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-author-studio",
+          "from": "author",
+          "to": "studio-ui",
+          "label": "Edita"
+        },
+        {
+          "id": "e-studio-api",
+          "from": "studio-ui",
+          "to": "api",
+          "label": "REST"
+        },
+        {
+          "id": "e-api-db",
+          "from": "api",
+          "to": "db",
+          "style": "dashed"
+        },
+        {
+          "id": "e-api-compiler",
+          "from": "api",
+          "to": "compiler",
+          "label": "Compila"
+        },
+        {
+          "id": "e-compiler-spec",
+          "from": "compiler",
+          "to": "spec",
+          "label": "Valida",
+          "style": "dashed"
+        },
+        {
+          "id": "e-compiler-pages",
+          "from": "compiler",
+          "to": "pages",
+          "label": "Publica",
+          "style": "thick",
+          "color": "orange"
+        },
+        {
+          "id": "e-pages-site",
+          "from": "runtime",
+          "to": "pages",
+          "label": "Se sirve desde",
+          "arrow": "start",
+          "style": "dashed"
+        },
+        {
+          "id": "e-runtime-spec",
+          "from": "runtime",
+          "to": "spec-json",
+          "label": "Carga"
+        },
+        {
+          "id": "e-runtime-explorer",
+          "from": "runtime",
+          "to": "explorer",
+          "style": "dotted"
+        },
+        {
+          "id": "e-reader-site",
+          "from": "reader",
+          "to": "runtime",
+          "label": "Lee"
+        }
+      ],
+      "steps": [
+        {
+          "title": "El autor edita en el studio",
+          "description": "Los cambios se guardan como documentos versionados.",
+          "nodes": [
+            "author",
+            "studio-ui",
+            "api",
+            "db"
+          ],
+          "edges": [
+            "e-author-studio",
+            "e-studio-api",
+            "e-api-db"
+          ]
+        },
+        {
+          "title": "La API compila el portal",
+          "description": "El compilador valida el spec y genera los archivos derivados.",
+          "nodes": [
+            "api",
+            "compiler",
+            "spec"
+          ],
+          "edges": [
+            "e-api-compiler",
+            "e-compiler-spec"
+          ]
+        },
+        {
+          "title": "Cloudflare Pages publica",
+          "description": "Solo se suben las entradas publicables del sitio.",
+          "nodes": [
+            "compiler",
+            "pages"
+          ],
+          "edges": [
+            "e-compiler-pages",
+            "e-pages-site"
+          ],
+          "groups": [
+            "site"
+          ]
+        },
+        {
+          "title": "El lector abre la documentación",
+          "description": "El navegador descarga el spec y pinta las páginas.",
+          "nodes": [
+            "reader",
+            "runtime",
+            "spec-json"
+          ],
+          "edges": [
+            "e-reader-site",
+            "e-runtime-spec"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "boot-sequence",
+      "title": "Arranque del sitio",
+      "description": "Qué pasa desde que el navegador pide la página hasta que la documentación queda lista para leerse.",
+      "category": "technical",
+      "kind": "sequence",
+      "autonumber": true,
+      "participants": [
+        {
+          "id": "browser",
+          "title": "Navegador",
+          "kind": "actor"
+        },
+        {
+          "id": "cdn",
+          "title": "Cloudflare Pages",
+          "kind": "external",
+          "icon": "brand:cloudflare"
+        },
+        {
+          "id": "main",
+          "title": "main.js",
+          "subtitle": "assets/js",
+          "icon": "code",
+          "color": "teal"
+        },
+        {
+          "id": "loader",
+          "title": "spec-loader",
+          "subtitle": "assets/js",
+          "icon": "file-json",
+          "color": "teal",
+          "link": {
+            "diagram": "spec-model"
+          }
+        },
+        {
+          "id": "app",
+          "title": "Aplicación",
+          "subtitle": "app.js",
+          "icon": "layers",
+          "color": "violet",
+          "link": {
+            "diagram": "architecture",
+            "node": "runtime"
+          }
+        }
+      ],
+      "items": [
+        {
+          "id": "m-get",
+          "from": "browser",
+          "to": "cdn",
+          "label": "GET index.html"
+        },
+        {
+          "from": "cdn",
+          "to": "browser",
+          "label": "HTML y módulos ES",
+          "style": "reply"
+        },
+        {
+          "id": "m-import",
+          "from": "browser",
+          "to": "main",
+          "label": "Ejecuta el módulo"
+        },
+        {
+          "from": "main",
+          "to": "loader",
+          "label": "loadSpec()"
+        },
+        {
+          "type": "block",
+          "kind": "alt",
+          "label": "Hay un spec elegido",
+          "items": [
+            {
+              "from": "loader",
+              "to": "cdn",
+              "label": "GET spec del idioma"
+            }
+          ],
+          "branches": [
+            {
+              "label": "Spec por omisión",
+              "items": [
+                {
+                  "from": "loader",
+                  "to": "cdn",
+                  "label": "GET config/api-spec.json"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "from": "cdn",
+          "to": "loader",
+          "label": "JSON del spec",
+          "style": "reply"
+        },
+        {
+          "id": "m-create",
+          "from": "main",
+          "to": "app",
+          "label": "createCapidocs(spec)"
+        },
+        {
+          "type": "block",
+          "kind": "loop",
+          "label": "Cada sección de la página",
+          "items": [
+            {
+              "from": "app",
+              "to": "app",
+              "label": "Pinta el bloque",
+              "style": "async"
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "over": [
+            "main",
+            "app"
+          ],
+          "text": "Sin temporizadores: un solo flujo de arranque y una bandera al final."
+        },
+        {
+          "id": "m-ready",
+          "from": "app",
+          "to": "browser",
+          "label": "data-capidocs = ready",
+          "style": "reply"
+        }
+      ],
+      "steps": [
+        {
+          "title": "Descarga",
+          "description": "El navegador recibe el HTML y los módulos.",
+          "edges": [
+            "m-get"
+          ]
+        },
+        {
+          "title": "Carga del spec",
+          "description": "Se elige el spec según el idioma o la versión.",
+          "edges": [
+            "m-import"
+          ]
+        },
+        {
+          "title": "La página queda lista",
+          "description": "La bandera permite verificar el sitio sin navegador visible.",
+          "edges": [
+            "m-create",
+            "m-ready"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spec-model",
+      "title": "Modelo del spec",
+      "description": "Las tablas lógicas del archivo de configuración y cómo se referencian entre sí.",
+      "category": "technical",
+      "direction": "TB",
+      "density": "comfortable",
+      "nodes": [
+        {
+          "id": "site-config",
+          "title": "site_config",
+          "shape": "table",
+          "color": "teal",
+          "fields": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "theme",
+              "type": "object"
+            },
+            {
+              "name": "languages",
+              "type": "array"
+            },
+            {
+              "name": "access",
+              "type": "enum"
+            }
+          ]
+        },
+        {
+          "id": "navigation",
+          "title": "navigation",
+          "shape": "table",
+          "color": "blue",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "key": "pk"
+            },
+            {
+              "name": "page_id",
+              "type": "string",
+              "key": "fk"
+            },
+            {
+              "name": "icon",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "id": "sections",
+          "title": "sections",
+          "shape": "table",
+          "color": "blue",
+          "fields": [
+            {
+              "name": "title",
+              "type": "string",
+              "key": "uk"
+            },
+            {
+              "name": "pages",
+              "type": "page_id[]",
+              "key": "fk"
+            },
+            {
+              "name": "endpoints",
+              "type": "endpoint_id[]",
+              "key": "fk"
+            }
+          ]
+        },
+        {
+          "id": "pages",
+          "title": "pages",
+          "shape": "table",
+          "color": "violet",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "key": "pk"
+            },
+            {
+              "name": "template",
+              "type": "hero | content"
+            },
+            {
+              "name": "content",
+              "type": "object"
+            }
+          ]
+        },
+        {
+          "id": "endpoints",
+          "title": "endpoints",
+          "shape": "table",
+          "color": "violet",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "key": "pk"
+            },
+            {
+              "name": "method",
+              "type": "enum"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "schema"
+            }
+          ]
+        },
+        {
+          "id": "rule",
+          "title": "Integridad referencial",
+          "shape": "note",
+          "description": "El validador rechaza navegación o sidebar que apunten a páginas inexistentes."
+        }
+      ],
+      "edges": [
+        {
+          "from": "site-config",
+          "to": "navigation",
+          "label": "tabs"
+        },
+        {
+          "from": "navigation",
+          "to": "pages",
+          "label": "page_id"
+        },
+        {
+          "from": "sections",
+          "to": "pages",
+          "label": "pages"
+        },
+        {
+          "from": "sections",
+          "to": "endpoints",
+          "label": "endpoints"
+        },
+        {
+          "from": "rule",
+          "to": "navigation",
+          "style": "dotted",
+          "arrow": "none"
+        }
+      ]
+    },
+    {
+      "id": "publish-pipeline",
+      "title": "Publicación de un portal",
+      "description": "El recorrido de un cambio desde el borrador hasta el sitio en línea, etapa por etapa.",
+      "category": "operational",
+      "direction": "LR",
+      "tags": [
+        "proceso"
+      ],
+      "lanes": [
+        {
+          "id": "edit",
+          "title": "Edición",
+          "icons": [
+            "pencil"
+          ],
+          "color": "blue"
+        },
+        {
+          "id": "check",
+          "title": "Validación",
+          "icons": [
+            "shield-check"
+          ],
+          "color": "violet"
+        },
+        {
+          "id": "build",
+          "title": "Compilación",
+          "icons": [
+            "cpu"
+          ],
+          "color": "teal"
+        },
+        {
+          "id": "ship",
+          "title": "Despliegue",
+          "icons": [
+            "rocket"
+          ],
+          "color": "orange"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "draft",
+          "title": "Borrador listo",
+          "shape": "pill",
+          "color": "blue",
+          "lane": "edit"
+        },
+        {
+          "id": "valid",
+          "title": "¿Spec válido?",
+          "shape": "diamond",
+          "color": "violet",
+          "lane": "check"
+        },
+        {
+          "id": "fix",
+          "title": "Corregir errores",
+          "subtitle": "mensajes por ruta",
+          "icon": "alert-triangle",
+          "color": "red",
+          "lane": "edit",
+          "tags": [
+            "errores"
+          ]
+        },
+        {
+          "id": "compile",
+          "title": "Compilar sitio",
+          "subtitle": "pnpm build:site",
+          "icon": "terminal",
+          "color": "teal",
+          "lane": "build",
+          "tags": [
+            "build"
+          ],
+          "props": [
+            {
+              "label": "Índice",
+              "value": "search-index.json",
+              "mono": true
+            },
+            {
+              "label": "Para modelos",
+              "value": "llms.txt y llms-full.txt",
+              "mono": true
+            },
+            {
+              "label": "SEO",
+              "value": "sitemap.xml y robots.txt",
+              "mono": true
+            }
+          ],
+          "preview": {
+            "type": "bars",
+            "title": "Segundos por compilación",
+            "values": [
+              4,
+              3.6,
+              3.9,
+              3.1,
+              2.8,
+              2.9,
+              2.4
+            ]
+          }
+        },
+        {
+          "id": "stage",
+          "title": "Preparar entradas",
+          "subtitle": ".tmp/dist",
+          "icon": "folder-lock",
+          "color": "teal",
+          "lane": "build",
+          "tags": [
+            "build"
+          ],
+          "description": "Solo se copian las entradas publicables: nunca pruebas ni package.json."
+        },
+        {
+          "id": "deploy",
+          "title": "Cloudflare Pages",
+          "shape": "tile",
+          "icon": "brand:cloudflare",
+          "color": "orange",
+          "lane": "ship"
+        },
+        {
+          "id": "live",
+          "title": "En línea",
+          "shape": "pill",
+          "color": "green",
+          "lane": "ship",
+          "status": "ok"
+        }
+      ],
+      "edges": [
+        {
+          "id": "p1",
+          "from": "draft",
+          "to": "valid"
+        },
+        {
+          "id": "p2",
+          "from": "valid",
+          "to": "compile",
+          "label": "Sí",
+          "color": "green"
+        },
+        {
+          "id": "p3",
+          "from": "valid",
+          "to": "fix",
+          "label": "No",
+          "color": "red",
+          "style": "dashed"
+        },
+        {
+          "id": "p4",
+          "from": "fix",
+          "to": "valid",
+          "label": "Reintenta",
+          "style": "dashed"
+        },
+        {
+          "id": "p5",
+          "from": "compile",
+          "to": "stage"
+        },
+        {
+          "id": "p6",
+          "from": "stage",
+          "to": "deploy",
+          "label": "wrangler"
+        },
+        {
+          "id": "p7",
+          "from": "deploy",
+          "to": "live"
+        }
+      ],
+      "steps": [
+        {
+          "title": "El borrador entra a validación",
+          "nodes": [
+            "draft",
+            "valid"
+          ],
+          "edges": [
+            "p1"
+          ]
+        },
+        {
+          "title": "Si falla, se corrige y se vuelve a validar",
+          "description": "Cada error indica la ruta exacta de la clave.",
+          "nodes": [
+            "valid",
+            "fix"
+          ],
+          "edges": [
+            "p3",
+            "p4"
+          ]
+        },
+        {
+          "title": "Se compila y se preparan las entradas",
+          "nodes": [
+            "compile",
+            "stage"
+          ],
+          "edges": [
+            "p2",
+            "p5"
+          ]
+        },
+        {
+          "title": "Cloudflare Pages lo publica",
+          "nodes": [
+            "deploy",
+            "live"
+          ],
+          "edges": [
+            "p6",
+            "p7"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "import-flow",
+      "title": "Importar un diagrama",
+      "description": "Qué hace el explorador con un archivo que sueltas en la página. Todo ocurre en el navegador: el archivo no se envía a ningún servidor.",
+      "category": "operational",
+      "direction": "TB",
+      "nodes": [
+        {
+          "id": "start",
+          "title": "Soltar o pegar",
+          "shape": "circle",
+          "color": "blue"
+        },
+        {
+          "id": "read",
+          "title": "Leer el archivo",
+          "subtitle": "JSON, Markdown, Mermaid, draw.io o HTML",
+          "icon": "upload",
+          "color": "blue"
+        },
+        {
+          "id": "known",
+          "title": "¿Formato conocido?",
+          "shape": "diamond",
+          "color": "violet"
+        },
+        {
+          "id": "valid",
+          "title": "¿Modelo válido?",
+          "shape": "diamond",
+          "color": "violet"
+        },
+        {
+          "id": "friendly",
+          "title": "Mensaje claro",
+          "subtitle": "sin detalles técnicos",
+          "icon": "info",
+          "color": "red",
+          "tags": [
+            "errores"
+          ]
+        },
+        {
+          "id": "choose",
+          "title": "Agregar o abrir aparte",
+          "icon": "git-merge",
+          "color": "teal"
+        },
+        {
+          "id": "store",
+          "title": "Este navegador",
+          "subtitle": "localStorage",
+          "shape": "cylinder",
+          "icon": "hard-drive",
+          "color": "teal"
+        },
+        {
+          "id": "privacy",
+          "title": "Privacidad",
+          "shape": "note",
+          "description": "Ninguna petición de red lleva el contenido importado."
+        }
+      ],
+      "edges": [
+        {
+          "id": "i1",
+          "from": "start",
+          "to": "read"
+        },
+        {
+          "id": "i2",
+          "from": "read",
+          "to": "known"
+        },
+        {
+          "id": "i3",
+          "from": "known",
+          "to": "valid",
+          "label": "Sí"
+        },
+        {
+          "id": "i4",
+          "from": "known",
+          "to": "friendly",
+          "label": "No",
+          "style": "dashed",
+          "color": "red"
+        },
+        {
+          "id": "i5",
+          "from": "valid",
+          "to": "choose",
+          "label": "Sí"
+        },
+        {
+          "id": "i6",
+          "from": "valid",
+          "to": "friendly",
+          "label": "No",
+          "style": "dashed",
+          "color": "red"
+        },
+        {
+          "id": "i7",
+          "from": "choose",
+          "to": "store",
+          "label": "Guarda"
+        },
+        {
+          "id": "i8",
+          "from": "privacy",
+          "to": "store",
+          "style": "dotted",
+          "arrow": "none"
+        }
+      ]
+    },
+    {
+      "id": "overview",
+      "title": "Panorama para equipos",
+      "description": "Quién usa capidocs y qué obtiene cada uno. Cada tarjeta lleva al diagrama técnico que lo hace posible.",
+      "category": "business",
+      "direction": "LR",
+      "density": "comfortable",
+      "nodes": [
+        {
+          "id": "authors",
+          "title": "Autores",
+          "shape": "tile",
+          "icon": "pencil",
+          "color": "blue"
+        },
+        {
+          "id": "readers",
+          "title": "Lectores",
+          "shape": "tile",
+          "icon": "users",
+          "color": "teal"
+        },
+        {
+          "id": "integrators",
+          "title": "Integradores",
+          "shape": "tile",
+          "icon": "plug",
+          "color": "violet"
+        },
+        {
+          "id": "leads",
+          "title": "Dirección",
+          "shape": "tile",
+          "icon": "briefcase",
+          "color": "amber"
+        },
+        {
+          "id": "portal",
+          "title": "Portal de documentación",
+          "subtitle": "capidocs",
+          "icon": "book-open",
+          "color": "teal",
+          "badge": {
+            "text": "Abierto",
+            "color": "green"
+          },
+          "link": {
+            "diagram": "architecture",
+            "label": "Ver la arquitectura"
+          },
+          "props": [
+            {
+              "label": "Idiomas",
+              "value": "Español e inglés"
+            },
+            {
+              "label": "Búsqueda",
+              "value": "Índice precalculado"
+            },
+            {
+              "label": "Licencia",
+              "value": "MIT"
+            }
+          ],
+          "preview": {
+            "type": "bars",
+            "title": "Páginas publicadas por mes",
+            "values": [
+              12,
+              18,
+              15,
+              22,
+              27,
+              31
+            ]
+          }
+        },
+        {
+          "id": "time",
+          "title": "Menos tiempo de respuesta",
+          "subtitle": "preguntas resueltas en la guía",
+          "icon": "timer",
+          "color": "green"
+        },
+        {
+          "id": "trust",
+          "title": "Integraciones más rápidas",
+          "subtitle": "ejemplos que se pueden copiar",
+          "icon": "zap",
+          "color": "green"
+        },
+        {
+          "id": "visibility",
+          "title": "Visibilidad del sistema",
+          "subtitle": "diagramas al día",
+          "icon": "eye",
+          "color": "green",
+          "link": {
+            "diagram": "publish-pipeline"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "authors",
+          "to": "portal",
+          "label": "Publican"
+        },
+        {
+          "from": "readers",
+          "to": "portal",
+          "label": "Consultan"
+        },
+        {
+          "from": "integrators",
+          "to": "portal",
+          "label": "Prueban la API"
+        },
+        {
+          "from": "leads",
+          "to": "portal",
+          "label": "Revisan"
+        },
+        {
+          "from": "portal",
+          "to": "time"
+        },
+        {
+          "from": "portal",
+          "to": "trust"
+        },
+        {
+          "from": "portal",
+          "to": "visibility"
+        }
+      ]
+    },
+    {
+      "id": "page-lifecycle",
+      "title": "Ciclo de vida de una página",
+      "description": "Los estados por los que pasa una página y quién decide cada cambio.",
+      "category": "business",
+      "direction": "LR",
+      "groups": [
+        {
+          "id": "editorial",
+          "title": "Equipo editorial",
+          "icon": "users",
+          "color": "blue"
+        },
+        {
+          "id": "public",
+          "title": "Visible para lectores",
+          "icon": "eye",
+          "color": "green",
+          "collapsed": false
+        }
+      ],
+      "nodes": [
+        {
+          "id": "draft",
+          "title": "Borrador",
+          "shape": "circle",
+          "color": "neutral",
+          "group": "editorial"
+        },
+        {
+          "id": "review",
+          "title": "En revisión",
+          "shape": "circle",
+          "color": "amber",
+          "group": "editorial"
+        },
+        {
+          "id": "published",
+          "title": "Publicada",
+          "shape": "circle",
+          "color": "green",
+          "group": "public"
+        },
+        {
+          "id": "archived",
+          "title": "Archivada",
+          "shape": "circle",
+          "color": "neutral",
+          "group": "public"
+        },
+        {
+          "id": "owner",
+          "title": "Responsable del espacio",
+          "shape": "actor"
+        }
+      ],
+      "edges": [
+        {
+          "from": "draft",
+          "to": "review",
+          "label": "Enviar"
+        },
+        {
+          "from": "review",
+          "to": "draft",
+          "label": "Cambios",
+          "style": "dashed"
+        },
+        {
+          "from": "review",
+          "to": "published",
+          "label": "Aprobar",
+          "color": "green"
+        },
+        {
+          "from": "published",
+          "to": "archived",
+          "label": "Retirar"
+        },
+        {
+          "from": "owner",
+          "to": "review",
+          "label": "Decide",
+          "style": "dotted"
+        }
+      ]
+    }
+  ]
+}
