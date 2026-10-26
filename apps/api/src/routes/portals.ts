@@ -12,7 +12,7 @@ import { buildPortal, recordPublish } from '../modules/publish.js';
 import type { RouteContext } from './context.js';
 
 export function portalRoutes(app: FastifyInstance, context: RouteContext) {
-  const { db } = context;
+  const { db, config } = context;
 
   app.get('/portals', async (request) => {
     const user = await context.currentUser(request);
@@ -31,7 +31,7 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext) {
         locales: z.array(z.string().min(2)).min(1).optional(),
         accessMode: z.enum(['open', 'gate', 'accounts']).optional(),
         brand: z.record(z.string(), z.unknown()).optional(),
-        deployTarget: z.record(z.string(), z.unknown()).optional(),
+        deployTarget: deployTargetSchema.optional(),
       })
       .parse(request.body);
     const workspace = await context.loadWorkspace(user.workspaceId);
@@ -109,9 +109,15 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext) {
     assertCan(actorFor(user), 'portal.update', { workspaceId: user.workspaceId });
 
     const builds = await buildPortal(db, portal.id);
-    const result = await recordPublish(db, portal.id, user.id, builds, (ready) =>
-      deploy(portal.deployTarget, ready, context.runtimeDir),
-    );
+    let result: Awaited<ReturnType<typeof recordPublish>>;
+    try {
+      result = await recordPublish(db, portal.id, user.id, builds, (ready) =>
+        deploy(portal.deployTarget, ready, context.runtimeDir, config.publish, (reason) => request.log.error({ reason }, 'deploy failed')),
+      );
+    } catch (error) {
+      void context.notify(user.email, templates.publishFailed({ portal: portal.name }));
+      throw error;
+    }
 
     const routes = builds[0] ? Object.keys(builds[0].spec.pages).length : 0;
     if (result.status === 'done') {

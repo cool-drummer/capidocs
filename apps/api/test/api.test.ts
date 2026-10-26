@@ -27,7 +27,7 @@ async function login(email: string, password: string, who: string) {
 beforeAll(async () => {
   await resetDatabase(DATABASE_URL);
   outDir = await mkdtemp(join(tmpdir(), 'capidocs-portal-'));
-  app = await createApp(testConfig(DATABASE_URL));
+  app = await createApp(testConfig(DATABASE_URL, { PUBLISH_ROOT: outDir }));
 }, 60000);
 
 afterAll(async () => {
@@ -343,7 +343,7 @@ describe('portal, space and pages', () => {
       slug: 'globex',
       siteUrl: 'https://globex.example/docs',
       locales: ['es'],
-      deployTarget: { kind: 'directory', path: outDir },
+      deployTarget: { kind: 'directory', path: 'globex' },
     });
     const space = await call('POST', '/spaces', {
       name: 'Portal',
@@ -356,11 +356,21 @@ describe('portal, space and pages', () => {
 
     const response = await call('POST', `/portals/${portal.body.portal.id}/publish`);
     expect(response.status).toBe(200);
-    expect(existsSync(join(outDir, 'index.html'))).toBe(true);
-    expect(existsSync(join(outDir, 'assets', 'js', 'main.js'))).toBe(true);
-    const spec = JSON.parse(readFileSync(join(outDir, 'config', 'api-spec.json'), 'utf8'));
+    const site = join(outDir, 'globex');
+    expect(existsSync(join(site, 'index.html'))).toBe(true);
+    expect(existsSync(join(site, 'assets', 'js', 'main.js'))).toBe(true);
+    const spec = JSON.parse(readFileSync(join(site, 'config', 'api-spec.json'), 'utf8'));
     expect(validateSpec(spec).ok).toBe(true);
-    expect(readFileSync(join(outDir, 'robots.txt'), 'utf8')).toContain('https://globex.example/docs/sitemap.xml');
+    expect(readFileSync(join(site, 'robots.txt'), 'utf8')).toContain('https://globex.example/docs/sitemap.xml');
+  });
+
+  it('refuses a deploy target outside the publish root', async () => {
+    const created = await call('POST', '/portals', { name: 'Fuga', slug: 'fuga', deployTarget: { kind: 'directory', path: '/etc' } });
+    expect(created.status).toBe(400);
+    const portals = await call('GET', '/portals');
+    const portal = portals.body.portals.find((entry: { slug: string }) => entry.slug === 'acme');
+    const updated = await call('PUT', `/portals/${portal.id}`, { deployTarget: { kind: 'directory', path: '../../etc' } });
+    expect(updated.status).toBe(400);
   });
 });
 

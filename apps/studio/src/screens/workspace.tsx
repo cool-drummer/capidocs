@@ -206,8 +206,8 @@ function PortalRow({
             />
           </Field>
           {kind === 'directory' ? (
-            <Field label="Ruta" hint="Carpeta donde se escribe el sitio compilado">
-              <TextInput value={path} onChange={setPath} mono placeholder="/var/www/docs" />
+            <Field label="Carpeta" hint="Se escribe dentro de la carpeta de publicación del servidor">
+              <TextInput value={path} onChange={setPath} mono placeholder="docs-acme" />
             </Field>
           ) : null}
           {kind === 'pages' ? (

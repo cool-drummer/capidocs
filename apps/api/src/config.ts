@@ -33,6 +33,12 @@ export interface Config {
   runtimeDir: string;
   storage: StorageConfig;
   attachments: { maxBytes: number };
+  publish: {
+    publishRoot: string | null;
+    wranglerBin: string | null;
+    cloudflare: { apiToken: string; accountId: string } | null;
+    git: { authorName: string; authorEmail: string; sshCommand: string | null };
+  };
   mail: { transport: 'resend' | 'console'; apiKey: string | null; from: string | null; brand: string; timeZone: string };
 }
 
@@ -145,6 +151,19 @@ export function loadConfig(env: Env = process.env): Config {
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
     storage: { driver: 'local', dir: '' },
     attachments: { maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }) },
+    publish: {
+      publishRoot: read.text('PUBLISH_ROOT') ? resolve(read.text('PUBLISH_ROOT')!) : null,
+      wranglerBin: read.text('WRANGLER_BIN'),
+      cloudflare:
+        read.text('CLOUDFLARE_API_TOKEN') && read.text('CLOUDFLARE_ACCOUNT_ID')
+          ? { apiToken: read.text('CLOUDFLARE_API_TOKEN')!, accountId: read.text('CLOUDFLARE_ACCOUNT_ID')! }
+          : null,
+      git: {
+        authorName: read.text('DEPLOY_GIT_AUTHOR_NAME') ?? 'Capidocs Studio',
+        authorEmail: read.text('DEPLOY_GIT_AUTHOR_EMAIL') ?? 'studio@localhost',
+        sshCommand: read.text('DEPLOY_GIT_SSH_COMMAND'),
+      },
+    },
     mail: {
       transport: mailTransport,
       apiKey: resendKey,
