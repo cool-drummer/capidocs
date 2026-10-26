@@ -28,7 +28,7 @@ function parseAttributes(text) {
     let match;
     while ((match = ATTRIBUTE.exec(text))) {
         const name = asciiLower(match[1]);
-        if (Object.prototype.hasOwnProperty.call(attributes, name)) continue;
+        if (Object.hasOwn(attributes, name)) continue;
         attributes[name] = decodeHtmlEntities(match[2] ?? match[3] ?? match[4] ?? '');
     }
     return attributes;
@@ -43,18 +43,22 @@ function closeIndex(lower, name, from) {
     let pos = from;
     const open = `<${name}`;
     const close = `</${name}`;
+    let nextOpen = -2;
+    let nextClose = -2;
     for (;;) {
-        const nextClose = lower.indexOf(close, pos);
+        if (nextClose !== -1 && nextClose < pos) nextClose = lower.indexOf(close, pos);
         if (nextClose === -1) return { start: -1, end: lower.length };
-        const nextOpen = lower.indexOf(open, pos);
-        if (nextOpen !== -1 && nextOpen < nextClose && /[\s>/]/.test(lower[nextOpen + open.length] ?? '')) {
-            depth += 1;
+        if (nextOpen !== -1 && nextOpen < pos) nextOpen = lower.indexOf(open, pos);
+        if (nextOpen !== -1 && nextOpen < nextClose) {
             pos = nextOpen + open.length;
+            if (/[\s>/]/.test(lower[pos] ?? '')) depth += 1;
             continue;
         }
         depth -= 1;
-        const end = lower.indexOf('>', nextClose);
-        if (depth === 0) return { start: nextClose, end: end === -1 ? lower.length : end + 1 };
+        if (depth === 0) {
+            const end = lower.indexOf('>', nextClose);
+            return { start: nextClose, end: end === -1 ? lower.length : end + 1 };
+        }
         pos = nextClose + close.length;
     }
 }
@@ -205,7 +209,7 @@ export function importHtml(source, options = {}) {
                 diagram.id = block.heading.title;
             }
             if (!diagram.description && block.heading?.description) diagram.description = block.heading.description;
-            parts.push({ label, set: buildSet({ title: diagram.title, lang, diagrams: [diagram] }) });
+            parts.push({ label, set: buildSet({ title: diagram.title, lang, diagrams: [diagram] }), trusted: true });
         } catch (error) {
             if (!(error instanceof ImportError)) throw error;
             warnings.add('invalid_block', `${label}: ${error.detail}`);
@@ -222,5 +226,5 @@ export function importHtml(source, options = {}) {
     });
     if (!parts.length) throw new ImportError('empty', 'No diagrams were found in the HTML file');
     const set = combineSets(parts, { title: scan.title ?? scan.firstHeading ?? options.title, description: scan.description, lang }, warnings);
-    return { set, warnings: warnings.list };
+    return { set, warnings: warnings.list, validated: true };
 }

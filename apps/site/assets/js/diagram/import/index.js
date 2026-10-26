@@ -5,7 +5,7 @@ import { importHtml } from './html.js';
 import { importJson } from './json.js';
 import { importMarkdown } from './markdown.js';
 import { importMermaid, looksLikeMermaid } from './mermaid.js';
-import { ImportError, exceedsByteLimit } from './shared.js';
+import { ImportError, exceedsByteLimit, own } from './shared.js';
 
 export const IMPORT_ERROR_CODES = ['unsupported_format', 'invalid_json', 'invalid_model', 'too_large', 'empty', 'parse_error'];
 export const IMPORT_FORMATS = ['json', 'mermaid', 'markdown', 'drawio', 'html', 'svg'];
@@ -40,7 +40,7 @@ export function sniffFormat(text) {
 }
 
 export function detectFormat(text, name) {
-    return EXTENSIONS[extensionOf(name)] ?? sniffFormat(text);
+    return own(EXTENSIONS, extensionOf(name)) ?? sniffFormat(text);
 }
 
 async function importSvg(text, options) {
@@ -86,7 +86,7 @@ export async function importDiagramFile(file, options = {}) {
             layout: options.layout === 'auto' ? 'auto' : 'keep',
             title: options.title ?? baseName(name)
         });
-        const result = validateDiagramSet(parsed.set);
+        const result = parsed.validated ? { ok: true, set: parsed.set, issues: [] } : validateDiagramSet(parsed.set);
         if (!result.ok) {
             const first = result.issues[0];
             return failure('invalid_model', first ? `${first.path}: ${first.message}` : 'Invalid diagram set', result.issues);
@@ -100,6 +100,6 @@ export async function importDiagramFile(file, options = {}) {
 
 export function importDiagramText(text, { hint, ...options } = {}) {
     const hinted = String(hint ?? '').toLowerCase();
-    const format = IMPORT_FORMATS.includes(hinted) ? hinted : EXTENSIONS[hinted.replace(/^.*\./, '')];
+    const format = IMPORT_FORMATS.includes(hinted) ? hinted : own(EXTENSIONS, hinted.replace(/^.*\./, ''));
     return importDiagramFile({ name: '', text }, { ...options, format: options.format ?? format });
 }
