@@ -7,39 +7,26 @@ import { validateSpec } from '@capidocs/spec';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { can } from '../src/lib/access.js';
 import { isValidPosition, positionBetween } from '../src/lib/position.js';
+import { Client, resetDatabase, testDatabaseUrl } from './helpers.js';
 
-const DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'postgres://capidocs:capidocs@127.0.0.1:55432/capidocs_test';
+const DATABASE_URL = process.env.TEST_DATABASE_URL ?? testDatabaseUrl('capidocs_test');
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 
 let app: CapidocsApp;
 let outDir: string;
-const cookies: Record<string, string> = {};
+const clients: Record<string, Client> = {};
+const client = (who: string) => (clients[who] ??= new Client(app));
 
 async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: unknown, who = 'owner') {
-  const response = await app.inject({
-    method,
-    url,
-    payload: payload as never,
-    headers: cookies[who] ? { cookie: cookies[who]! } : {},
-  });
-  return { status: response.statusCode, body: response.json() as never, raw: response };
+  return client(who).call(method, url, payload);
 }
 
 async function login(email: string, password: string, who: string) {
-  const response = await app.inject({ method: 'POST', url: '/auth/login', payload: { email, password } });
-  const header = response.headers['set-cookie'];
-  const cookie = Array.isArray(header) ? header[0] : header;
-  if (cookie) cookies[who] = cookie.split(';')[0]!;
-  return response;
+  return client(who).login(email, password);
 }
 
 beforeAll(async () => {
-  const admin = await import('postgres').then((module) => module.default(DATABASE_URL.replace(/\/[^/]+$/, '/postgres')));
-  const name = DATABASE_URL.split('/').pop()!;
-  await admin.unsafe(`DROP DATABASE IF EXISTS ${name}`);
-  await admin.unsafe(`CREATE DATABASE ${name}`);
-  await admin.end();
-
+  await resetDatabase(DATABASE_URL);
   outDir = await mkdtemp(join(tmpdir(), 'capidocs-portal-'));
   app = await createApp({ databaseUrl: DATABASE_URL, runtimeDir: join(ROOT, 'apps/site') });
 }, 60000);
@@ -151,7 +138,7 @@ describe('workspace setup and auth', () => {
   });
 
   it('rejects a wrong password with a friendly message', async () => {
-    const response = await app.inject({ method: 'POST', url: '/auth/login', payload: { email: 'owner@example.com', password: 'mala' } });
+    const response = await new Client(app).request('POST', '/auth/login', { payload: { email: 'owner@example.com', password: 'mala' } });
     expect(response.statusCode).toBe(401);
     expect(response.json().message).toBe('Correo o contraseña incorrectos.');
     expect(JSON.stringify(response.json())).not.toMatch(/scrypt|hash|sql|column/i);
@@ -166,7 +153,7 @@ describe('workspace setup and auth', () => {
   });
 
   it('refuses anything without a session', async () => {
-    const response = await app.inject({ method: 'GET', url: '/spaces' });
+    const response = await new Client(app).request('GET', '/spaces');
     expect(response.statusCode).toBe(401);
   });
 });
@@ -352,9 +339,7 @@ describe('portal, space and pages', () => {
 
 describe('space isolation', () => {
   it('hides a space from a member with no role in it', async () => {
-    const created = await app.inject({
-      method: 'POST',
-      url: '/auth/setup',
+    const created = await new Client(app).request('POST', '/auth/setup', {
       payload: { workspaceName: 'Otro', workspaceSlug: 'otro', name: 'Otra', email: 'otra2@example.com', password: 'una-clave-larga' },
     });
     expect(created.statusCode).toBe(409);

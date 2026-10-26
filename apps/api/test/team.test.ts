@@ -5,8 +5,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { detectMime, storageKeyFor } from '../src/modules/attachments.js';
 import { renderHtml, renderText, templates, type MailMessage } from '../src/lib/mail.js';
+import { Client, resetDatabase, testDatabaseUrl } from './helpers.js';
 
-const DATABASE_URL = process.env.TEST_TEAM_DATABASE_URL ?? 'postgres://capidocs:capidocs@127.0.0.1:55432/capidocs_team_test';
+const DATABASE_URL = process.env.TEST_TEAM_DATABASE_URL ?? testDatabaseUrl('capidocs_team_test');
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 
 const outbox: MailMessage[] = [];
@@ -20,30 +21,21 @@ const mailer = {
 
 let app: CapidocsApp;
 let filesDir: string;
-const cookies: Record<string, string> = {};
+const clients: Record<string, Client> = {};
+const client = (who: string) => (clients[who] ??= new Client(app));
 
 async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: unknown, who = 'owner') {
-  const response = await app.inject({ method, url, payload: payload as never, headers: cookies[who] ? { cookie: cookies[who]! } : {} });
-  return { status: response.statusCode, body: response.json() as never, headers: response.headers };
+  return client(who).call(method, url, payload);
 }
 
 async function login(email: string, password: string, who: string) {
-  const response = await app.inject({ method: 'POST', url: '/auth/login', payload: { email, password } });
-  const header = response.headers['set-cookie'];
-  const cookie = Array.isArray(header) ? header[0] : header;
-  if (cookie) cookies[who] = cookie.split(';')[0]!;
-  return response;
+  return client(who).login(email, password);
 }
 
 const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
 
 beforeAll(async () => {
-  const postgres = (await import('postgres')).default;
-  const admin = postgres(DATABASE_URL.replace(/\/[^/]+$/, '/postgres'));
-  const name = DATABASE_URL.split('/').pop()!;
-  await admin.unsafe(`DROP DATABASE IF EXISTS ${name}`);
-  await admin.unsafe(`CREATE DATABASE ${name}`);
-  await admin.end();
+  await resetDatabase(DATABASE_URL);
 
   filesDir = await mkdtemp(join(tmpdir(), 'capidocs-files-'));
   app = await createApp({
@@ -102,27 +94,22 @@ describe('invitations', () => {
   });
 
   it('lets anyone with the link read who it is for', async () => {
-    const response = await app.inject({ method: 'GET', url: `/invitations/${token}` });
+    const response = await new Client(app).request('GET', `/invitations/${token}`);
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ email: 'ana@example.com', role: 'member', workspace: 'Dado' });
   });
 
   it('rejects an unknown or expired token with a friendly message', async () => {
-    const response = await app.inject({ method: 'GET', url: '/invitations/no-existe-este-token' });
+    const response = await new Client(app).request('GET', '/invitations/no-existe-este-token');
     expect(response.statusCode).toBe(400);
     expect(response.json().message).toBe('Esta invitación ya no es válida. Pide una nueva.');
   });
 
   it('accepts the invitation, logs the person in and notifies both sides', async () => {
     outbox.length = 0;
-    const response = await app.inject({
-      method: 'POST',
-      url: `/invitations/${token}/accept`,
-      payload: { name: 'Ana', password: 'otra-clave-larga' },
-    });
+    const response = await client('ana').request('POST', `/invitations/${token}/accept`, { payload: { name: 'Ana', password: 'otra-clave-larga' } });
     expect(response.statusCode).toBe(201);
-    const header = response.headers['set-cookie'];
-    cookies.ana = (Array.isArray(header) ? header[0] : header)!.split(';')[0]!;
+    client('ana').adopt(response);
 
     const recipients = outbox.map((message) => message.to).sort();
     expect(recipients).toEqual(['ana@example.com', 'dan@example.com']);
@@ -132,7 +119,7 @@ describe('invitations', () => {
   });
 
   it('cannot be used twice', async () => {
-    const response = await app.inject({ method: 'POST', url: `/invitations/${token}/accept`, payload: { name: 'Ana', password: 'otra-clave-larga' } });
+    const response = await new Client(app).request('POST', `/invitations/${token}/accept`, { payload: { name: 'Ana', password: 'otra-clave-larga' } });
     expect(response.statusCode).toBe(400);
   });
 
@@ -225,10 +212,8 @@ describe('attachments', () => {
     const spaces = await call('GET', '/spaces');
     spaceId = spaces.body.spaces[0].id;
 
-    const response = await app.inject({
-      method: 'POST',
-      url: `/attachments?spaceId=${spaceId}&name=${encodeURIComponent('panel.png')}`,
-      headers: { cookie: cookies.owner!, 'content-type': 'application/octet-stream' },
+    const response = await client('owner').request('POST', `/attachments?spaceId=${spaceId}&name=${encodeURIComponent('panel.png')}`, {
+      headers: { 'content-type': 'application/octet-stream' },
       payload: PNG,
     });
     expect(response.statusCode).toBe(201);
@@ -236,17 +221,15 @@ describe('attachments', () => {
     expect(attachment.mime).toBe('image/png');
     key = attachment.url.split('/').pop();
 
-    const fetched = await app.inject({ method: 'GET', url: `/files/${key}`, headers: { cookie: cookies.owner! } });
+    const fetched = await client('owner').request('GET', `/files/${key}`);
     expect(fetched.statusCode).toBe(200);
     expect(fetched.headers['content-type']).toBe('image/png');
     expect(Buffer.from(fetched.rawPayload).equals(PNG)).toBe(true);
   });
 
   it('refuses a file whose bytes are not a supported type', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: `/attachments?spaceId=${spaceId}&name=payload.png`,
-      headers: { cookie: cookies.owner!, 'content-type': 'application/octet-stream' },
+    const response = await client('owner').request('POST', `/attachments?spaceId=${spaceId}&name=payload.png`, {
+      headers: { 'content-type': 'application/octet-stream' },
       payload: Buffer.from('<?php system($_GET["c"]); ?>'),
     });
     expect(response.statusCode).toBe(400);
@@ -254,7 +237,7 @@ describe('attachments', () => {
   });
 
   it('refuses a request with no session', async () => {
-    const response = await app.inject({ method: 'GET', url: `/files/${key}` });
+    const response = await new Client(app).request('GET', `/files/${key}`);
     expect(response.statusCode).toBe(401);
   });
 

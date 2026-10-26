@@ -4,8 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { validateSpec } from '@capidocs/spec';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { importSpec } from '../src/lib/import-spec.js';
+import { Client, resetDatabase, testDatabaseUrl } from './helpers.js';
 
-const DATABASE_URL = process.env.TEST_IMPORT_DATABASE_URL ?? 'postgres://capidocs:capidocs@127.0.0.1:55432/capidocs_import_test';
+const DATABASE_URL = process.env.TEST_IMPORT_DATABASE_URL ?? testDatabaseUrl('capidocs_import_test');
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 
 const available = (process.env.CAPIDOCS_EXTRA_SPECS ?? '')
@@ -14,22 +15,16 @@ const available = (process.env.CAPIDOCS_EXTRA_SPECS ?? '')
   .map((path, index) => ({ label: `Portal externo ${index + 1}`, path }));
 
 let app: CapidocsApp;
-let cookie = '';
+let owner: Client;
 
 async function call(method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) {
-  const response = await app.inject({ method, url, payload: payload as never, headers: cookie ? { cookie } : {} });
-  return { status: response.statusCode, body: response.json() as never };
+  return owner.call(method, url, payload);
 }
 
 beforeAll(async () => {
-  const postgres = (await import('postgres')).default;
-  const admin = postgres(DATABASE_URL.replace(/\/[^/]+$/, '/postgres'));
-  const name = DATABASE_URL.split('/').pop()!;
-  await admin.unsafe(`DROP DATABASE IF EXISTS ${name}`);
-  await admin.unsafe(`CREATE DATABASE ${name}`);
-  await admin.end();
-
+  await resetDatabase(DATABASE_URL);
   app = await createApp({ databaseUrl: DATABASE_URL, runtimeDir: join(ROOT, 'apps/site') });
+  owner = new Client(app);
   await call('POST', '/auth/setup', {
     workspaceName: 'Acme',
     workspaceSlug: 'acme',
@@ -37,9 +32,7 @@ beforeAll(async () => {
     email: 'owner@example.com',
     password: 'una-clave-larga',
   });
-  const login = await app.inject({ method: 'POST', url: '/auth/login', payload: { email: 'owner@example.com', password: 'una-clave-larga' } });
-  const header = login.headers['set-cookie'];
-  cookie = (Array.isArray(header) ? header[0] : header)!.split(';')[0]!;
+  await owner.login('owner@example.com', 'una-clave-larga');
 }, 60000);
 
 afterAll(async () => {
