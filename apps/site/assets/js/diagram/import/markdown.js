@@ -17,10 +17,33 @@ function headingText(row, marker) {
 }
 const DIAGRAM_LANGUAGES = new Set(['mermaid', 'capidocs-diagram', 'json']);
 
+function stripLinks(text) {
+    let result = '';
+    let index = 0;
+    let nextBracket = -2;
+    let nextParen = -2;
+    while (index < text.length) {
+        const image = text[index] === '!' && text[index + 1] === '[';
+        if (text[index] === '[' || image) {
+            const open = image ? index + 1 : index;
+            if (nextBracket !== -1 && nextBracket <= open) nextBracket = text.indexOf(']', open + 1);
+            if (nextBracket !== -1 && text[nextBracket + 1] === '(') {
+                if (nextParen !== -1 && nextParen <= nextBracket + 1) nextParen = text.indexOf(')', nextBracket + 2);
+                if (nextParen !== -1) {
+                    result += text.slice(open + 1, nextBracket);
+                    index = nextParen + 1;
+                    continue;
+                }
+            }
+        }
+        result += text[index];
+        index += 1;
+    }
+    return result;
+}
+
 export function inlineMarkdownToText(text) {
-    const plain = String(text ?? '').slice(0, MAX_TEXT)
-        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    const plain = stripLinks(String(text ?? '').slice(0, MAX_TEXT))
         .replace(/`([^`]*)`/g, '$1')
         .replace(/\*\*([^*]+)\*\*/g, '$1')
         .replace(/__([^_]+)__/g, '$1')
@@ -114,7 +137,7 @@ export function importMarkdown(source, options = {}) {
                     diagram.id = block.heading.title;
                 }
                 if (!diagram.description && block.heading?.description) diagram.description = block.heading.description;
-                parts.push({ label, set: buildSet({ title: diagram.title, lang, diagrams: [diagram] }) });
+                parts.push({ label, set: buildSet({ title: diagram.title, lang, diagrams: [diagram] }), trusted: true });
             } catch (error) {
                 if (!(error instanceof ImportError)) throw error;
                 warnings.add('invalid_block', `${label}: ${error.detail}`);
@@ -142,5 +165,5 @@ export function importMarkdown(source, options = {}) {
     }
     if (!parts.length) throw new ImportError('empty', 'No diagram blocks were found in the Markdown file');
     const set = combineSets(parts, { title: scan.title ?? options.title, description: scan.description, lang }, warnings);
-    return { set, warnings: warnings.list };
+    return { set, warnings: warnings.list, validated: true };
 }

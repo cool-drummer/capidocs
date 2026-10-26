@@ -1,7 +1,7 @@
 import { LIMITS } from '../model.js';
 import {
     ImportError, Warnings, buildSet, chromaticColor, clip, createIdFactory, fallbackText,
-    htmlToText, lines, namedEntity, parseCssDeclarations, safeHref, singleLine, splitLabel
+    htmlToText, lines, namedEntity, own, parseCssDeclarations, safeHref, singleLine, splitLabel
 } from './shared.js';
 
 const TYPE_LINE = /^([A-Za-z][A-Za-z0-9-]*)\b(.*)$/;
@@ -64,13 +64,13 @@ export function mermaidType(source) {
     const { lines: body } = preprocess(source);
     const header = locateHeader(body);
     if (!header) return null;
-    return SUPPORTED[header.keyword] ?? null;
+    return own(SUPPORTED, header.keyword) ?? null;
 }
 
 export function looksLikeMermaid(source) {
     const { lines: body } = preprocess(String(source ?? '').slice(0, 4096));
     const header = locateHeader(body);
-    return Boolean(header && (SUPPORTED[header.keyword] || /^(classDiagram|stateDiagram(-v2)?|gantt|pie|journey|gitGraph|mindmap|timeline|quadrantChart|requirementDiagram|C4\w*|sankey(-beta)?|xychart(-beta)?|block(-beta)?|packet(-beta)?|architecture(-beta)?|kanban)$/.test(header.keyword)));
+    return Boolean(header && (own(SUPPORTED, header.keyword) || /^(classDiagram|stateDiagram(-v2)?|gantt|pie|journey|gitGraph|mindmap|timeline|quadrantChart|requirementDiagram|C4\w*|sankey(-beta)?|xychart(-beta)?|block(-beta)?|packet(-beta)?|architecture(-beta)?|kanban)$/.test(header.keyword)));
 }
 
 const MERMAID_ENTITY = /#([A-Za-z][A-Za-z0-9]{1,31}|[0-9]{1,7});/g;
@@ -107,23 +107,25 @@ function cleanText(raw) {
 function splitStatements(body, separators) {
     const statements = [];
     for (const line of body) {
-        let current = '';
+        if (!separators || !line.includes(';')) {
+            statements.push(line);
+            continue;
+        }
+        let start = 0;
         let quote = false;
         let depth = 0;
-        for (const char of line) {
+        for (let index = 0; index < line.length; index += 1) {
+            const char = line[index];
             if (char === '"') quote = !quote;
-            if (!quote) {
-                if ('[({'.includes(char)) depth += 1;
-                else if ('])}'.includes(char)) depth = Math.max(0, depth - 1);
+            else if (quote) continue;
+            else if (char === '[' || char === '(' || char === '{') depth += 1;
+            else if (char === ']' || char === ')' || char === '}') depth = Math.max(0, depth - 1);
+            else if (char === ';' && depth === 0) {
+                statements.push(line.slice(start, index));
+                start = index + 1;
             }
-            if (separators && char === ';' && !quote && depth === 0) {
-                statements.push(current);
-                current = '';
-                continue;
-            }
-            current += char;
         }
-        statements.push(current);
+        statements.push(line.slice(start));
     }
     return statements;
 }
@@ -187,10 +189,10 @@ function collectAccessibility(statements, meta) {
     return rest;
 }
 
-const ID_CHAR = /[A-Za-z0-9_$\u00c0-\uffff]/;
-
 function isIdChar(char) {
-    return char !== undefined && ID_CHAR.test(char);
+    if (char === undefined) return false;
+    const code = char.charCodeAt(0);
+    return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95 || code === 36 || code >= 0xc0;
 }
 
 const SHAPES = [
@@ -216,14 +218,53 @@ const NEW_SHAPES = {
     doc: 'note', document: 'note', 'flag': 'note', 'notch-rect': 'note', card: 'note', 'tag-doc': 'note'
 };
 
+const SHAPE_STARTS = '([{>';
+const FLOW_KEYWORDS = new Set(['subgraph', 'end', 'direction', 'classDef', 'class', 'style', 'linkStyle', 'click']);
+const MAX_SHAPE_BODY = 2000;
+const MAX_SUBGRAPH_STACK = 1000;
+
+function parseShapeProps(body) {
+    const props = Object.create(null);
+    let start = 0;
+    let quote = false;
+    for (let index = 0; index <= body.length; index += 1) {
+        const char = body[index];
+        if (char === '"' && body[index - 1] !== '\\') quote = !quote;
+        if (index < body.length && (char !== ',' || quote)) continue;
+        const part = body.slice(start, index);
+        const colon = part.indexOf(':');
+        if (colon !== -1) {
+            const key = part.slice(0, colon).trim().toLowerCase();
+            if (/^[a-z]{1,32}$/.test(key)) props[key] = unquote(part.slice(colon + 1).trim());
+        }
+        start = index + 1;
+    }
+    return props;
+}
+
 class Scanner {
     constructor(text) {
         this.text = text;
         this.pos = 0;
+        this.found = new Map();
+        this.hasEdgeIds = text.includes('@');
+    }
+
+    indexFrom(token, from) {
+        const cached = this.found.get(token);
+        if (cached && cached.from <= from && (cached.index === -1 || cached.index >= from)) return cached.index;
+        const index = this.text.indexOf(token, from);
+        this.found.set(token, { from, index });
+        return index;
     }
 
     skip() {
-        while (this.pos < this.text.length && /\s/.test(this.text[this.pos])) this.pos += 1;
+        const { text } = this;
+        while (this.pos < text.length) {
+            const code = text.charCodeAt(this.pos);
+            if (code === 32 || (code >= 9 && code <= 13) || (code > 127 && /\s/.test(text[this.pos]))) this.pos += 1;
+            else break;
+        }
     }
 
     done() {
@@ -256,20 +297,20 @@ class Scanner {
                 this.pos = save;
                 return null;
             }
-            const body = text.slice(this.pos + 2, end);
+            const props = parseShapeProps(text.slice(this.pos + 2, end));
             this.pos = end + 1;
-            const props = {};
-            const pattern = /([A-Za-z]+)\s*:\s*("(?:[^"\\]|\\.)*"|[^,}]*)/g;
-            let match;
-            while ((match = pattern.exec(body))) props[match[1].toLowerCase()] = unquote(match[2].trim());
-            return { shape: NEW_SHAPES[String(props.shape ?? '').toLowerCase()] ?? 'card', label: props.label };
+            return { shape: own(NEW_SHAPES, String(props.shape ?? '').toLowerCase()) ?? 'card', label: props.label };
+        }
+        if (!SHAPE_STARTS.includes(text[this.pos])) {
+            this.pos = save;
+            return null;
         }
         for (const [open, closers, shape] of SHAPES) {
             if (!text.startsWith(open, this.pos)) continue;
             let cursor = this.pos + open.length;
             while (cursor < text.length && text[cursor] === ' ') cursor += 1;
             if (text[cursor] === '"') {
-                const quoteEnd = text.indexOf('"', cursor + 1);
+                const quoteEnd = this.indexFrom('"', cursor + 1);
                 if (quoteEnd !== -1) {
                     let after = quoteEnd + 1;
                     while (after < text.length && text[after] === ' ') after += 1;
@@ -283,13 +324,13 @@ class Scanner {
             let best = -1;
             let bestCloser = '';
             for (const closer of closers) {
-                const index = text.indexOf(closer, this.pos + open.length);
+                const index = this.indexFrom(closer, this.pos + open.length);
                 if (index !== -1 && (best === -1 || index < best)) {
                     best = index;
                     bestCloser = closer;
                 }
             }
-            if (best === -1) continue;
+            if (best === -1 || best - (this.pos + open.length) > MAX_LABEL) continue;
             const label = text.slice(this.pos + open.length, best);
             this.pos = best + bestCloser.length;
             return { shape, label };
@@ -300,7 +341,8 @@ class Scanner {
 
     findClose(char, from) {
         let quote = false;
-        for (let index = from; index < this.text.length; index += 1) {
+        const limit = Math.min(this.text.length, from + MAX_SHAPE_BODY);
+        for (let index = from; index < limit; index += 1) {
             const current = this.text[index];
             if (current === '"') quote = !quote;
             else if (current === char && !quote) return index;
@@ -392,7 +434,7 @@ class Scanner {
 
     readLink() {
         this.skip();
-        const edgeId = /^[A-Za-z0-9_]+@(?=[-=.~<xo])/.exec(this.text.slice(this.pos, this.pos + 90));
+        const edgeId = this.hasEdgeIds ? /^[A-Za-z0-9_]+@(?=[-=.~<xo])/.exec(this.text.slice(this.pos, this.pos + 90)) : null;
         if (edgeId) this.pos += edgeId[0].length;
         const arrow = this.readArrow();
         if (!arrow) return null;
@@ -439,7 +481,7 @@ function styleColor(declarations) {
 }
 
 function parseFlowchart(header, body, meta, warnings, options) {
-    const direction = DIRECTION_MAP[(header.rest.trim().split(/[\s;]/)[0] || '').toUpperCase()] ?? 'TB';
+    const direction = own(DIRECTION_MAP, (header.rest.trim().split(/[\s;]/)[0] || '').toUpperCase()) ?? 'TB';
     const remainder = header.rest.trim().replace(/^(TB|TD|BT|LR|RL)\b/i, '').replace(/^\s*;/, '');
     const statements = collectAccessibility(splitStatements(joinMultilineStrings([remainder, ...body]), true), meta);
 
@@ -447,6 +489,8 @@ function parseFlowchart(header, body, meta, warnings, options) {
     const order = [];
     const subgraphs = [];
     const stack = [];
+    const groupStack = [];
+    let ignoredSubgraphs = 0;
     const classDefs = new Map();
     const links = [];
     const linkStyles = new Map();
@@ -466,9 +510,9 @@ function parseFlowchart(header, body, meta, warnings, options) {
         const current = entry(node.id);
         if (node.shape) current.shape = node.shape;
         if (node.label !== undefined) current.label = node.label;
-        current.classes.push(...node.classes);
-        const open = stack[stack.length - 1];
-        if (open) open.members.push(node.id);
+        for (const name of node.classes) current.classes.push(name);
+        const owner = groupStack[groupStack.length - 1];
+        if (owner) owner.members.push(node.id);
         return current;
     };
 
@@ -476,86 +520,94 @@ function parseFlowchart(header, body, meta, warnings, options) {
         const text = statement.trim();
         if (!text) continue;
         let match;
-        if ((match = /^subgraph(?:\s+(.*))?$/.exec(text))) {
-            const spec = (match[1] ?? '').trim();
-            let raw;
-            let title;
-            const bracket = /^([^\s[]+)\s*\[(.*)\]$/.exec(spec);
-            if (bracket) {
-                raw = bracket[1];
-                title = cleanText(bracket[2]);
-            } else if (/^"[^"]*"$/.test(spec)) {
-                title = cleanText(spec);
-                raw = title;
-            } else {
-                raw = spec || `subgraph-${subgraphs.length + 1}`;
-                title = cleanText(spec);
-            }
-            const depth = stack.filter((item) => !item.flatten).length;
-            const flatten = depth >= LIMITS.depth || groupsBudget <= 0;
-            if (flatten) warnings.add('flattened_groups', 'Some subgraphs were merged into their parent');
-            const record = { raw, title, members: [], flatten, parent: [...stack].reverse().find((item) => !item.flatten)?.raw };
-            if (!flatten) {
-                groupsBudget -= 1;
-                subgraphs.push(record);
-                entry(raw).subgraph = record;
-            }
-            stack.push(record);
-            continue;
-        }
-        if (text === 'end') {
-            const record = stack.pop();
-            if (!record) {
-                warnings.add('unsupported_syntax', 'Unexpected "end"');
+        if (FLOW_KEYWORDS.has(/^[A-Za-z]+/.exec(text)?.[0])) {
+            if ((match = /^subgraph(?:\s+(.*))?$/.exec(text))) {
+                if (stack.length >= MAX_SUBGRAPH_STACK) {
+                    ignoredSubgraphs += 1;
+                    warnings.add('flattened_groups', 'Some subgraphs were merged into their parent');
+                    continue;
+                }
+                const spec = (match[1] ?? '').trim();
+                let raw;
+                let title;
+                const bracket = /^([^\s[]+)\s*\[(.*)\]$/.exec(spec);
+                if (bracket) {
+                    raw = bracket[1];
+                    title = cleanText(bracket[2]);
+                } else if (/^"[^"]*"$/.test(spec)) {
+                    title = cleanText(spec);
+                    raw = title;
+                } else {
+                    raw = spec || `subgraph-${subgraphs.length + 1}`;
+                    title = cleanText(spec);
+                }
+                const flatten = groupStack.length >= LIMITS.depth || groupsBudget <= 0;
+                if (flatten) warnings.add('flattened_groups', 'Some subgraphs were merged into their parent');
+                const record = { raw, title, members: [], flatten, parent: groupStack[groupStack.length - 1]?.raw };
+                if (!flatten) {
+                    groupsBudget -= 1;
+                    subgraphs.push(record);
+                    entry(raw).subgraph = record;
+                    groupStack.push(record);
+                }
+                stack.push(record);
                 continue;
             }
-            const owner = record.flatten ? [...stack].reverse().find((item) => !item.flatten) : record;
-            if (record.flatten) {
-                if (owner) owner.members.push(...record.members);
+            if (text === 'end') {
+                if (ignoredSubgraphs > 0) {
+                    ignoredSubgraphs -= 1;
+                    continue;
+                }
+                const record = stack.pop();
+                if (!record) {
+                    warnings.add('unsupported_syntax', 'Unexpected "end"');
+                    continue;
+                }
+                if (record.flatten) continue;
+                groupStack.pop();
+                for (const raw of record.members) {
+                    const current = entries.get(raw);
+                    if (current && !current.subgraph && current.group === undefined) current.group = record.raw;
+                }
                 continue;
             }
-            for (const raw of record.members) {
-                const current = entries.get(raw);
-                if (current && !current.subgraph && current.group === undefined) current.group = record.raw;
-            }
-            continue;
-        }
-        if (/^direction\s+\w+$/i.test(text)) continue;
-        if ((match = /^classDef\s+(\S+)\s+(.+)$/.exec(text))) {
-            const declarations = parseCssDeclarations(match[2]);
-            for (const name of match[1].split(',')) classDefs.set(name.trim(), declarations);
-            continue;
-        }
-        if ((match = /^class\s+(\S+)\s+([\w-]+)$/.exec(text))) {
-            for (const raw of match[1].split(',')) entry(raw.trim()).classes.push(match[2]);
-            continue;
-        }
-        if ((match = /^style\s+(\S+)\s+(.+)$/.exec(text))) {
-            entry(match[1]).style = parseCssDeclarations(match[2]);
-            continue;
-        }
-        if ((match = /^linkStyle\s+(\S+)\s+(.+)$/.exec(text))) {
-            const color = styleColor(parseCssDeclarations(match[2]));
-            for (const index of match[1].split(',')) linkStyles.set(index.trim(), color);
-            continue;
-        }
-        if ((match = /^click\s+(\S+)\s+(.*)$/.exec(text))) {
-            const target = entry(match[1]);
-            const args = match[2].trim();
-            const parts = /^(?:href\s+)?"([^"]*)"(?:\s+"([^"]*)")?/.exec(args);
-            if (!parts) {
-                warnings.add('unsupported_click', 'Click callbacks are ignored');
+            if (/^direction\s+\w+$/i.test(text)) continue;
+            if ((match = /^classDef\s+(\S+)\s+(.+)$/.exec(text))) {
+                const declarations = parseCssDeclarations(match[2]);
+                for (const name of match[1].split(',')) classDefs.set(name.trim(), declarations);
                 continue;
             }
-            const href = safeHref(parts[1]);
-            if (!href) {
-                warnings.add('unsafe_link', 'A link with an unsupported scheme was removed');
+            if ((match = /^class\s+(\S+)\s+([\w-]+)$/.exec(text))) {
+                for (const raw of match[1].split(',')) entry(raw.trim()).classes.push(match[2]);
                 continue;
             }
-            target.link = { href, label: clip(parts[2] ? cleanText(parts[2]) : undefined, 80) };
-            continue;
-        }
+            if ((match = /^style\s+(\S+)\s+(.+)$/.exec(text))) {
+                entry(match[1]).style = parseCssDeclarations(match[2]);
+                continue;
+            }
+            if ((match = /^linkStyle\s+(\S+)\s+(.+)$/.exec(text))) {
+                const color = styleColor(parseCssDeclarations(match[2]));
+                for (const index of match[1].split(',')) linkStyles.set(index.trim(), color);
+                continue;
+            }
+            if ((match = /^click\s+(\S+)\s+(.*)$/.exec(text))) {
+                const target = entry(match[1]);
+                const args = match[2].trim();
+                const parts = /^(?:href\s+)?"([^"]*)"(?:\s+"([^"]*)")?/.exec(args);
+                if (!parts) {
+                    warnings.add('unsupported_click', 'Click callbacks are ignored');
+                    continue;
+                }
+                const href = safeHref(parts[1]);
+                if (!href) {
+                    warnings.add('unsafe_link', 'A link with an unsupported scheme was removed');
+                    continue;
+                }
+                target.link = { href, label: clip(parts[2] ? cleanText(parts[2]) : undefined, 80) };
+                continue;
+            }
 
+        }
         const scanner = new Scanner(text);
         let previous = scanner.readNodeGroup();
         if (!previous) {
@@ -598,11 +650,18 @@ function parseFlowchart(header, body, meta, warnings, options) {
 
     const ids = createIdFactory('node');
     const idOf = new Map();
-    for (const raw of order) idOf.set(raw, ids.id(raw));
+    let nodeBudget = LIMITS.nodes;
+    for (const raw of order) {
+        if (!entries.get(raw).subgraph) {
+            if (nodeBudget <= 0) continue;
+            nodeBudget -= 1;
+        }
+        idOf.set(raw, ids.id(raw));
+    }
 
     const colorFor = (current) => {
-        const own = styleColor(current.style);
-        if (own) return own;
+        const explicit = styleColor(current.style);
+        if (explicit) return explicit;
         for (let index = current.classes.length - 1; index >= 0; index -= 1) {
             const color = styleColor(classDefs.get(current.classes[index]));
             if (color) return color;
@@ -735,7 +794,7 @@ function parseSequence(header, body, meta, warnings) {
             const metaIndex = rest.indexOf('@{');
             if (metaIndex !== -1) {
                 const type = /"?type"?\s*:\s*"?(\w+)"?/.exec(rest.slice(metaIndex));
-                if (type) kind = PARTICIPANT_TYPES[type[1].toLowerCase()] ?? kind;
+                if (type) kind = own(PARTICIPANT_TYPES, type[1].toLowerCase()) ?? kind;
                 rest = rest.slice(0, metaIndex).trim();
             }
             const words = rest.split(/\s+/);
@@ -912,7 +971,7 @@ function parseEr(header, body, meta, warnings) {
         }
         let match;
         if ((match = /^direction\s+(\w+)$/i.exec(text))) {
-            direction = DIRECTION_MAP[match[1].toUpperCase()] ?? direction;
+            direction = own(DIRECTION_MAP, match[1].toUpperCase()) ?? direction;
             continue;
         }
         const name = ENTITY_NAME.exec(text);
@@ -956,7 +1015,7 @@ function parseEr(header, body, meta, warnings) {
             const to = entity(rightName[1] ?? rightName[2]);
             if (!from || !to) continue;
             const cardinality = symbol
-                ? `${CARDINALITY_SYMBOL[symbol[1]]} : ${CARDINALITY_SYMBOL[symbol[3]]}`
+                ? `${own(CARDINALITY_SYMBOL, symbol[1])} : ${own(CARDINALITY_SYMBOL, symbol[3])}`
                 : `${CARDINALITY_WORDS.find(([word]) => word === words[1].toLowerCase())?.[1]} : ${CARDINALITY_WORDS.find(([word]) => word === words[3].toLowerCase())?.[1]}`;
             const dashed = symbol ? symbol[2] === '..' : words[2].toLowerCase() === 'optionally to';
             if (relations.length < LIMITS.edges) relations.push({ from: from.raw, to: to.raw, label, cardinality, dashed });
@@ -986,7 +1045,7 @@ export function parseMermaid(source, options = {}) {
     const { lines: body, meta } = preprocess(source);
     const header = locateHeader(body);
     if (!header) throw new ImportError('empty', 'No Mermaid diagram found');
-    const type = SUPPORTED[header.keyword];
+    const type = own(SUPPORTED, header.keyword);
     if (!type) throw new ImportError('unsupported_format', `Mermaid diagram type "${clip(header.keyword, 40)}" is not supported`);
     const rest = body.slice(header.index + 1);
     const content = type === 'flowchart'

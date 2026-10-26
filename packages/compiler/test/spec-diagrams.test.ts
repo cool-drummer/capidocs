@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -8,10 +8,17 @@ const validSet = { title: 'Mapa', diagrams: [{ id: 'main', title: 'Principal', n
 
 describe('validateSpecDiagrams', () => {
   let dir: string;
+  let outside: string;
 
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), 'capidocs-diagrams-'));
+    outside = await mkdtemp(join(tmpdir(), 'capidocs-outside-'));
+    await writeFile(join(outside, 'secret.json'), '##\n# Host secret.internal 10.0.0.1\n');
     await mkdir(join(dir, 'config', 'diagrams'), { recursive: true });
+    await symlink(join(outside, 'secret.json'), join(dir, 'config', 'diagrams', 'link.json'));
+    await symlink(outside, join(dir, 'config', 'external'));
+    await symlink(join(dir, 'config', 'diagrams', 'ok.json'), join(dir, 'config', 'diagrams', 'alias.json'));
+    await writeFile(join(dir, 'config', 'diagrams', 'garbage.json'), '##\n# Host secret.internal 10.0.0.1\n');
     await writeFile(join(dir, 'config', 'diagrams', 'ok.json'), JSON.stringify(validSet));
     await writeFile(join(dir, 'config', 'diagrams', 'broken.json'), JSON.stringify({ title: 'Roto', diagrams: [{ id: 'x', title: 'X', nodes: [{ id: 'bad id', title: 'B' }] }] }));
     await writeFile(join(dir, 'config', 'diagrams', 'flow.mmd'), 'flowchart LR\n  A --> B');
@@ -20,6 +27,7 @@ describe('validateSpecDiagrams', () => {
 
   afterAll(async () => {
     await rm(dir, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
   });
 
   function specWith(blocks: unknown[]): unknown {
@@ -59,6 +67,33 @@ describe('validateSpecDiagrams', () => {
       { path: `${base}.7.diagram.src(config/diagrams/single.json).diagrams`, message: 'At least one diagram is required' },
     ].map((issue) => expect.objectContaining(issue))));
     expect(issues.every((issue) => issue.path.startsWith(base))).toBe(true);
+  });
+
+  it('refuses symlinks that leave the site without reading them', async () => {
+    const read: string[] = [];
+    const readFile = async (path: string) => {
+      read.push(path);
+      const fs = await import('node:fs/promises');
+      return fs.readFile(path, 'utf8');
+    };
+    const issues = await validateSpecDiagrams(specWith([
+      { src: 'config/diagrams/link.json' },
+      { src: 'config/external/secret.json' },
+      { src: 'config/diagrams/alias.json' },
+    ]), { baseDir: dir, readFile });
+    const base = 'pages.guide.content.sections';
+    expect(issues).toEqual([
+      { path: `${base}.0.diagram.src`, message: '"config/diagrams/link.json" points outside the site directory' },
+      { path: `${base}.1.diagram.src`, message: '"config/external/secret.json" points outside the site directory' },
+    ]);
+    expect(read).toHaveLength(1);
+    expect(read[0]).toMatch(/ok\.json$/);
+  });
+
+  it('reports invalid JSON without repeating the file content', async () => {
+    const issues = await validateSpecDiagrams(specWith([{ src: 'config/diagrams/garbage.json' }]), { baseDir: dir });
+    expect(issues.map((issue) => issue.message)).toEqual(['Invalid JSON']);
+    expect(JSON.stringify(issues)).not.toContain('secret');
   });
 
   it('ignores specs without diagram blocks', async () => {

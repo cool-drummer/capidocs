@@ -1,4 +1,4 @@
-import { DIAGRAM_VERSION, LIMITS } from '../model.js';
+import { DIAGRAM_VERSION, LIMITS, describeJsonError } from '../model.js';
 import { ImportError, clip, createIdFactory, fallbackText } from './shared.js';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -17,7 +17,7 @@ export function parseJsonText(text) {
     try {
         return JSON.parse(text);
     } catch (error) {
-        throw new ImportError('invalid_json', error instanceof Error ? error.message : 'Invalid JSON');
+        throw new ImportError('invalid_json', describeJsonError(error));
     }
 }
 

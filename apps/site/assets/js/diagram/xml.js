@@ -198,6 +198,7 @@ export function parseXml(source, options = {}) {
 
     if (stack.length > 1) throw new XmlError('malformed', `Unclosed element <${stack[stack.length - 1].name}>`, text.length);
     if (!document.children.length) throw new XmlError('malformed', 'No root element', 0);
+    document.nodeCount = nodes;
     return document;
 }
 

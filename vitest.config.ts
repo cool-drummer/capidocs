@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -31,7 +31,16 @@ export default defineConfig({
         test: {
           name: 'site',
           include: ['apps/site/test/**/*.test.js'],
+          exclude: [...configDefaults.exclude, 'apps/site/test/timing/**'],
           environment: 'jsdom',
+        },
+      },
+      {
+        test: {
+          name: 'site-timing',
+          include: ['apps/site/test/timing/**/*.test.js'],
+          environment: 'node',
+          sequence: { groupOrder: 1 },
         },
       },
     ],

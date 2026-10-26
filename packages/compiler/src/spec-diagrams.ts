@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { extname, isAbsolute, relative, resolve } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { importDiagramFile } from '@capidocs/site/diagram/import';
 import { findDiagram, parseDiagramSetJson, validateDiagramSet, type DiagramSet } from '@capidocs/site/diagram/model';
 
@@ -11,11 +11,17 @@ export interface DiagramBlockIssue {
 export interface SpecDiagramOptions {
   baseDir: string;
   readFile?: (path: string) => Promise<string>;
+  realpath?: (path: string) => Promise<string>;
 }
 
 type Block = Record<string, unknown>;
 
 const MAX_SPEC_DEPTH = 64;
+
+function within(base: string, file: string): boolean {
+  const inside = relative(base, file);
+  return inside !== '' && inside !== '..' && !inside.startsWith(`..${sep}`) && !isAbsolute(inside);
+}
 
 function isRecord(value: unknown): value is Block {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -46,14 +52,19 @@ async function loadSource(
 ): Promise<DiagramSet | null> {
   const base = resolve(options.baseDir);
   const file = resolve(base, src);
-  const inside = relative(base, file);
-  if (isAbsolute(src) || inside.startsWith('..') || isAbsolute(inside)) {
-    issues.push({ path: `${path}.src`, message: `"${src}" points outside the site directory` });
+  const outside = { path: `${path}.src`, message: `"${src}" points outside the site directory` };
+  if (isAbsolute(src) || !within(base, file)) {
+    issues.push(outside);
     return null;
   }
   let text: string;
   try {
-    text = await options.readFile(file);
+    const [realBase, realFile] = await Promise.all([options.realpath(base), options.realpath(file)]);
+    if (!within(realBase, realFile)) {
+      issues.push(outside);
+      return null;
+    }
+    text = await options.readFile(realFile);
   } catch {
     issues.push({ path: `${path}.src`, message: `File not found: ${src}` });
     return null;
@@ -75,7 +86,7 @@ async function loadSource(
 }
 
 export async function validateSpecDiagrams(spec: unknown, options: SpecDiagramOptions): Promise<DiagramBlockIssue[]> {
-  const settings: Required<SpecDiagramOptions> = { readFile: (path) => readFile(path, 'utf8'), ...options };
+  const settings: Required<SpecDiagramOptions> = { readFile: (path) => readFile(path, 'utf8'), realpath: (path) => realpath(path), ...options };
   const blocks: { path: string; block: Block }[] = [];
   collectBlocks(spec, '', blocks, 0);
   const issues: DiagramBlockIssue[] = [];
