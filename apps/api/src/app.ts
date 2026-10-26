@@ -1,11 +1,10 @@
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import type { Config } from './config.js';
 import { createDatabase, type Database } from './db/client.js';
 import { migrate } from './db/migrate.js';
 import { createCsrfGuard } from './lib/csrf.js';
-import { ApiError } from './lib/errors.js';
+import { handleError } from './lib/error-handler.js';
 import { createMailer, type Mailer } from './lib/mail.js';
 import { createLocalStore, type AttachmentStore } from './modules/attachments.js';
 import type { SessionUser } from './modules/context.js';
@@ -76,17 +75,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     onMailError: (error) => app.log.error({ reason: (error as Error).message }, 'mail delivery failed'),
   });
 
-  app.setErrorHandler((error, request, reply) => {
-    if (error instanceof ApiError) {
-      return reply.status(error.statusCode).send({ error: error.code, message: error.message });
-    }
-    if (error instanceof z.ZodError) {
-      request.log.error({ issues: error.issues }, 'validation failed');
-      return reply.status(400).send({ error: 'bad_request', message: 'Revisa los datos e inténtalo de nuevo.' });
-    }
-    request.log.error(error);
-    return reply.status(500).send({ error: 'internal', message: 'Algo salió mal, inténtalo de nuevo en un momento.' });
-  });
+  app.setErrorHandler(handleError);
 
   app.setNotFoundHandler((_request, reply) =>
     reply.status(404).send({ error: 'not_found', message: 'No encontramos lo que buscas.' }),
