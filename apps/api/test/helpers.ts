@@ -25,9 +25,12 @@ export function testConfig(databaseUrl: string, env: Record<string, string> = {}
   });
 }
 
+export const TEST_SETUP_TOKEN = 'setup-token-for-the-test-suite';
+
 export function productionConfig(databaseUrl: string, env: Record<string, string> = {}): Config {
   return loadConfig({
     NODE_ENV: 'production',
+    SETUP_TOKEN: TEST_SETUP_TOKEN,
     DATABASE_URL: databaseUrl,
     PUBLIC_URL: 'https://studio.test',
     RESEND_API_KEY: 'not-used-in-tests',

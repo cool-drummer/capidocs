@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type CapidocsApp } from '../src/app.js';
 import { sessions } from '../src/db/schema.js';
 import { hashToken } from '../src/lib/auth.js';
-import { Client, memoryMailer, productionConfig, resetDatabase, testDatabaseUrl } from './helpers.js';
+import { Client, memoryMailer, productionConfig, resetDatabase, TEST_SETUP_TOKEN, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = testDatabaseUrl('capidocs_sessions_test');
 const PASSWORD = 'una-clave-bastante-larga';
@@ -27,6 +27,7 @@ beforeAll(async () => {
     name: 'Dueña',
     email: 'owner@example.com',
     password: PASSWORD,
+    setupToken: TEST_SETUP_TOKEN,
   });
 }, 60000);
 

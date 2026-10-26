@@ -5,6 +5,7 @@ import { users } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
 import { csrfTokenFor } from '../lib/csrf.js';
 import { templates } from '../lib/mail-templates.js';
+import { assertStrongPassword } from '../lib/password-policy.js';
 import { actorFor, loadSpaceSubject } from '../modules/context.js';
 import {
   acceptInvitation,
@@ -20,6 +21,7 @@ import {
   setSpaceMember,
   updateMemberRole,
 } from '../modules/members.js';
+import { passwordSchema, personNameSchema } from './auth.js';
 import { emailSchema, type RouteContext } from './context.js';
 
 export function memberRoutes(app: FastifyInstance, context: RouteContext) {
@@ -66,10 +68,12 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
 
   app.post('/invitations/:token/accept', { config: { publicEntry: true } }, async (request, reply) => {
     const params = z.object({ token: z.string().min(10) }).parse(request.params);
-    const body = z.object({ name: z.string().trim().min(2), password: z.string().min(10) }).parse(request.body);
+    const body = z.object({ name: personNameSchema, password: passwordSchema }).parse(request.body);
+    const pending = await inspectInvitation(db, params.token);
+    const workspace = await context.loadWorkspace(pending.workspaceId);
+    assertStrongPassword(body.password, { email: pending.email, name: body.name, workspace: workspace.name });
     const { userId, invitation } = await acceptInvitation(db, params.token, body.name, body.password);
 
-    const workspace = await context.loadWorkspace(invitation.workspaceId);
     const inviter = (await db.select().from(users).where(eq(users.id, invitation.invitedById)).limit(1))[0];
     if (inviter) await notify(inviter.email, templates.invitationAccepted({ workspace: workspace.name, who: body.name, email: invitation.email }));
     await notify(invitation.email, templates.welcome({ workspace: workspace.name, url: context.studioUrl }));

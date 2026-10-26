@@ -211,6 +211,16 @@ const STATEMENTS = [
 
   `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_seen_at timestamptz NOT NULL DEFAULT now()`,
   `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS ip varchar(64)`,
+
+  `CREATE TABLE IF NOT EXISTS password_resets (
+     id uuid PRIMARY KEY DEFAULT gen_uuid_v7(),
+     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     token_hash text NOT NULL UNIQUE,
+     expires_at timestamptz NOT NULL,
+     used_at timestamptz,
+     requested_ip varchar(64),
+     created_at timestamptz NOT NULL DEFAULT now())`,
+  `CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets(user_id)`,
 ];
 
 const MIGRATION_LOCK = 7_310_221_904;

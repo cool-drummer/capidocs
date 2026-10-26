@@ -14,9 +14,11 @@ export interface Config {
   publicOrigin: string;
   secureCookies: boolean;
   session: { idleMinutes: number; absoluteHours: number };
+  passwordResetTtlMinutes: number;
+  setupToken: string | null;
   runtimeDir: string;
   files: { dir: string };
-  mail: { transport: 'resend' | 'console'; apiKey: string | null; from: string | null; brand: string };
+  mail: { transport: 'resend' | 'console'; apiKey: string | null; from: string | null; brand: string; timeZone: string };
 }
 
 export class ConfigError extends Error {
@@ -122,6 +124,8 @@ export function loadConfig(env: Env = process.env): Config {
       idleMinutes: read.integer('SESSION_IDLE_MINUTES', 120, { min: 5, max: 1440 }),
       absoluteHours: read.integer('SESSION_ABSOLUTE_HOURS', 24, { min: 1, max: 720 }),
     },
+    passwordResetTtlMinutes: read.integer('PASSWORD_RESET_TTL_MINUTES', 30, { min: 5, max: 1440 }),
+    setupToken: read.text('SETUP_TOKEN'),
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
     files: { dir: resolve(read.text('FILES_DIR') ?? '.tmp/files') },
     mail: {
@@ -129,8 +133,17 @@ export function loadConfig(env: Env = process.env): Config {
       apiKey: resendKey,
       from: mailFrom,
       brand: read.text('MAIL_BRAND') ?? 'Capidocs Studio',
+      timeZone: read.text('MAIL_TIME_ZONE') ?? 'America/Mexico_City',
     },
   };
+
+  const setupToken = config.setupToken;
+  if (setupToken !== null && setupToken.length < 24) read.problems.push('SETUP_TOKEN must have at least 24 characters');
+  try {
+    new Intl.DateTimeFormat('es-MX', { timeZone: config.mail.timeZone });
+  } catch {
+    read.problems.push('MAIL_TIME_ZONE must be an IANA time zone');
+  }
 
   if (read.problems.length) throw new ConfigError(read.problems);
   return config;

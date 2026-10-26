@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type CapidocsApp } from '../src/app.js';
-import { Client, memoryMailer, productionConfig, resetDatabase, testDatabaseUrl } from './helpers.js';
+import { Client, memoryMailer, productionConfig, resetDatabase, TEST_SETUP_TOKEN, testDatabaseUrl } from './helpers.js';
 
 const DATABASE_URL = testDatabaseUrl('capidocs_csrf_test');
 const PASSWORD = 'una-clave-bastante-larga';
@@ -17,6 +17,7 @@ beforeAll(async () => {
     name: 'Dueña',
     email: 'owner@example.com',
     password: PASSWORD,
+    setupToken: TEST_SETUP_TOKEN,
   });
   owner = new Client(app);
   await owner.login('owner@example.com', PASSWORD);

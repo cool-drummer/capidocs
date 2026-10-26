@@ -66,6 +66,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     });
 
   const context = createRouteContext({
+    config,
     db,
     runtimeDir: config.runtimeDir,
     studioUrl: config.publicUrl,

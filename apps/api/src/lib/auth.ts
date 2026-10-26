@@ -36,3 +36,9 @@ export function createToken(): { token: string; tokenHash: string } {
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
+
+export function safeCompare(expected: string, presented: string): boolean {
+  const a = createHash('sha256').update(expected).digest();
+  const b = createHash('sha256').update(presented).digest();
+  return timingSafeEqual(a, b) && expected.length === presented.length;
+}

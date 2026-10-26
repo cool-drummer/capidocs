@@ -307,3 +307,19 @@ export const attachments = pgTable(
   },
   (table) => [index('attachments_space_idx').on(table.spaceId, table.createdAt)],
 );
+
+export const passwordResets = pgTable(
+  'password_resets',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    requestedIp: varchar('requested_ip', { length: 64 }),
+    createdAt: createdAt(),
+  },
+  (table) => [index('password_resets_user_idx').on(table.userId)],
+);
