@@ -3,11 +3,13 @@ const BEND = 40;
 const CROSS = 18;
 const SHARE = 10;
 const FOREIGN_GROUP = 1.8;
+const OUTSIDE_CONTAINER = 5;
 const SIDE_PENALTY = { preferred: 0, side: 90, back: 140 };
 const STEP = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const SIDES = ['E', 'S', 'W', 'N'];
 const OUTWARD = { E: 0, S: 1, W: 2, N: 3 };
 const PORT_GAP = 14;
+const MIN_PORT_GAP = 9;
 const MAX_GRID_POINTS = 400000;
 
 const reverse = (dir) => (dir + 2) % 4;
@@ -195,7 +197,7 @@ function maskHas(mask, related) {
     return false;
 }
 
-function search(grid, starts, goals, related, usage) {
+function search(grid, starts, goals, related, usage, bounds = null) {
     const { nx, ny, xs, ys } = grid;
     const states = grid.size * 4;
     const cost = new Float64Array(states).fill(Infinity);
@@ -269,6 +271,11 @@ function search(grid, starts, goals, related, usage) {
             const length = next % 2 === 0 ? Math.abs(xs[ni] - xs[i]) : Math.abs(ys[nj] - ys[j]);
             let step = length;
             if (foreign(grid.groupMask[point]) || foreign(grid.groupMask[target])) step *= FOREIGN_GROUP;
+            if (bounds) {
+                const mx = (xs[i] + xs[ni]) / 2;
+                const my = (ys[j] + ys[nj]) / 2;
+                if (mx < bounds.x || mx > bounds.x + bounds.w || my < bounds.y || my > bounds.y + bounds.h) step *= OUTSIDE_CONTAINER;
+            }
             if (next !== dir) step += BEND;
             if (next % 2 === 0) {
                 if (usage.v[target]) step += CROSS;
@@ -472,6 +479,51 @@ function throughPoints(source, target, waypoints) {
     return { points: simplify(points), sides: [startSide, endSide] };
 }
 
+function corridorPlan(edge, endpoints) {
+    const corridor = edge.corridor;
+    const horizontal = corridor.horizontal;
+    const sourceId = corridor.reversed ? edge.to : edge.from;
+    const targetId = corridor.reversed ? edge.from : edge.to;
+    const source = endpoints.get(sourceId);
+    const target = endpoints.get(targetId);
+    if (!source || !target) return null;
+    const mainOf = (point) => (horizontal ? point.x : point.y);
+    const crossOf = (point) => (horizontal ? point.y : point.x);
+    const at = (main, cross) => (horizontal ? { x: main, y: cross } : { x: cross, y: main });
+    const firstGap = corridor.gaps[0];
+    const lastGap = corridor.gaps[corridor.gaps.length - 1];
+    const facing = (endpoint, gap) => {
+        const middle = mainOf(centerOf(endpoint.box));
+        if (horizontal) return gap >= middle ? 'E' : 'W';
+        return gap >= middle ? 'S' : 'N';
+    };
+    const sourceSide = facing(source, firstGap);
+    const targetSide = facing(target, lastGap);
+    const build = (sourcePort, targetPort) => {
+        const points = [sourcePort];
+        let cross = crossOf(sourcePort);
+        corridor.gaps.forEach((gap, index) => {
+            points.push(at(gap, cross));
+            cross = index < corridor.via.length ? crossOf(corridor.via[index]) : crossOf(targetPort);
+            points.push(at(gap, cross));
+        });
+        points.push(targetPort);
+        const ordered = corridor.reversed ? points.reverse() : points;
+        return simplify(ordered.map((point) => ({ x: round(point.x), y: round(point.y) })));
+    };
+    return {
+        source,
+        target,
+        sides: corridor.reversed ? [targetSide, sourceSide] : [sourceSide, targetSide],
+        build: (startPort, endPort) => (corridor.reversed ? build(endPort, startPort) : build(startPort, endPort)),
+        defaults: () => {
+            const start = corridor.reversed ? anchor(target, targetSide) : anchor(source, sourceSide);
+            const end = corridor.reversed ? anchor(source, sourceSide) : anchor(target, targetSide);
+            return { start, end };
+        }
+    };
+}
+
 function markUsage(grid, usage, points) {
     for (let index = 0; index + 1 < points.length; index += 1) {
         const a = points[index];
@@ -500,10 +552,22 @@ function relatedMask(groupIndex, endpointAncestors) {
     return mask;
 }
 
-function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixed }) {
+function commonContainer(source, target, groups) {
+    const shared = source.ancestors.find((id) => id !== source.id && target.ancestors.includes(id) && id !== target.id);
+    const group = shared ? groups.find((entry) => entry.id === shared) : null;
+    return group ? inflate(group.box, -2) : null;
+}
+
+function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixed, prerouted = new Map() }) {
     const inflated = obstacles.map((box) => inflate(box, MARGIN));
     const extraX = [];
     const extraY = [];
+    for (const route of prerouted.values()) {
+        for (const point of route.points) {
+            extraX.push(point.x);
+            extraY.push(point.y);
+        }
+    }
     const plans = edges.map((edge) => {
         const source = endpoints.get(edge.from);
         const target = endpoints.get(edge.to);
@@ -525,7 +589,7 @@ function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixe
             extraX.push(entry.stub.x, entry.port.x);
             extraY.push(entry.stub.y, entry.port.y);
         }
-        return { edge, source, target, starts, ends };
+        return { edge, source, target, starts, ends, bounds: commonContainer(source, target, groups) };
     });
     const all = [...inflated, ...groups.map((group) => group.box)];
     const minX = Math.min(...all.map((box) => box.x), ...extraX) - MARGIN * 4;
@@ -536,6 +600,7 @@ function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixe
     const grid = new Grid({ obstacles: inflated, groups: groups.map((group) => group.box), xs: extraX, ys: extraY, frame });
     const groupIndex = new Map(groups.map((group, index) => [group.id, index]));
     const usage = { h: new Uint8Array(grid.size), v: new Uint8Array(grid.size) };
+    for (const route of prerouted.values()) markUsage(grid, usage, route.points);
     const tooLarge = grid.size > MAX_GRID_POINTS;
     const results = new Map();
     const order = plans.map((plan, index) => ({ plan, index }))
@@ -558,7 +623,7 @@ function routeAll({ edges, endpoints, obstacles, groups, direction, manual, fixe
             }
         }
         const related = relatedMask(groupIndex, [...plan.source.ancestors, ...plan.target.ancestors]);
-        const found = starts.length && goals.length ? search(grid, starts, goals, related, usage) : null;
+        const found = starts.length && goals.length ? search(grid, starts, goals, related, usage, plan.bounds) : null;
         let points;
         let sides;
         if (found) {
@@ -616,7 +681,9 @@ function assignPorts(edges, endpoints, firstPass) {
         const along = horizontalSide(side) ? 'y' : 'x';
         entries.sort((a, b) => (a.other[along] - b.other[along]) || String(a.edge.id).localeCompare(String(b.edge.id)));
         const span = base.max - base.min;
-        const gap = entries.length > 1 ? Math.min(PORT_GAP, span / (entries.length - 1)) : 0;
+        const capacity = Math.floor(span / MIN_PORT_GAP) + 1;
+        const bus = entries.length > Math.max(1, capacity);
+        const gap = entries.length > 1 && !bus ? Math.min(PORT_GAP, span / (entries.length - 1)) : 0;
         entries.forEach((entry, index) => {
             const offset = (index - (entries.length - 1) / 2) * gap;
             const port = { x: base.x, y: base.y };
@@ -820,7 +887,7 @@ export function placeLabels(edges, routes, obstacles, chips, direction) {
             const length = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
             const horizontal = Math.abs(a.y - b.y) < 0.5;
             const offsets = horizontal ? [[0, 0], [0, -(h / 2 + 3)], [0, h / 2 + 3]] : [[0, 0], [-(w / 2 + 3), 0], [w / 2 + 3, 0]];
-            for (const [fraction, [dx, dy]] of [0.5, 0.35, 0.65, 0.2, 0.8].flatMap((value) => offsets.map((offset) => [value, offset]))) {
+            for (const [fraction, [dx, dy]] of [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9].flatMap((value) => offsets.map((offset) => [value, offset]))) {
                 const x = a.x + (b.x - a.x) * fraction + dx;
                 const y = a.y + (b.y - a.y) * fraction + dy;
                 const box = { x: x - w / 2, y: y - h / 2, w, h };
@@ -843,8 +910,11 @@ export function placeLabels(edges, routes, obstacles, chips, direction) {
         }
         if (best) {
             const box = { x: Math.round(best.box.x * 2) / 2, y: Math.round(best.box.y * 2) / 2, w, h };
-            placed.push(box);
-            boxes.set(edge.id, box);
+            const clash = placed.some((other) => overlapArea(box, inflate(other, 2)) > 0)
+                || obstacles.some((obstacle) => overlapArea(box, inflate(obstacle, 1)) > 0)
+                || chips.some((chip) => overlapArea(box, chip) > 0);
+            if (!clash) placed.push(box);
+            boxes.set(edge.id, { box, hidden: clash });
         }
     }
     return boxes;
@@ -865,15 +935,31 @@ export function routeEdges({ edges, endpoints, obstacles, groups, direction, man
             searchable.push(edge);
         }
     }
-    if (searchable.length) {
-        const first = routeAll({ edges: searchable, endpoints, obstacles, groups, direction, manual, fixed: null });
-        const fixed = assignPorts(searchable, endpoints, first);
-        const second = routeAll({ edges: searchable, endpoints, obstacles, groups, direction, manual, fixed });
-        for (const edge of searchable) routes.set(edge.id, second.get(edge.id) ?? first.get(edge.id));
+    const plans = new Map();
+    const free = [];
+    for (const edge of searchable) {
+        const plan = edge.corridor && !manual ? corridorPlan(edge, endpoints) : null;
+        if (plan) plans.set(edge.id, plan);
+        else free.push(edge);
     }
+    const provisional = new Map();
+    for (const [id, plan] of plans) {
+        const { start, end } = plan.defaults();
+        provisional.set(id, { points: plan.build(start, end), sides: plan.sides });
+    }
+    const first = free.length ? routeAll({ edges: free, endpoints, obstacles, groups, direction, manual, fixed: null, prerouted: provisional }) : new Map();
+    const fixed = assignPorts(searchable, endpoints, new Map([...provisional, ...first]));
+    const laid = new Map();
+    for (const [id, plan] of plans) {
+        const choice = fixed.get(id);
+        laid.set(id, choice ? { points: plan.build(choice.start, choice.end), sides: [choice.startSide, choice.endSide] } : provisional.get(id));
+    }
+    const second = free.length ? routeAll({ edges: free, endpoints, obstacles, groups, direction, manual, fixed, prerouted: laid }) : new Map();
+    for (const edge of searchable) routes.set(edge.id, laid.get(edge.id) ?? second.get(edge.id) ?? first.get(edge.id));
     const ordered = new Map(edges.filter((edge) => routes.has(edge.id)).map((edge) => [edge.id, routes.get(edge.id)]));
-    const searched = new Map([...ordered].filter(([id]) => searchable.some((edge) => edge.id === id)));
+    const searched = new Map([...ordered].filter(([id]) => free.some((edge) => edge.id === id)));
+    const all = new Map([...ordered].filter(([id]) => searchable.some((edge) => edge.id === id)));
     centerSegments(searched, obstacles, groups, endpoints, edges);
-    nudge(searched, obstacles);
+    nudge(all, obstacles);
     return ordered;
 }

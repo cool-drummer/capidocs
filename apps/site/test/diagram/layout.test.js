@@ -116,7 +116,7 @@ describe('graph layout', () => {
   it('places edge labels away from nodes and from each other', () => {
     for (const diagram of graphs) {
       const scene = layoutDiagram(diagram);
-      const labels = scene.edges.filter((edge) => edge.labelBox).map((edge) => edge.labelBox);
+      const labels = scene.edges.filter((edge) => edge.labelBox && !edge.labelHidden).map((edge) => edge.labelBox);
       expect(labels.length).toBe(scene.edges.filter((edge) => edge.label).length);
       for (let i = 0; i < labels.length; i += 1) {
         for (let j = i + 1; j < labels.length; j += 1) expect(overlaps(labels[i], labels[j]), diagram.id).toBe(false);

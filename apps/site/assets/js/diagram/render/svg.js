@@ -414,7 +414,7 @@ function shapeActor(ctx, node) {
         `M${num(cx)} 26 L${num(cx - 9)} 38`,
         `M${num(cx)} 26 L${num(cx + 9)} 38`
     ].join(' ');
-    return `<rect${attrs({ width: node.w, height: node.h, fill: 'transparent', class: 'dg-hit' })}/><path${attrs({ d: figure, fill: 'none', stroke, 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'dg-actor' })}/>${lines(ctx, node.text.title, {
+    return `<rect${attrs({ x: -6, y: -4, width: node.w + 12, height: node.h + 8, rx: 10, fill: 'transparent', class: 'dg-hit' })}/><path${attrs({ d: figure, fill: 'none', stroke, 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'dg-actor' })}/>${lines(ctx, node.text.title, {
         x: cx, top: m.figureHeight + m.labelGap, font: m.title, fill: ctx.tokens.ink, anchor: 'middle'
     })}`;
 }
@@ -433,7 +433,7 @@ function shapeNote(ctx, node) {
 }
 
 function shapeText(ctx, node) {
-    return `<rect${attrs({ width: node.w, height: node.h, fill: 'transparent', class: 'dg-hit' })}/>${lines(ctx, node.text.title, { x: 0, top: 0, font: METRICS.text.title, fill: ctx.tokens.ink })}`;
+    return `<rect${attrs({ x: -6, y: -4, width: node.w + 12, height: node.h + 8, rx: 8, fill: 'transparent', class: 'dg-hit' })}/>${lines(ctx, node.text.title, { x: 0, top: 0, font: METRICS.text.title, fill: ctx.tokens.ink })}`;
 }
 
 const SHAPES = {
@@ -555,9 +555,10 @@ function renderEdge(ctx, edge) {
 
 function renderEdgeLabel(ctx, edge) {
     if (!edge.label || !edge.labelBox) return '';
+    if (edge.labelHidden && !ctx.interactive) return '';
     const m = METRICS.edge.label;
     const box = edge.labelBox;
-    return `<g${attrs({ class: 'dg-edge-label', 'data-edge': edge.id })}><rect${attrs({ x: box.x, y: box.y, width: box.w, height: box.h, rx: m.radius, fill: ctx.tokens.labelBg })}/>${text(ctx, {
+    return `<g${attrs({ class: edge.labelHidden ? 'dg-edge-label dg-label-hidden' : 'dg-edge-label', 'data-edge': edge.id })}><rect${attrs({ x: box.x, y: box.y, width: box.w, height: box.h, rx: m.radius, fill: ctx.tokens.labelBg })}/>${text(ctx, {
         x: box.x + box.w / 2, y: baseline(box.y, box.h, m.size), size: m.size, weight: m.weight, fill: ctx.tokens.labelText, anchor: 'middle', content: edge.label
     })}</g>`;
 }

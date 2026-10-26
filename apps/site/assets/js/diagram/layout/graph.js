@@ -54,15 +54,27 @@ function visibleEdges(diagram, structure) {
         if (from === to && edge.from !== edge.to) continue;
         if (from !== to && (structure.ancestors(to).includes(from) || structure.ancestors(from).includes(to))) continue;
         const key = `${from}>${to}`;
-        if (redirected && seen.has(key)) {
-            seen.get(key).merged.push(edge.id);
+        if (seen.has(key)) {
+            const first = seen.get(key);
+            first.merged.push(edge.id);
+            if (edge.label) first.labels.push(edge.label);
+            first.points = [];
             continue;
         }
-        const entry = { edge, id: edge.id, from, to, redirected, merged: [], points: redirected ? [] : edge.points };
+        const entry = { edge, id: edge.id, from, to, redirected, merged: [], labels: edge.label ? [edge.label] : [], points: redirected ? [] : edge.points };
         result.push(entry);
-        if (!seen.has(key)) seen.set(key, entry);
+        seen.set(key, entry);
     }
+    for (const entry of result) entry.label = combineLabels(entry.labels);
     return result;
+}
+
+export function combineLabels(labels) {
+    const unique = [...new Set(labels.filter(Boolean))];
+    if (unique.length <= 1) return unique[0];
+    const pair = `${unique[0]}, ${unique[1]}`;
+    if (unique.length === 2) return pair.length <= 40 ? pair : `${unique[0]} +1`;
+    return pair.length <= 34 ? `${pair} +${unique.length - 2}` : `${unique[0]} +${unique.length - 1}`;
 }
 
 function nodeVisual(node, box) {
@@ -224,7 +236,9 @@ function autoLayout(diagram, context) {
     const groupBoxes = new Map();
     const hasLanes = Boolean(laneOf);
     const laneTop = hasLanes ? METRICS.lane.header + METRICS.lane.pad : 0;
+    const placed = [];
     const place = (containerId, layout, originX, originY) => {
+        placed.push({ containerId, layout, originX, originY });
         for (const id of children.get(containerId) ?? []) {
             const position = layout.positions.get(id);
             const x = originX + position.x;
@@ -283,7 +297,25 @@ function autoLayout(diagram, context) {
             };
         });
     }
-    return { boxes, groupBoxes, lanes };
+    const entries = new Map(edges.map((entry) => [entry.id, entry]));
+    const horizontal = diagram.direction === 'LR' || diagram.direction === 'RL';
+    const corridors = new Map();
+    for (const { containerId, layout, originX, originY } of placed) {
+        for (const lift of lifted.get(containerId) ?? []) {
+            const entry = entries.get(lift.id);
+            const path = layout.paths?.get(lift.id);
+            if (!entry || !path || lift.from !== entry.from || lift.to !== entry.to || !path.gaps.length) continue;
+            corridors.set(entry.id, {
+                horizontal,
+                reversed: path.reversed,
+                via: path.via.map((point) => ({ x: point.x + originX, y: point.y + originY })),
+                gaps: path.gaps.map((gap) => gap + (horizontal ? originX : originY))
+            });
+        }
+    }
+    const firstRank = [...root.ranks.entries()].filter(([, rank]) => rank === 0).map(([id]) => id);
+    const flowItems = firstRank.map((id) => boxes.get(id) ?? groupBoxes.get(id)?.box).filter(Boolean);
+    return { boxes, groupBoxes, lanes, corridors, flowItems };
 }
 
 function manualLayout(diagram, context) {
@@ -364,6 +396,7 @@ function translate(scene, dx, dy) {
         for (const point of edge.points) move(point);
         move(edge.labelBox);
     }
+    move(scene.flowStart);
 }
 
 export function layoutGraph(diagram, { measure = approximateMeasure, expanded, collapsed } = {}) {
@@ -374,11 +407,12 @@ export function layoutGraph(diagram, { measure = approximateMeasure, expanded, c
     for (const node of structure.visibleNodes) sizes.set(node.id, nodeSize(node, { measure, expanded: expandedSet.has(node.id) }));
     const edges = visibleEdges(diagram, structure).map((entry) => ({
         ...entry,
-        labelSize: entry.edge.label ? edgeLabelSize(entry.edge.label, measure) : null
+        labelSize: entry.label ? edgeLabelSize(entry.label, measure) : null
     }));
     const manual = diagram.nodes.length > 0 && diagram.nodes.every((node) => node.x !== undefined && node.y !== undefined);
     const context = { structure, sizes, edges, measure, collapsed: collapsedSet };
-    const { boxes, groupBoxes, lanes } = manual ? manualLayout(diagram, context) : autoLayout(diagram, context);
+    const { boxes, groupBoxes, lanes, corridors = new Map(), flowItems = [] } = manual ? manualLayout(diagram, context) : autoLayout(diagram, context);
+    for (const entry of edges) if (corridors.has(entry.id)) entry.corridor = corridors.get(entry.id);
 
     const endpoints = new Map();
     const obstacles = [];
@@ -401,6 +435,13 @@ export function layoutGraph(diagram, { measure = approximateMeasure, expanded, c
     }
     const routes = routeEdges({ edges, endpoints, obstacles, groups: routedGroups, direction: diagram.direction, manual });
     const labelBoxes = placeLabels(edges, routes, obstacles, chips, diagram.direction);
+    const startItems = flowItems.length ? flowItems : [...boxes.values()].sort((a, b) => (diagram.direction === 'TB' || diagram.direction === 'BT' ? a.y - b.y : a.x - b.x)).slice(0, 1);
+    const flowStart = startItems.length ? {
+        x: Math.min(...startItems.map((box) => box.x)),
+        y: Math.min(...startItems.map((box) => box.y)),
+        w: Math.max(...startItems.map((box) => box.x + box.w)) - Math.min(...startItems.map((box) => box.x)),
+        h: Math.max(...startItems.map((box) => box.y + box.h)) - Math.min(...startItems.map((box) => box.y))
+    } : null;
 
     const scene = {
         kind: 'graph',
@@ -408,6 +449,7 @@ export function layoutGraph(diagram, { measure = approximateMeasure, expanded, c
         height: 0,
         direction: diagram.direction,
         manual,
+        flowStart,
         lanes,
         groups: [...groupBoxes.entries()]
             .map(([id, entry]) => {
@@ -448,8 +490,10 @@ export function layoutGraph(diagram, { measure = approximateMeasure, expanded, c
             from: entry.from,
             to: entry.to,
             points: routes.get(entry.id).points.map((point) => ({ x: point.x, y: point.y })),
-            label: entry.edge.label,
-            labelBox: labelBoxes.get(entry.id),
+            label: entry.label,
+            labels: entry.labels,
+            labelBox: labelBoxes.get(entry.id)?.box,
+            labelHidden: Boolean(labelBoxes.get(entry.id)?.hidden),
             style: entry.edge.style,
             arrow: entry.edge.arrow,
             color: entry.edge.color,
