@@ -9,31 +9,60 @@ export interface SiteOrigins {
 
 const GOOGLE_FONTS_CSS = 'https://fonts.googleapis.com';
 const GOOGLE_FONTS_FILES = 'https://fonts.gstatic.com';
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost']);
+const MAX_IMG_TAG = 4096;
 
-function originOf(value: unknown): string | null {
+function originOf(value: unknown, secure: boolean): string | null {
   if (typeof value !== 'string') return null;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.origin : null;
+    if (url.protocol === 'https:') return url.origin;
+    if (url.protocol === 'http:' && (!secure || LOOPBACK_HOSTS.has(url.hostname))) return url.origin;
+    return null;
   } catch {
     return null;
   }
 }
 
-function addOrigin(target: Set<string>, value: unknown): void {
-  const origin = originOf(value);
-  if (origin) target.add(origin);
+function asciiLower(value: string): string {
+  return value.replace(/[A-Z]+/g, (letters) => letters.toLowerCase());
 }
 
-const IMG_SRC = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi;
+export function imageSources(html: string): string[] {
+  const lower = asciiLower(html);
+  const sources: string[] = [];
+  let pos = 0;
+  for (;;) {
+    const start = lower.indexOf('<img', pos);
+    if (start === -1) break;
+    const end = lower.indexOf('>', start);
+    if (end === -1) break;
+    const boundary = lower[start + 4];
+    if (end - start <= MAX_IMG_TAG && (boundary === '>' || boundary === '/' || /\s/.test(boundary ?? ''))) {
+      const match = /(?:^|\s)src\s*=\s*["']([^"']+)["']/i.exec(html.slice(start + 4, end));
+      if (match?.[1]) sources.push(match[1]);
+    }
+    pos = end + 1;
+  }
+  return sources;
+}
+
+export function isSecureSite(specs: Spec[]): boolean {
+  return !specs.some((spec) => /^http:/i.test(spec.site_config.site_url ?? ''));
+}
 
 export function collectOrigins(specs: Spec[]): SiteOrigins {
   const origins: SiteOrigins = { connect: new Set(), style: new Set(), font: new Set(), img: new Set() };
+  const secure = isSecureSite(specs);
+  const addOrigin = (target: Set<string>, value: unknown, strict = true): void => {
+    const origin = originOf(value, strict && secure);
+    if (origin) target.add(origin);
+  };
   for (const spec of specs) {
     const site = spec.site_config;
     addOrigin(origins.connect, spec.api?.base_url);
     if (site.access?.mode === 'gate') addOrigin(origins.connect, site.access.endpoint);
-    for (const href of site.theme?.fonts?.imports ?? []) addOrigin(origins.style, href);
+    for (const href of site.theme?.fonts?.imports ?? []) addOrigin(origins.style, href, false);
     for (const logo of Object.values(site.logos ?? {})) addOrigin(origins.img, logo);
     for (const page of Object.values(spec.pages)) {
       if (page.template === 'hero') {
@@ -42,7 +71,7 @@ export function collectOrigins(specs: Spec[]): SiteOrigins {
       }
       for (const section of page.content.sections ?? []) {
         addOrigin(origins.img, section.image?.src);
-        for (const match of (section.prose ?? '').matchAll(IMG_SRC)) addOrigin(origins.img, match[1]);
+        for (const source of imageSources(section.prose ?? '')) addOrigin(origins.img, source);
       }
     }
   }
@@ -65,8 +94,9 @@ export function buildContentSecurityPolicy(specs: Spec[]): string {
     ['base-uri', ["'none'"]],
     ['form-action', ["'none'"]],
     ['frame-ancestors', ["'none'"]],
+    ['upgrade-insecure-requests', []],
   ];
-  return directives.map(([name, values]) => `${name} ${values.join(' ')}`).join('; ');
+  return directives.map(([name, values]) => (values.length ? `${name} ${values.join(' ')}` : name)).join('; ');
 }
 
 export function buildHeaders(specs: Spec[]): string {
@@ -75,7 +105,7 @@ export function buildHeaders(specs: Spec[]): string {
     'X-Content-Type-Options: nosniff',
     'X-Frame-Options: DENY',
     'Referrer-Policy: strict-origin-when-cross-origin',
-    'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+    'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()',
     'Cross-Origin-Opener-Policy: same-origin',
     'Strict-Transport-Security: max-age=31536000; includeSubDomains',
   ];
