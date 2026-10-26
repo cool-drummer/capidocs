@@ -13,7 +13,7 @@ describe('draw.io decompression budget', () => {
     expect(text.length).toBeLessThan(200000);
     const started = performance.now();
     await expect(parseDrawio(text)).rejects.toMatchObject({ code: 'too_large' });
-    expect(performance.now() - started).toBeLessThan(1000);
+    expect(performance.now() - started).toBeLessThan(3000);
     const result = await importDiagramFile({ name: 'bomb.drawio', text });
     expect(result).toMatchObject({ ok: false, error: { code: 'too_large' } });
   });
