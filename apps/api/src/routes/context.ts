@@ -6,7 +6,7 @@ import type { Database } from '../db/client.js';
 import { workspaces } from '../db/schema.js';
 import { notFound, unauthorized } from '../lib/errors.js';
 import type { Mailer, MailMessage } from '../lib/mail.js';
-import type { AttachmentStore } from '../modules/attachments.js';
+import type { AttachmentStore } from '../lib/storage.js';
 import { loadMembership, type SessionUser } from '../modules/context.js';
 import {
   resolveSession,

@@ -7,6 +7,11 @@ const production = {
   PUBLIC_URL: 'https://studio.example.com',
   RESEND_API_KEY: 'value',
   MAIL_FROM: 'Studio <studio@example.com>',
+  S3_ENDPOINT: 'https://nyc3.digitaloceanspaces.com',
+  S3_REGION: 'nyc3',
+  S3_BUCKET: 'studio-files',
+  S3_ACCESS_KEY_ID: 'value',
+  S3_SECRET_ACCESS_KEY: 'value',
 };
 
 function problemsOf(env: Record<string, string>): string[] {
@@ -55,6 +60,16 @@ describe('configuration', () => {
     expect(config.environment).toBe('development');
     expect(config.secureCookies).toBe(false);
     expect(config.mail.transport).toBe('console');
+  });
+
+  it('refuses local disk storage in production', () => {
+    expect(problemsOf({ ...production, STORAGE_DRIVER: 'local' })).toContain('STORAGE_DRIVER must be s3 in production');
+  });
+
+  it('keeps attachments in a private bucket under a safe prefix', () => {
+    const config = loadConfig(production);
+    expect(config.storage).toMatchObject({ driver: 's3', endpoint: 'https://nyc3.digitaloceanspaces.com', prefix: 'attachments/' });
+    expect(problemsOf({ ...production, S3_PREFIX: '../x' })).toContain('S3_PREFIX must be empty or end with a slash and use only a-z, 0-9, _ and -');
   });
 
   it('declares the database as required in every environment', () => {

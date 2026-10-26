@@ -35,6 +35,11 @@ export function productionConfig(databaseUrl: string, env: Record<string, string
     PUBLIC_URL: 'https://studio.test',
     RESEND_API_KEY: 'not-used-in-tests',
     MAIL_FROM: 'Studio <studio@example.com>',
+    S3_ENDPOINT: 'https://storage.example.com',
+    S3_REGION: 'nyc3',
+    S3_BUCKET: 'studio-test',
+    S3_ACCESS_KEY_ID: 'not-used-in-tests',
+    S3_SECRET_ACCESS_KEY: 'not-used-in-tests',
     CAPIDOCS_RUNTIME_DIR: join(ROOT, 'apps/site'),
     ...env,
   });

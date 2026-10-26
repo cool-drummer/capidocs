@@ -6,7 +6,7 @@ import { migrate } from './db/migrate.js';
 import { createCsrfGuard } from './lib/csrf.js';
 import { handleError } from './lib/error-handler.js';
 import { createMailer, type Mailer } from './lib/mail.js';
-import { createLocalStore, type AttachmentStore } from './modules/attachments.js';
+import { createLocalStore, createS3Store, type AttachmentStore } from './lib/storage.js';
 import type { SessionUser } from './modules/context.js';
 import { purgeSessions } from './modules/sessions.js';
 import { attachmentRoutes } from './routes/attachments.js';
@@ -19,6 +19,7 @@ import { portalRoutes } from './routes/portals.js';
 export interface AppOverrides {
   logger?: boolean;
   mailer?: Mailer;
+  store?: AttachmentStore;
 }
 
 declare module 'fastify' {
@@ -56,7 +57,9 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
   await app.register(cookie);
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));
 
-  const store = createLocalStore(config.files.dir);
+  const store =
+    overrides.store ??
+    (config.storage.driver === 's3' ? createS3Store(config.storage) : createLocalStore(config.storage.dir));
   const mailer =
     overrides.mailer ??
     createMailer(config.mail, {

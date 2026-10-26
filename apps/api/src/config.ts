@@ -3,7 +3,20 @@ import { resolve } from 'node:path';
 export type Environment = 'production' | 'development' | 'test';
 
 export const REQUIRED_ENV = ['DATABASE_URL'] as const;
-export const REQUIRED_PRODUCTION_ENV = ['PUBLIC_URL', 'RESEND_API_KEY', 'MAIL_FROM'] as const;
+export const REQUIRED_PRODUCTION_ENV = [
+  'PUBLIC_URL',
+  'RESEND_API_KEY',
+  'MAIL_FROM',
+  'S3_ENDPOINT',
+  'S3_REGION',
+  'S3_BUCKET',
+  'S3_ACCESS_KEY_ID',
+  'S3_SECRET_ACCESS_KEY',
+] as const;
+
+export type StorageConfig =
+  | { driver: 'local'; dir: string }
+  | { driver: 's3'; endpoint: string; region: string; bucket: string; prefix: string; accessKeyId: string; secretAccessKey: string };
 
 export interface Config {
   environment: Environment;
@@ -18,7 +31,8 @@ export interface Config {
   invitationTtlHours: number;
   setupToken: string | null;
   runtimeDir: string;
-  files: { dir: string };
+  storage: StorageConfig;
+  attachments: { maxBytes: number };
   mail: { transport: 'resend' | 'console'; apiKey: string | null; from: string | null; brand: string; timeZone: string };
 }
 
@@ -129,7 +143,8 @@ export function loadConfig(env: Env = process.env): Config {
     invitationTtlHours: read.integer('INVITATION_TTL_HOURS', 168, { min: 1, max: 720 }),
     setupToken: read.text('SETUP_TOKEN'),
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
-    files: { dir: resolve(read.text('FILES_DIR') ?? '.tmp/files') },
+    storage: { driver: 'local', dir: '' },
+    attachments: { maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }) },
     mail: {
       transport: mailTransport,
       apiKey: resendKey,
@@ -139,6 +154,24 @@ export function loadConfig(env: Env = process.env): Config {
     },
   };
 
+  const driver = read.choice('STORAGE_DRIVER', ['s3', 'local'] as const, production ? 's3' : 'local');
+  if (production && driver !== 's3') read.problems.push('STORAGE_DRIVER must be s3 in production');
+  if (driver === 's3') {
+    const endpoint = read.url('S3_ENDPOINT', null, ['https:', ...(production ? [] : ['http:'])]);
+    config.storage = {
+      driver: 's3',
+      endpoint: endpoint?.origin ?? '',
+      region: read.required('S3_REGION'),
+      bucket: read.required('S3_BUCKET'),
+      prefix: read.text('S3_PREFIX') ?? 'attachments/',
+      accessKeyId: read.required('S3_ACCESS_KEY_ID'),
+      secretAccessKey: read.required('S3_SECRET_ACCESS_KEY'),
+    };
+    if (!endpoint && !production) read.problems.push('S3_ENDPOINT is required');
+  } else {
+    config.storage = { driver: 'local', dir: resolve(read.text('FILES_DIR') ?? '.tmp/files') };
+  }
+
   const setupToken = config.setupToken;
   if (setupToken !== null && setupToken.length < 24) read.problems.push('SETUP_TOKEN must have at least 24 characters');
   try {
@@ -147,6 +180,10 @@ export function loadConfig(env: Env = process.env): Config {
     read.problems.push('MAIL_TIME_ZONE must be an IANA time zone');
   }
 
-  if (read.problems.length) throw new ConfigError(read.problems);
+  if (config.storage.driver === 's3' && !/^([a-z0-9_-]+\/)*$/.test(config.storage.prefix)) {
+    read.problems.push('S3_PREFIX must be empty or end with a slash and use only a-z, 0-9, _ and -');
+  }
+
+  if (read.problems.length) throw new ConfigError([...new Set(read.problems)]);
   return config;
 }
