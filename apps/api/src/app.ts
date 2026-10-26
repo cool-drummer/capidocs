@@ -8,6 +8,7 @@ import { ApiError } from './lib/errors.js';
 import { createMailer, type Mailer } from './lib/mail.js';
 import { createLocalStore, type AttachmentStore } from './modules/attachments.js';
 import type { SessionUser } from './modules/context.js';
+import { purgeSessions } from './modules/sessions.js';
 import { attachmentRoutes } from './routes/attachments.js';
 import { authRoutes } from './routes/auth.js';
 import { contentRoutes } from './routes/content.js';
@@ -23,6 +24,7 @@ export interface AppOverrides {
 declare module 'fastify' {
   interface FastifyRequest {
     user?: SessionUser;
+    sessionId?: string;
   }
 }
 
@@ -41,6 +43,7 @@ export const API_PREFIX = '/api';
 export async function createApp(config: Config, overrides: AppOverrides = {}): Promise<CapidocsApp> {
   const { db, sql, close } = createDatabase(config.databaseUrl, { max: config.databasePoolSize });
   await migrate(sql);
+  await purgeSessions(db);
 
   const app = Fastify({
     logger: overrides.logger ? { level: config.server.logLevel } : false,
@@ -64,7 +67,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     db,
     runtimeDir: config.runtimeDir,
     studioUrl: config.publicUrl,
-    secureCookies: config.secureCookies,
+    sessionPolicy: { ...config.session, secure: config.secureCookies },
     mailer,
     store,
     onMailError: (error) => app.log.error({ err: error }, 'mail delivery failed'),

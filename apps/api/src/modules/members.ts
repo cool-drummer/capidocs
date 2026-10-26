@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { invitations, members, spaceMembers, users } from '../db/schema.js';
-import { createSessionToken, hashPassword, hashToken } from '../lib/auth.js';
+import { createToken, hashPassword, hashToken } from '../lib/auth.js';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
 import type { WorkspaceRole } from '../lib/access.js';
 
@@ -72,7 +72,7 @@ export async function createInvitation(
       ),
     );
 
-  const { token, tokenHash } = createSessionToken();
+  const { token, tokenHash } = createToken();
   const [invitation] = await db
     .insert(invitations)
     .values({

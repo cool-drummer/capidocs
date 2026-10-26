@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { members, sessions, users, workspaces } from '../db/schema.js';
-import { cookieOptions, createSessionToken, hashPassword, hashToken, SESSION_COOKIE, sessionExpiry, verifyPassword } from '../lib/auth.js';
+import { members, users, workspaces } from '../db/schema.js';
+import { hashPassword, verifyPassword } from '../lib/auth.js';
 import { ApiError, conflict, forbidden } from '../lib/errors.js';
 import { loadMembership } from '../modules/context.js';
 import { emailSchema, type RouteContext } from './context.js';
@@ -51,24 +51,13 @@ export function authRoutes(app: FastifyInstance, context: RouteContext) {
     const membership = await loadMembership(db, user.id);
     if (!membership) throw forbidden();
 
-    const { token, tokenHash } = createSessionToken();
-    await db.insert(sessions).values({
-      userId: user.id,
-      tokenHash,
-      expiresAt: sessionExpiry(),
-      userAgent: request.headers['user-agent'] ?? null,
-    });
+    await context.sessions.begin(request, reply, user.id);
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
-    reply.setCookie(SESSION_COOKIE, token, cookieOptions(context.secureCookies));
     return { user: { id: user.id, name: user.name, email: user.email, role: membership.workspaceRole } };
   });
 
   app.post('/auth/logout', async (request, reply) => {
-    const token = request.cookies[SESSION_COOKIE];
-    if (token) {
-      await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.tokenHash, hashToken(token)));
-    }
-    reply.clearCookie(SESSION_COOKIE, { path: '/' });
+    await context.sessions.end(request, reply);
     return { ok: true };
   });
 

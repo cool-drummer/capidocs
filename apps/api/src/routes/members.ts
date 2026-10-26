@@ -1,9 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { sessions, users } from '../db/schema.js';
+import { users } from '../db/schema.js';
 import { assertCan } from '../lib/access.js';
-import { cookieOptions, createSessionToken, SESSION_COOKIE, sessionExpiry } from '../lib/auth.js';
 import { templates } from '../lib/mail.js';
 import { actorFor, loadSpaceSubject } from '../modules/context.js';
 import {
@@ -72,9 +71,7 @@ export function memberRoutes(app: FastifyInstance, context: RouteContext) {
     if (inviter) await notify(inviter.email, templates.invitationAccepted({ workspace: workspace.name, who: body.name }));
     await notify(invitation.email, templates.welcome({ workspace: workspace.name, url: context.studioUrl }));
 
-    const { token, tokenHash } = createSessionToken();
-    await db.insert(sessions).values({ userId, tokenHash, expiresAt: sessionExpiry(), userAgent: request.headers['user-agent'] ?? null });
-    reply.setCookie(SESSION_COOKIE, token, cookieOptions(context.secureCookies));
+    await context.sessions.begin(request, reply, userId);
     return reply.status(201).send({ workspace: workspace.name });
   });
 

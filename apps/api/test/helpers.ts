@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import postgres from 'postgres';
 import type { CapidocsApp } from '../src/app.js';
 import { loadConfig, type Config } from '../src/config.js';
+import type { MailMessage } from '../src/lib/mail.js';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 type InjectResponse = Awaited<ReturnType<CapidocsApp['inject']>>;
@@ -22,6 +23,29 @@ export function testConfig(databaseUrl: string, env: Record<string, string> = {}
     CAPIDOCS_RUNTIME_DIR: join(ROOT, 'apps/site'),
     ...env,
   });
+}
+
+export function productionConfig(databaseUrl: string, env: Record<string, string> = {}): Config {
+  return loadConfig({
+    NODE_ENV: 'production',
+    DATABASE_URL: databaseUrl,
+    PUBLIC_URL: 'https://studio.test',
+    RESEND_API_KEY: 'not-used-in-tests',
+    MAIL_FROM: 'Studio <studio@example.com>',
+    CAPIDOCS_RUNTIME_DIR: join(ROOT, 'apps/site'),
+    ...env,
+  });
+}
+
+export function memoryMailer() {
+  const sent: MailMessage[] = [];
+  return {
+    sent,
+    async send(message: MailMessage) {
+      sent.push(message);
+      return { id: `test-${sent.length}` };
+    },
+  };
 }
 
 export async function resetDatabase(url: string): Promise<void> {

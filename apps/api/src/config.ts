@@ -13,6 +13,7 @@ export interface Config {
   publicUrl: string;
   publicOrigin: string;
   secureCookies: boolean;
+  session: { idleMinutes: number; absoluteHours: number };
   runtimeDir: string;
   files: { dir: string };
   mail: { transport: 'resend' | 'console'; apiKey: string | null; from: string | null; brand: string };
@@ -117,6 +118,10 @@ export function loadConfig(env: Env = process.env): Config {
     publicUrl: publicUrl ? publicUrl.href.replace(/\/$/, '') : '',
     publicOrigin: publicUrl ? publicUrl.origin : '',
     secureCookies: production,
+    session: {
+      idleMinutes: read.integer('SESSION_IDLE_MINUTES', 120, { min: 5, max: 1440 }),
+      absoluteHours: read.integer('SESSION_ABSOLUTE_HOURS', 24, { min: 1, max: 720 }),
+    },
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
     files: { dir: resolve(read.text('FILES_DIR') ?? '.tmp/files') },
     mail: {

@@ -208,6 +208,9 @@ const STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS attachments_space_idx ON attachments(space_id, created_at DESC)`,
 
   `ALTER TABLE portals ADD COLUMN IF NOT EXISTS access_config jsonb NOT NULL DEFAULT '{}'::jsonb`,
+
+  `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_seen_at timestamptz NOT NULL DEFAULT now()`,
+  `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS ip varchar(64)`,
 ];
 
 const MIGRATION_LOCK = 7_310_221_904;

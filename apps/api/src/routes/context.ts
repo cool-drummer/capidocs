@@ -1,21 +1,37 @@
 import { eq } from 'drizzle-orm';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
-import { sessions, workspaces } from '../db/schema.js';
-import { hashToken, SESSION_COOKIE } from '../lib/auth.js';
+import { workspaces } from '../db/schema.js';
 import { notFound, unauthorized } from '../lib/errors.js';
 import type { Mailer, MailMessage } from '../lib/mail.js';
 import type { AttachmentStore } from '../modules/attachments.js';
 import { loadMembership, type SessionUser } from '../modules/context.js';
+import {
+  resolveSession,
+  revokeSession,
+  sessionCookieName,
+  sessionCookieOptions,
+  startSession,
+  type ActiveSession,
+  type SessionPolicy,
+} from '../modules/sessions.js';
 
 export type Workspace = typeof workspaces.$inferSelect;
+
+export interface SessionControl {
+  policy: SessionPolicy;
+  cookieName: string;
+  tokenOf: (request: FastifyRequest) => string | null;
+  begin: (request: FastifyRequest, reply: FastifyReply, userId: string) => Promise<{ token: string; session: ActiveSession }>;
+  end: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+}
 
 export interface RouteContext {
   db: Database;
   runtimeDir: string;
   studioUrl: string;
-  secureCookies: boolean;
+  sessions: SessionControl;
   mailer: Mailer;
   store: AttachmentStore;
   currentUser: (request: FastifyRequest) => Promise<SessionUser>;
@@ -29,26 +45,44 @@ export function createRouteContext(input: {
   db: Database;
   runtimeDir: string;
   studioUrl: string;
-  secureCookies: boolean;
+  sessionPolicy: SessionPolicy;
   mailer: Mailer;
   store: AttachmentStore;
   onMailError: (error: unknown) => void;
 }): RouteContext {
-  const { db, mailer } = input;
+  const { db, mailer, sessionPolicy } = input;
+  const cookieName = sessionCookieName(sessionPolicy.secure);
+
+  const tokenOf = (request: FastifyRequest): string | null => request.cookies[cookieName] || null;
+
+  const sessionControl: SessionControl = {
+    policy: sessionPolicy,
+    cookieName,
+    tokenOf,
+    async begin(request, reply, userId) {
+      const presented = tokenOf(request);
+      if (presented) await revokeSession(db, presented);
+      const started = await startSession(db, userId, { userAgent: request.headers['user-agent'] ?? null, ip: request.ip }, sessionPolicy);
+      reply.setCookie(cookieName, started.token, sessionCookieOptions(sessionPolicy));
+      return started;
+    },
+    async end(request, reply) {
+      const presented = tokenOf(request);
+      if (presented) await revokeSession(db, presented);
+      const { path, httpOnly, secure, sameSite } = sessionCookieOptions(sessionPolicy);
+      reply.clearCookie(cookieName, { path, httpOnly, secure, sameSite });
+    },
+  };
 
   async function currentUser(request: FastifyRequest): Promise<SessionUser> {
-    const token = request.cookies[SESSION_COOKIE];
+    const token = tokenOf(request);
     if (!token) throw unauthorized();
-    const rows = await db
-      .select({ userId: sessions.userId, expiresAt: sessions.expiresAt, revokedAt: sessions.revokedAt })
-      .from(sessions)
-      .where(eq(sessions.tokenHash, hashToken(token)))
-      .limit(1);
-    const session = rows[0];
-    if (!session || session.revokedAt || session.expiresAt < new Date()) throw unauthorized();
+    const session = await resolveSession(db, token, sessionPolicy);
+    if (!session) throw unauthorized();
     const user = await loadMembership(db, session.userId);
     if (!user) throw unauthorized();
     request.user = user;
+    request.sessionId = session.id;
     return user;
   }
 
@@ -71,7 +105,7 @@ export function createRouteContext(input: {
     db,
     runtimeDir: input.runtimeDir,
     studioUrl: input.studioUrl,
-    secureCookies: input.secureCookies,
+    sessions: sessionControl,
     mailer,
     store: input.store,
     currentUser,
