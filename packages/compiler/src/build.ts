@@ -3,26 +3,32 @@ import { dirname, join, resolve } from 'node:path';
 import { assertSpec, type Spec } from '@capidocs/spec';
 import { resolveCodeFiles } from './resolve.js';
 import { buildOutputs } from './outputs.js';
+import { validateSpecDiagrams, type DiagramBlockIssue } from './spec-diagrams.js';
 
 export interface BuildResult {
   siteDir: string;
   specPath: string;
   spec: Spec;
   missingFiles: string[];
+  diagramIssues: DiagramBlockIssue[];
   written: { path: string; bytes: number }[];
 }
 
-export async function loadSpecFile(specPath: string): Promise<{ spec: Spec; missingFiles: string[] }> {
+export async function loadSpecFile(
+  specPath: string,
+): Promise<{ spec: Spec; missingFiles: string[]; diagramIssues: DiagramBlockIssue[] }> {
   const raw = JSON.parse(await readFile(specPath, 'utf8')) as unknown;
   const spec = assertSpec(raw, specPath);
-  const { missing } = await resolveCodeFiles(spec, { baseDir: dirname(dirname(specPath)) });
-  return { spec, missingFiles: missing };
+  const baseDir = dirname(dirname(specPath));
+  const { missing } = await resolveCodeFiles(spec, { baseDir });
+  const diagramIssues = await validateSpecDiagrams(spec, { baseDir });
+  return { spec, missingFiles: missing, diagramIssues };
 }
 
 export async function buildSite(siteDir: string, specFile = 'config/api-spec.json'): Promise<BuildResult> {
   const root = resolve(siteDir);
   const specPath = join(root, specFile);
-  const { spec, missingFiles } = await loadSpecFile(specPath);
+  const { spec, missingFiles, diagramIssues } = await loadSpecFile(specPath);
   const outputs = buildOutputs(spec);
 
   const files: { path: string; content: string }[] = [
@@ -39,5 +45,5 @@ export async function buildSite(siteDir: string, specFile = 'config/api-spec.jso
     written.push({ path: file.path, bytes: Buffer.byteLength(file.content) });
   }
 
-  return { siteDir: root, specPath, spec, missingFiles, written };
+  return { siteDir: root, specPath, spec, missingFiles, diagramIssues, written };
 }
