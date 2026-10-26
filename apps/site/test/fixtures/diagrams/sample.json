@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "title": "Tienda en línea",
+  "description": "Conjunto de ejemplo que recorre todas las piezas del modelo.",
+  "lang": "es",
+  "start": "overview",
+  "icons": {
+    "storefront": { "viewBox": "0 0 24 24", "stroke": true, "paths": ["M3 9l2-5h14l2 5", "M4 9v11h16V9", "M9 20v-6h6v6"] }
+  },
+  "diagrams": [
+    {
+      "id": "overview",
+      "title": "Panorama del sistema",
+      "description": "Quién usa la tienda y con qué servicios habla.",
+      "category": "business",
+      "direction": "LR",
+      "groups": [
+        { "id": "platform", "title": "Plataforma", "icon": "cpu", "color": "blue" },
+        { "id": "data", "title": "Datos", "parent": "platform", "color": "teal" }
+      ],
+      "nodes": [
+        { "id": "buyer", "title": "Comprador", "shape": "actor" },
+        { "id": "web", "title": "Sitio web", "subtitle": "apps/web", "icon": "storefront", "group": "platform", "badge": { "text": "Vue", "color": "green" }, "link": { "diagram": "checkout" }, "status": "ok",
+          "props": [ { "label": "Estado", "value": "Estable", "status": "ok" }, { "label": "Responsable", "value": "Equipo web" }, { "label": "Repositorio", "value": "github.com/acme/web", "mono": true } ],
+          "preview": { "type": "sparkline", "title": "Peticiones por minuto", "values": [3, 5, 9, 14, 12, 10, 11, 9, 8, 7] } },
+        { "id": "api", "title": "API", "subtitle": "apps/api", "group": "platform", "badge": "Node", "tags": ["backend"] },
+        { "id": "db", "title": "Base de datos", "shape": "cylinder", "group": "data", "tags": ["backend"] },
+        { "id": "orders", "title": "orders", "shape": "table", "group": "data", "fields": [ { "name": "id", "type": "uuid", "key": "pk" }, { "name": "customer_id", "type": "uuid", "key": "fk" }, { "name": "total", "type": "numeric(12,2)" } ] },
+        { "id": "payments", "title": "Pasarela de pago", "shape": "tile", "icon": "briefcase", "color": "violet" }
+      ],
+      "edges": [
+        { "id": "e-buyer-web", "from": "buyer", "to": "web", "label": "Navega" },
+        { "id": "e-web-api", "from": "web", "to": "api", "label": "HTTPS" },
+        { "id": "e-api-db", "from": "api", "to": "data", "style": "dashed" },
+        { "id": "e-api-pay", "from": "api", "to": "payments", "label": "Cobro", "arrow": "both" }
+      ],
+      "steps": [
+        { "title": "El comprador entra al sitio", "nodes": ["buyer", "web"], "edges": ["e-buyer-web"] },
+        { "title": "El sitio consulta la API", "nodes": ["web", "api"], "edges": ["e-web-api"] },
+        { "title": "La API guarda el pedido", "nodes": ["api", "db", "orders"], "edges": ["e-api-db"] }
+      ]
+    },
+    {
+      "id": "lineage",
+      "title": "Linaje de datos",
+      "category": "technical",
+      "lanes": [
+        { "id": "ingest", "title": "Ingesta", "icons": ["workflow"] },
+        { "id": "store", "title": "Almacén", "icons": ["cpu"] },
+        { "id": "serve", "title": "Consumo", "icons": ["briefcase"] }
+      ],
+      "nodes": [
+        { "id": "raw", "title": "Eventos crudos", "subtitle": "raw.events", "lane": "ingest", "badge": { "text": "Kafka", "color": "orange" } },
+        { "id": "clean", "title": "Eventos limpios", "subtitle": "stage.events", "lane": "store", "badge": { "text": "Postgres", "color": "blue" } },
+        { "id": "report", "title": "Reporte diario", "subtitle": "bi.daily", "lane": "serve", "badge": { "text": "BI", "color": "pink" } }
+      ],
+      "edges": [
+        { "from": "raw", "to": "clean", "label": "Limpieza" },
+        { "from": "clean", "to": "report", "label": "Agregado" }
+      ]
+    },
+    {
+      "id": "checkout",
+      "title": "Flujo de compra",
+      "category": "operational",
+      "kind": "sequence",
+      "autonumber": true,
+      "participants": [
+        { "id": "buyer", "title": "Comprador", "kind": "actor" },
+        { "id": "web", "title": "Sitio web" },
+        { "id": "api", "title": "API", "link": { "diagram": "overview", "node": "api" } },
+        { "id": "psp", "title": "Pasarela", "kind": "external" }
+      ],
+      "items": [
+        { "id": "m-pay", "from": "buyer", "to": "web", "label": "Confirma el pago" },
+        { "from": "web", "to": "api", "label": "POST /orders" },
+        { "type": "block", "kind": "alt", "label": "Tarjeta aprobada", "items": [
+          { "from": "api", "to": "psp", "label": "Autoriza cargo" },
+          { "from": "psp", "to": "api", "label": "Aprobado", "style": "reply" }
+        ], "branches": [ { "label": "Rechazada", "items": [ { "from": "api", "to": "web", "label": "Error amigable", "style": "reply" } ] } ] },
+        { "type": "note", "over": ["web", "api"], "text": "El pedido queda pendiente hasta la confirmación." },
+        { "from": "api", "to": "api", "label": "Registra auditoría", "style": "async" }
+      ],
+      "steps": [ { "title": "Confirmación", "edges": ["m-pay"] } ]
+    }
+  ]
+}
