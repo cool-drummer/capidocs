@@ -193,6 +193,19 @@ const STATEMENTS = [
      revoked_at timestamptz,
      created_at timestamptz NOT NULL DEFAULT now())`,
   `CREATE UNIQUE INDEX IF NOT EXISTS invitations_workspace_email_idx ON invitations(workspace_id, lower(email)) WHERE accepted_at IS NULL AND revoked_at IS NULL`,
+
+  `CREATE TABLE IF NOT EXISTS attachments (
+     id uuid PRIMARY KEY DEFAULT gen_uuid_v7(),
+     workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+     space_id uuid REFERENCES spaces(id) ON DELETE CASCADE,
+     page_id uuid REFERENCES pages(id) ON DELETE SET NULL,
+     storage_key varchar(80) NOT NULL UNIQUE,
+     file_name varchar(300) NOT NULL,
+     mime varchar(120) NOT NULL,
+     size integer NOT NULL,
+     creator_id uuid NOT NULL,
+     created_at timestamptz NOT NULL DEFAULT now())`,
+  `CREATE INDEX IF NOT EXISTS attachments_space_idx ON attachments(space_id, created_at DESC)`,
 ];
 
 export async function migrate(sql: Sql): Promise<number> {

@@ -10,6 +10,7 @@ import { assertCan } from './lib/access.js';
 import { cookieOptions, createSessionToken, hashPassword, hashToken, SESSION_COOKIE, sessionExpiry, verifyPassword } from './lib/auth.js';
 import { writeBuild } from './lib/deploy.js';
 import { ApiError, badRequest, conflict, forbidden, notFound, unauthorized } from './lib/errors.js';
+import { createLocalStore, deleteAttachment, getAttachment, listAttachments, saveAttachment, type AttachmentStore } from './modules/attachments.js';
 import { actorFor, loadMembership, loadSpaceSubject, spaceRoleFor, visibleSpaceIds, type SessionUser } from './modules/context.js';
 import {
   acceptInvitation,
@@ -45,6 +46,7 @@ export interface AppOptions {
   secureCookies?: boolean;
   logger?: boolean;
   studioUrl?: string;
+  filesDir?: string;
   mailer?: Mailer;
   mail?: { apiKey?: string; from?: string };
 }
@@ -61,6 +63,7 @@ export interface CapidocsApp {
   fastify: FastifyInstance;
   db: Database;
   mailer: Mailer;
+  store: AttachmentStore;
   inject: FastifyInstance['inject'];
   listen: FastifyInstance['listen'];
   close: () => Promise<void>;
@@ -70,10 +73,12 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
   const { db, sql, close } = createDatabase(options.databaseUrl);
   await migrate(sql);
 
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({ logger: options.logger ?? false, bodyLimit: 12 * 1024 * 1024 });
   await app.register(cookie);
+  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));
 
   const studioUrl = (options.studioUrl ?? 'http://localhost:5190').replace(/\/$/, '');
+  const store = createLocalStore(options.filesDir ?? '.tmp/files');
   const mailer =
     options.mailer ??
     createMailer({
@@ -456,6 +461,56 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
     return { ok: true };
   });
 
+  app.get('/attachments', async (request) => {
+    const user = await currentUser(request);
+    const query = z.object({ spaceId: z.string().uuid().optional() }).parse(request.query);
+    if (query.spaceId) {
+      const subject = await loadSpaceSubject(db, user.workspaceId, query.spaceId, user.id);
+      assertCan(actorFor(user), 'page.read', subject);
+    }
+    return { attachments: await listAttachments(db, user.workspaceId, query.spaceId ?? null, store) };
+  });
+
+  app.post('/attachments', async (request, reply) => {
+    const user = await currentUser(request);
+    const query = z
+      .object({ spaceId: z.string().uuid(), pageId: z.string().uuid().optional(), name: z.string().min(1).max(300) })
+      .parse(request.query);
+    const subject = await loadSpaceSubject(db, user.workspaceId, query.spaceId, user.id);
+    assertCan(actorFor(user), 'page.update', subject);
+    const bytes = request.body;
+    if (!Buffer.isBuffer(bytes)) throw badRequest('Envía el archivo como cuerpo binario.');
+    const record = await saveAttachment(db, store, {
+      workspaceId: user.workspaceId,
+      spaceId: query.spaceId,
+      pageId: query.pageId ?? null,
+      fileName: query.name,
+      bytes,
+      creatorId: user.id,
+    });
+    return reply.status(201).send({ attachment: { id: record.id, url: record.url, fileName: record.fileName, size: record.size, mime: record.mime } });
+  });
+
+  app.get('/files/:key', async (request, reply) => {
+    const user = await currentUser(request);
+    const params = z.object({ key: z.string().min(5) }).parse(request.params);
+    const record = await getAttachment(db, user.workspaceId, params.key);
+    const bytes = await store.get(record.storageKey);
+    return reply.header('Content-Type', record.mime).header('Cache-Control', 'private, max-age=300').send(bytes);
+  });
+
+  app.delete('/attachments/:key', async (request) => {
+    const user = await currentUser(request);
+    const params = z.object({ key: z.string().min(5) }).parse(request.params);
+    const record = await getAttachment(db, user.workspaceId, params.key);
+    if (record.spaceId) {
+      const subject = await loadSpaceSubject(db, user.workspaceId, record.spaceId, user.id);
+      assertCan(actorFor(user), 'page.update', subject);
+    }
+    await deleteAttachment(db, store, user.workspaceId, params.key);
+    return { ok: true };
+  });
+
   app.get('/portals', async (request) => {
     const user = await currentUser(request);
     const rows = await db.select().from(portals).where(eq(portals.workspaceId, user.workspaceId)).orderBy(asc(portals.name));
@@ -570,6 +625,7 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
     fastify: app,
     db,
     mailer,
+    store,
     inject: app.inject.bind(app),
     listen: app.listen.bind(app),
     close: async () => {

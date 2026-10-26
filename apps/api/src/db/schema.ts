@@ -285,3 +285,22 @@ export const invitations = pgTable(
   },
   (table) => [index('invitations_workspace_idx').on(table.workspaceId)],
 );
+
+export const attachments = pgTable(
+  'attachments',
+  {
+    id: id(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    spaceId: uuid('space_id').references(() => spaces.id, { onDelete: 'cascade' }),
+    pageId: uuid('page_id').references(() => pages.id, { onDelete: 'set null' }),
+    storageKey: varchar('storage_key', { length: 80 }).notNull().unique(),
+    fileName: varchar('file_name', { length: 300 }).notNull(),
+    mime: varchar('mime', { length: 120 }).notNull(),
+    size: integer('size').notNull(),
+    creatorId: uuid('creator_id').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('attachments_space_idx').on(table.spaceId, table.createdAt)],
+);
