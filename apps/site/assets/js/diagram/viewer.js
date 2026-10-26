@@ -57,7 +57,7 @@ function resolveTheme(option, doc) {
 }
 
 function iconSvg(name, size = 16) {
-    const icon = BUILTIN_ICONS[name];
+    const icon = Object.hasOwn(BUILTIN_ICONS, name) ? BUILTIN_ICONS[name] : null;
     if (!icon) return '';
     const paths = icon.paths.map((d) => `<path d="${d}"/>`).join('');
     return `<svg class="dg-ui-icon" width="${size}" height="${size}" viewBox="${icon.viewBox}" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -1062,8 +1062,8 @@ export function mountDiagram(container, options = {}) {
             pause: () => { if (state.playing) togglePlay(); },
             stop: exitSteps
         },
-        toSvg({ theme: exportTheme = state.theme, embedFontCss, background = true } = {}) {
-            return renderSvg(state.scene, { mode: 'export', theme: exportTheme, set, diagram: state.diagram, embedFontCss, accent: brandAccent, title: state.diagram.title, background });
+        toSvg({ theme: exportTheme = state.theme, embedFontCss, background = true, metadata = false } = {}) {
+            return renderSvg(state.scene, { mode: 'export', theme: exportTheme, set, diagram: state.diagram, embedFontCss, accent: brandAccent, title: state.diagram.title, background, metadata });
         },
         layoutFor(diagram, layoutOptions = {}) {
             return layoutDiagram(diagram, { measure: state.measure, ...layoutOptions });
