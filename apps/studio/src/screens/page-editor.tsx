@@ -57,7 +57,7 @@ function HeroEditor({ document, onChange }: { document: HeroDocument; onChange: 
   );
 }
 
-export function PageEditor({ pageId, locale, onLocale }: { pageId: string; locale: string; onLocale: (locale: string) => void }) {
+export function PageEditor({ pageId, spaceId, locale, onLocale }: { pageId: string; spaceId: string; locale: string; onLocale: (locale: string) => void }) {
   const client = useQueryClient();
   const query = useQuery({ queryKey: ['page', pageId, locale], queryFn: () => api.page(pageId, locale) });
   const [title, setTitle] = useState('');
@@ -163,7 +163,7 @@ export function PageEditor({ pageId, locale, onLocale }: { pageId: string; local
         <HeroEditor document={hero} onChange={setHero} />
       ) : (
         <>
-          <SectionList sections={sections} onChange={setSections} />
+          <SectionList sections={sections} onChange={setSections} spaceId={spaceId} />
           <button type="button" className="button button-quiet" onClick={() => setSections([...sections, emptySection()])}>
             Agregar sección
           </button>

@@ -40,6 +40,7 @@ export function SectionEditor({
   section,
   index,
   total,
+  spaceId,
   onChange,
   onMove,
   onRemove,
@@ -47,6 +48,7 @@ export function SectionEditor({
   section: Section;
   index: number;
   total: number;
+  spaceId: string;
   onChange: (section: Section) => void;
   onMove: (from: number, to: number) => void;
   onRemove: () => void;
@@ -72,7 +74,7 @@ export function SectionEditor({
               ✕
             </button>
           </div>
-          <BlockEditor kind={kind} value={section[kind]} onChange={(value) => onChange(setBlock(section, kind, value))} />
+          <BlockEditor kind={kind} value={section[kind]} spaceId={spaceId} onChange={(value) => onChange(setBlock(section, kind, value))} />
         </div>
       ))}
 
@@ -81,7 +83,7 @@ export function SectionEditor({
   );
 }
 
-export function SectionList({ sections, onChange }: { sections: Section[]; onChange: (sections: Section[]) => void }) {
+export function SectionList({ sections, spaceId, onChange }: { sections: Section[]; spaceId: string; onChange: (sections: Section[]) => void }) {
   return (
     <div className="section-list">
       {sections.map((section, index) => (
@@ -90,6 +92,7 @@ export function SectionList({ sections, onChange }: { sections: Section[]; onCha
           section={section}
           index={index}
           total={sections.length}
+          spaceId={spaceId}
           onChange={(next) => onChange(sections.map((item, i) => (i === index ? next : item)))}
           onMove={(from, to) => onChange(moveItem(sections, from, to))}
           onRemove={() => onChange(sections.filter((_, i) => i !== index))}

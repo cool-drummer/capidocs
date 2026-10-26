@@ -48,6 +48,38 @@ export interface TreeNode {
   children: TreeNode[];
 }
 
+export interface Member {
+  userId: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'member';
+  lastLoginAt: string | null;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+}
+
+export interface SpaceMember {
+  id: string;
+  userId: string | null;
+  groupId: string | null;
+  role: 'admin' | 'writer' | 'reader';
+  name: string | null;
+  email: string | null;
+}
+
+export interface Attachment {
+  id: string;
+  url: string;
+  fileName: string;
+  size: number;
+  mime: string;
+}
+
 export interface PageContent {
   id: string;
   pageId: string;
@@ -122,4 +154,41 @@ export const api = {
     ),
   previewPortal: (portalId: string) =>
     request<{ specs: { locale: string; spec: unknown }[] }>('GET', `/portals/${portalId}/preview`),
+  importPortal: (spec: unknown, name?: string) =>
+    request<{ portalId: string; portalName: string; spaces: { name: string; pages: number }[]; warnings: string[] }>(
+      'POST',
+      '/portals/import',
+      { spec, ...(name ? { name } : {}) },
+    ),
+
+  members: () => request<{ members: Member[]; invitations: Invitation[] }>('GET', '/members'),
+  invite: (email: string, role: 'admin' | 'member') =>
+    request<{ invitation: Invitation }>('POST', '/members/invitations', { email, role }),
+  revokeInvitation: (id: string) => request<{ ok: boolean }>('DELETE', `/members/invitations/${id}`),
+  setMemberRole: (userId: string, role: 'admin' | 'member') => request<{ ok: boolean }>('PUT', `/members/${userId}`, { role }),
+  removeMember: (userId: string) => request<{ ok: boolean }>('DELETE', `/members/${userId}`),
+  invitation: (token: string) => request<{ email: string; role: string; workspace: string }>('GET', `/invitations/${token}`),
+  acceptInvitation: (token: string, name: string, password: string) =>
+    request<{ workspace: string }>('POST', `/invitations/${token}/accept`, { name, password }),
+
+  spaceMembers: (spaceId: string) => request<{ members: SpaceMember[] }>('GET', `/spaces/${spaceId}/members`),
+  setSpaceMember: (spaceId: string, userId: string, role: 'admin' | 'writer' | 'reader') =>
+    request<{ ok: boolean }>('PUT', `/spaces/${spaceId}/members/${userId}`, { role }),
+  removeSpaceMember: (spaceId: string, userId: string) => request<{ ok: boolean }>('DELETE', `/spaces/${spaceId}/members/${userId}`),
+
+  attachments: (spaceId: string) => request<{ attachments: Attachment[] }>('GET', `/attachments?spaceId=${spaceId}`),
+  deleteAttachment: (key: string) => request<{ ok: boolean }>('DELETE', `/attachments/${key}`),
+  async upload(spaceId: string, file: File): Promise<Attachment> {
+    const response = await fetch(`${BASE}/attachments?spaceId=${spaceId}&name=${encodeURIComponent(file.name)}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: await file.arrayBuffer(),
+    });
+    const payload = (await response.json()) as Record<string, unknown>;
+    if (!response.ok) {
+      throw new ApiError(response.status, typeof payload.message === 'string' ? payload.message : 'No se pudo subir el archivo.');
+    }
+    return (payload as { attachment: Attachment }).attachment;
+  },
 };

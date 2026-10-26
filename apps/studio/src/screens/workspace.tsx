@@ -3,7 +3,9 @@ import { useState } from 'react';
 import type { ApiError} from '../api';
 import { api, type Portal, type Space, type TreeNode } from '../api';
 import { PageEditor } from './page-editor';
-import { Field, Select, TextInput } from '../components/fields';
+import { PreviewPanel } from './preview';
+import { SpaceMembersPanel, TeamPanel } from './team';
+import { Field, Select, TextArea, TextInput } from '../components/fields';
 
 const AUDIENCE_LABEL: Record<Space['audience'], string> = {
   public: 'Público',
@@ -135,14 +137,35 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function PortalRow({ portal, onPublish, publishing }: { portal: Portal; onPublish: () => void; publishing: boolean }) {
+function PortalRow({
+  portal,
+  onPublish,
+  publishing,
+  onPreview,
+}: {
+  portal: Portal;
+  onPublish: () => void;
+  publishing: boolean;
+  onPreview: () => void;
+}) {
   const client = useQueryClient();
-  const target = (portal.deployTarget ?? {}) as { kind?: string; path?: string };
+  const target = (portal.deployTarget ?? {}) as { kind?: string; path?: string; project?: string; repository?: string; subdirectory?: string };
+  const [kind, setKind] = useState(target.kind ?? 'none');
   const [path, setPath] = useState(target.path ?? '');
+  const [project, setProject] = useState(target.project ?? '');
+  const [repository, setRepository] = useState(target.repository ?? '');
+  const [subdirectory, setSubdirectory] = useState(target.subdirectory ?? 'docs');
   const [open, setOpen] = useState(false);
 
+  const deployTarget = () => {
+    if (kind === 'directory') return { kind, path };
+    if (kind === 'pages') return { kind, project };
+    if (kind === 'git') return { kind, repository, subdirectory };
+    return { kind: 'none' };
+  };
+
   const save = useMutation({
-    mutationFn: () => api.updatePortal(portal.id, { deployTarget: path ? { kind: 'directory', path } : {} }),
+    mutationFn: () => api.updatePortal(portal.id, { deployTarget: deployTarget() }),
     onSuccess: () => {
       setOpen(false);
       void client.invalidateQueries({ queryKey: ['portals'] });
@@ -157,6 +180,9 @@ function PortalRow({ portal, onPublish, publishing }: { portal: Portal; onPublis
           <div className="portal-url">{portal.siteUrl ?? 'Sin dominio'}</div>
         </div>
         <div className="row-actions">
+          <button type="button" className="button button-quiet" onClick={onPreview}>
+            Vista previa
+          </button>
           <button type="button" className="button button-quiet" onClick={() => setOpen((value) => !value)}>
             Destino
           </button>
@@ -167,20 +193,106 @@ function PortalRow({ portal, onPublish, publishing }: { portal: Portal; onPublis
       </div>
       {open ? (
         <div className="portal-target">
-          <Field label="Carpeta de publicación" hint="Ruta donde se escribe el sitio compilado">
-            <TextInput value={path} onChange={setPath} mono placeholder="/var/www/docs" />
+          <Field label="Dónde se publica">
+            <Select
+              value={kind}
+              onChange={setKind}
+              options={[
+                { value: 'none', label: 'Solo compilar' },
+                { value: 'directory', label: 'Carpeta del servidor' },
+                { value: 'pages', label: 'Cloudflare Pages' },
+                { value: 'git', label: 'Repositorio git' },
+              ]}
+            />
           </Field>
+          {kind === 'directory' ? (
+            <Field label="Ruta" hint="Carpeta donde se escribe el sitio compilado">
+              <TextInput value={path} onChange={setPath} mono placeholder="/var/www/docs" />
+            </Field>
+          ) : null}
+          {kind === 'pages' ? (
+            <Field label="Proyecto de Pages" hint="El nombre del proyecto en Cloudflare">
+              <TextInput value={project} onChange={setProject} mono placeholder="mis-docs" />
+            </Field>
+          ) : null}
+          {kind === 'git' ? (
+            <>
+              <Field label="Repositorio">
+                <TextInput value={repository} onChange={setRepository} mono placeholder="git@host:org/web.git" />
+              </Field>
+              <Field label="Subcarpeta" hint="Solo se toca esta carpeta del repositorio">
+                <TextInput value={subdirectory} onChange={setSubdirectory} mono placeholder="docs" />
+              </Field>
+            </>
+          ) : null}
           <button type="button" className="button button-quiet" disabled={save.isPending} onClick={() => save.mutate()}>
             Guardar destino
           </button>
         </div>
       ) : null}
-      {!target.path ? <p className="status">Sin destino: al publicar solo se compila.</p> : null}
+      {!target.kind || target.kind === 'none' ? <p className="status">Sin destino: al publicar solo se compila.</p> : null}
     </div>
   );
 }
 
-function PortalsPanel() {
+function ImportPanel({ onDone }: { onDone: () => void }) {
+  const client = useQueryClient();
+  const [raw, setRaw] = useState('');
+  const [name, setName] = useState('');
+  const [result, setResult] = useState<string[]>([]);
+  const [error, setError] = useState('');
+
+  const load = useMutation({
+    mutationFn: () => {
+      let spec: unknown;
+      try {
+        spec = JSON.parse(raw);
+      } catch {
+        throw new Error('Ese texto no es un JSON válido.');
+      }
+      return api.importPortal(spec, name || undefined);
+    },
+    onSuccess: (data) => {
+      setResult([
+        `Se creó el portal ${data.portalName} con ${data.spaces.length} espacio(s).`,
+        ...data.spaces.map((space) => `${space.name}: ${space.pages} páginas`),
+        ...data.warnings,
+      ]);
+      setRaw('');
+      void client.invalidateQueries();
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  return (
+    <div className="panel">
+      <h3>Importar un portal existente</h3>
+      <p className="status">Pega el api-spec.json de un sitio capidocs y se convierte en espacios y páginas editables.</p>
+      <Field label="Nombre del portal" hint="Opcional, si no se toma el de la marca">
+        <TextInput value={name} onChange={setName} />
+      </Field>
+      <Field label="Contenido del spec">
+        <TextArea value={raw} onChange={setRaw} rows={8} mono placeholder='{ "site_config": { ... } }' />
+      </Field>
+      {result.map((line, index) => (
+        <p className="status" key={index}>
+          {line}
+        </p>
+      ))}
+      {error ? <p className="status status-error">{error}</p> : null}
+      <div className="panel-actions">
+        <button type="button" className="button button-quiet" onClick={onDone}>
+          Cerrar
+        </button>
+        <button type="button" className="button button-primary" disabled={load.isPending || !raw} onClick={() => load.mutate()}>
+          Importar el portal
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PortalsPanel({ onPreview }: { onPreview: (portalId: string) => void }) {
   const client = useQueryClient();
   const portals = useQuery({ queryKey: ['portals'], queryFn: api.portals });
   const [name, setName] = useState('');
@@ -216,7 +328,7 @@ function PortalsPanel() {
     <div className="panel">
       <h3>Portales</h3>
       {(portals.data?.portals ?? []).map((portal) => (
-        <PortalRow key={portal.id} portal={portal} onPublish={() => publish.mutate(portal.id)} publishing={publish.isPending} />
+        <PortalRow key={portal.id} portal={portal} onPublish={() => publish.mutate(portal.id)} publishing={publish.isPending} onPreview={() => onPreview(portal.id)} />
       ))}
       <form
         className="portal-form"
@@ -254,7 +366,8 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [pageId, setPageId] = useState<string | null>(null);
   const [locale, setLocale] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'none' | 'space' | 'portals'>('none');
+  const [panel, setPanel] = useState<'none' | 'space' | 'portals' | 'team' | 'import' | 'access' | 'preview'>('none');
+  const [previewPortal, setPreviewPortal] = useState<string | null>(null);
 
   const activeSpace = spaces.data?.spaces.find((space) => space.id === spaceId) ?? spaces.data?.spaces[0] ?? null;
   const activeLocale = locale ?? me.data?.workspace.defaultLocale ?? 'es';
@@ -296,6 +409,12 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
           <span className="brand-name">{me.data?.workspace.name ?? 'Studio'}</span>
         </div>
         <div className="topbar-actions">
+          <button type="button" className="button button-quiet" onClick={() => setPanel(panel === 'team' ? 'none' : 'team')}>
+            Equipo
+          </button>
+          <button type="button" className="button button-quiet" onClick={() => setPanel(panel === 'import' ? 'none' : 'import')}>
+            Importar
+          </button>
           <button type="button" className="button button-quiet" onClick={() => setPanel(panel === 'portals' ? 'none' : 'portals')}>
             Portales
           </button>
@@ -335,6 +454,9 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
               <div className="sidebar-head sidebar-head-spaced">
                 <span className="sidebar-label">Páginas</span>
                 <div className="tree-actions">
+                  <button type="button" className="icon-button" aria-label="Quién entra a este espacio" onClick={() => setPanel('access')}>
+                    ⚿
+                  </button>
                   <button type="button" className="icon-button" aria-label="Nueva portada" onClick={() => createPage.mutate('hero')}>
                     ★
                   </button>
@@ -361,8 +483,21 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
 
         <main className="main">
           {panel === 'space' ? <NewSpaceForm onDone={() => setPanel('none')} /> : null}
-          {panel === 'portals' ? <PortalsPanel /> : null}
-          {panel === 'none' && pageId ? <PageEditor pageId={pageId} locale={activeLocale} onLocale={setLocale} /> : null}
+          {panel === 'team' ? <TeamPanel /> : null}
+          {panel === 'import' ? <ImportPanel onDone={() => setPanel('none')} /> : null}
+          {panel === 'access' && activeSpace ? <SpaceMembersPanel spaceId={activeSpace.id} /> : null}
+          {panel === 'portals' ? (
+            <PortalsPanel
+              onPreview={(id) => {
+                setPreviewPortal(id);
+                setPanel('preview');
+              }}
+            />
+          ) : null}
+          {panel === 'preview' && previewPortal ? <PreviewPanel portalId={previewPortal} /> : null}
+          {panel === 'none' && pageId && activeSpace ? (
+            <PageEditor pageId={pageId} spaceId={activeSpace.id} locale={activeLocale} onLocale={setLocale} />
+          ) : null}
           {panel === 'none' && !pageId ? (
             <div className="placeholder placeholder-center">
               <p>Elige una página en la izquierda o crea una nueva.</p>

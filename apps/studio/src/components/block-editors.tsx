@@ -1,6 +1,45 @@
+import { useRef, useState } from 'react';
 import type { BlockKind } from '../blocks';
 import { moveItem } from '../blocks';
+import type { ApiError } from '../api';
+import { api } from '../api';
 import { Field, RowActions, Select, TextArea, TextInput, Toggle } from './fields';
+
+function ImageUpload({ spaceId, onUploaded }: { spaceId: string; onUploaded: (url: string, name: string) => void }) {
+  const input = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  return (
+    <div className="upload">
+      <input
+        ref={input}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+        hidden
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          setBusy(true);
+          setError('');
+          try {
+            const attachment = await api.upload(spaceId, file);
+            onUploaded(attachment.url, attachment.fileName);
+          } catch (err) {
+            setError((err as ApiError).message);
+          } finally {
+            setBusy(false);
+            event.target.value = '';
+          }
+        }}
+      />
+      <button type="button" className="button button-quiet" disabled={busy} onClick={() => input.current?.click()}>
+        {busy ? 'Subiendo…' : 'Subir imagen'}
+      </button>
+      {error ? <span className="status status-error">{error}</span> : null}
+    </div>
+  );
+}
 
 type Row = Record<string, unknown>;
 
@@ -40,7 +79,17 @@ function ListEditor({
   );
 }
 
-export function BlockEditor({ kind, value, onChange }: { kind: BlockKind; value: unknown; onChange: (value: unknown) => void }) {
+export function BlockEditor({
+  kind,
+  value,
+  spaceId,
+  onChange,
+}: {
+  kind: BlockKind;
+  value: unknown;
+  spaceId: string;
+  onChange: (value: unknown) => void;
+}) {
   if (kind === 'content' || kind === 'note' || kind === 'warning') {
     return <TextArea value={String(value ?? '')} onChange={onChange} rows={kind === 'content' ? 4 : 2} placeholder="Escribe aquí" />;
   }
@@ -312,6 +361,10 @@ export function BlockEditor({ kind, value, onChange }: { kind: BlockKind; value:
     const image = (value ?? {}) as Row;
     return (
       <div className="grid-2">
+        <div className="grid-span">
+          <ImageUpload spaceId={spaceId} onUploaded={(url, name) => onChange({ ...image, src: url, alt: image.alt || name })} />
+          {image.src ? <img className="upload-preview" src={String(image.src)} alt={String(image.alt ?? '')} /> : null}
+        </div>
         <Field label="Ruta">
           <TextInput value={String(image.src ?? '')} onChange={(next) => onChange({ ...image, src: next })} mono placeholder="assets/img/panel.png" />
         </Field>

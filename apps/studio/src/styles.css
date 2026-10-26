@@ -282,3 +282,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .portal-card { display: flex; flex-direction: column; gap: 0.5rem; }
 .portal-target { background: var(--surface-2); border-radius: var(--radius); padding: 0.75rem 0.85rem; display: grid; gap: 0.6rem; }
+
+.member-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--surface-2); border-radius: var(--radius); padding: 0.6rem 0.8rem; }
+.member-name { font-weight: 500; }
+.member-email { font-size: 0.8rem; color: var(--muted); }
+.member-row .input { padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+
+.upload { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.upload-preview { display: block; margin-top: 0.6rem; max-width: 100%; max-height: 12rem; border-radius: var(--radius); box-shadow: var(--shadow); }
+
+.preview { display: flex; flex-direction: column; gap: 0.7rem; height: calc(100vh - 8rem); }
+.preview-head { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.preview-frame { flex: 1; width: 100%; border: 0; border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
