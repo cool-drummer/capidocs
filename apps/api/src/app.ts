@@ -8,7 +8,7 @@ import { migrate } from './db/migrate.js';
 import { members, portals, sessions, spaceMembers, spaces, users, workspaces } from './db/schema.js';
 import { assertCan } from './lib/access.js';
 import { cookieOptions, createSessionToken, hashPassword, hashToken, SESSION_COOKIE, sessionExpiry, verifyPassword } from './lib/auth.js';
-import { writeBuild } from './lib/deploy.js';
+import { deploy, deployTargetSchema } from './lib/deploy.js';
 import { ApiError, badRequest, conflict, forbidden, notFound, unauthorized } from './lib/errors.js';
 import { createLocalStore, deleteAttachment, getAttachment, listAttachments, saveAttachment, type AttachmentStore } from './modules/attachments.js';
 import { actorFor, loadMembership, loadSpaceSubject, spaceRoleFor, visibleSpaceIds, type SessionUser } from './modules/context.js';
@@ -561,7 +561,7 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
         accessMode: z.enum(['open', 'gate', 'accounts']).optional(),
         brand: z.record(z.string(), z.unknown()).optional(),
         accessConfig: z.record(z.string(), z.unknown()).optional(),
-        deployTarget: z.record(z.string(), z.unknown()).optional(),
+        deployTarget: deployTargetSchema.optional(),
       })
       .parse(request.body);
 
@@ -607,19 +607,24 @@ export async function createApp(options: AppOptions): Promise<CapidocsApp> {
     assertCan(actorFor(user), 'portal.update', { workspaceId: user.workspaceId });
 
     const builds = await buildPortal(db, portal.id);
-    const target = portal.deployTarget as { kind?: string; path?: string };
-    const result = await recordPublish(db, portal.id, user.id, builds, async (ready) => {
-      if (target.kind !== 'directory' || !target.path) {
-        return { detail: 'Portal compilado. Configura un destino de despliegue para publicarlo.' };
-      }
-      return writeBuild({ kind: 'directory', path: target.path }, ready, options.runtimeDir);
-    });
+    const result = await recordPublish(db, portal.id, user.id, builds, (ready) =>
+      deploy(portal.deployTarget, ready, options.runtimeDir),
+    );
+
+    const routes = builds[0] ? Object.keys(builds[0].spec.pages).length : 0;
+    if (result.status === 'done') {
+      const output = result.output as { url?: string };
+      await notify(
+        user.email,
+        templates.published({ portal: portal.name, pages: routes, ...(output.url?.startsWith('http') ? { url: output.url } : {}) }),
+      );
+    }
 
     return {
       status: result.status,
       checksum: builds.map((build) => build.checksum.slice(0, 12)),
       locales: builds.map((build) => build.locale),
-      routes: builds[0] ? Object.keys(builds[0].spec.pages).length : 0,
+      routes,
       output: result.output,
     };
   });
