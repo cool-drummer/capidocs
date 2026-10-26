@@ -28,6 +28,7 @@ export function previewRoutes(app: FastifyInstance, context: RouteContext, signe
       .headers({
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': previewFrameCsp(config.publicOrigin, nonce),
+        'X-Frame-Options': 'SAMEORIGIN',
         'Referrer-Policy': 'no-referrer',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store',

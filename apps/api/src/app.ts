@@ -18,6 +18,8 @@ import { createRouteContext } from './routes/context.js';
 import { memberRoutes } from './routes/members.js';
 import { portalRoutes } from './routes/portals.js';
 import { previewRoutes, runtimeRoutes } from './routes/preview.js';
+import { studioRoutes } from './routes/studio.js';
+import { securityHeaders } from './lib/security-headers.js';
 import { createUrlSigner } from './lib/preview.js';
 
 export interface AppOverrides {
@@ -85,6 +87,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     onMailError: (error) => app.log.error({ reason: (error as Error).message }, 'mail delivery failed'),
   });
 
+  app.addHook('onSend', securityHeaders({ secure: config.secureCookies, apiPrefix: API_PREFIX }));
   app.setErrorHandler(handleError);
 
   app.setNotFoundHandler((_request, reply) =>
@@ -106,6 +109,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     { prefix: API_PREFIX },
   );
   runtimeRoutes(app, context);
+  studioRoutes(app, { studioDir: config.studioDir, secure: config.secureCookies });
 
   return {
     fastify: app,

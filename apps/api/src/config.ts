@@ -37,6 +37,7 @@ export interface Config {
   invitationTtlHours: number;
   setupToken: string | null;
   runtimeDir: string;
+  studioDir: string;
   storage: StorageConfig;
   attachments: { maxBytes: number; previewTtlSeconds: number };
   limits: { bodyBytes: number; contentBytes: number; importBytes: number };
@@ -164,6 +165,7 @@ export function loadConfig(env: Env = process.env): Config {
     invitationTtlHours: read.integer('INVITATION_TTL_HOURS', 168, { min: 1, max: 720 }),
     setupToken: read.text('SETUP_TOKEN'),
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
+    studioDir: resolve(read.text('STUDIO_DIST_DIR') ?? 'apps/studio/dist'),
     storage: { driver: 'local', dir: '' },
     attachments: {
       maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }),
