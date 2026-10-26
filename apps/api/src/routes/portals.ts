@@ -6,6 +6,7 @@ import { assertCan } from '../lib/access.js';
 import { deploy, deployTargetSchema } from '../lib/deploy.js';
 import { notFound } from '../lib/errors.js';
 import { templates } from '../lib/mail-templates.js';
+import { fileUrl } from '../modules/attachments.js';
 import { actorFor } from '../modules/context.js';
 import { importPortal } from '../modules/import.js';
 import { buildPortal, recordPublish } from '../modules/publish.js';
@@ -108,7 +109,7 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext) {
     if (!portal) throw notFound();
     assertCan(actorFor(user), 'portal.update', { workspaceId: user.workspaceId });
 
-    const builds = await buildPortal(db, portal.id);
+    const builds = await buildPortal(db, portal.id, { files: { mode: 'bundle', store: context.store } });
     let result: Awaited<ReturnType<typeof recordPublish>>;
     try {
       result = await recordPublish(db, portal.id, user.id, builds, (ready) =>
@@ -146,7 +147,7 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext) {
       .where(and(eq(portals.id, params.portalId), eq(portals.workspaceId, user.workspaceId)))
       .limit(1);
     if (!rows.length) throw notFound();
-    const builds = await buildPortal(db, params.portalId);
+    const builds = await buildPortal(db, params.portalId, { files: { mode: 'sign', sign: fileUrl } });
     return { specs: builds.map((build) => ({ locale: build.locale, spec: build.spec })) };
   });
 }
