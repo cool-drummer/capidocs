@@ -6,13 +6,13 @@ import { assertCan } from '../lib/access.js';
 import { deploy, deployTargetSchema } from '../lib/deploy.js';
 import { notFound } from '../lib/errors.js';
 import { templates } from '../lib/mail-templates.js';
-import { fileUrl } from '../modules/attachments.js';
-import { actorFor } from '../modules/context.js';
+import type { UrlSigner } from '../lib/preview.js';
+import { actorFor, visibleSpaceIds } from '../modules/context.js';
 import { importPortal } from '../modules/import.js';
 import { buildPortal, recordPublish } from '../modules/publish.js';
 import type { RouteContext } from './context.js';
 
-export function portalRoutes(app: FastifyInstance, context: RouteContext) {
+export function portalRoutes(app: FastifyInstance, context: RouteContext, signer: UrlSigner) {
   const { db, config } = context;
 
   app.get('/portals', async (request) => {
@@ -142,12 +142,18 @@ export function portalRoutes(app: FastifyInstance, context: RouteContext) {
     const user = await context.currentUser(request);
     const params = z.object({ portalId: z.string().uuid() }).parse(request.params);
     const rows = await db
-      .select()
+      .select({ id: portals.id })
       .from(portals)
       .where(and(eq(portals.id, params.portalId), eq(portals.workspaceId, user.workspaceId)))
       .limit(1);
     if (!rows.length) throw notFound();
-    const builds = await buildPortal(db, params.portalId, { files: { mode: 'sign', sign: fileUrl } });
-    return { specs: builds.map((build) => ({ locale: build.locale, spec: build.spec })) };
+    const visible = await visibleSpaceIds(db, user);
+    const builds = await buildPortal(db, params.portalId, { files: { mode: 'sign', sign: (key) => signer.sign(key) }, spaceIds: visible });
+    return {
+      specs: builds.map((build) => ({
+        locale: build.locale,
+        spec: { ...build.spec, site_config: { ...build.spec.site_config, access: { mode: 'open' } } },
+      })),
+    };
   });
 }

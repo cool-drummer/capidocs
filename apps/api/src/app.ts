@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Config } from './config.js';
@@ -15,6 +16,8 @@ import { contentRoutes } from './routes/content.js';
 import { createRouteContext } from './routes/context.js';
 import { memberRoutes } from './routes/members.js';
 import { portalRoutes } from './routes/portals.js';
+import { previewRoutes, runtimeRoutes } from './routes/preview.js';
+import { createUrlSigner } from './lib/preview.js';
 
 export interface AppOverrides {
   logger?: boolean;
@@ -67,6 +70,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
       error: (data, message) => app.log.error(data, message),
     });
 
+  const signer = createUrlSigner(randomBytes(32), config.attachments.previewTtlSeconds);
   const context = createRouteContext({
     config,
     db,
@@ -92,10 +96,12 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
       contentRoutes(api, context);
       memberRoutes(api, context);
       attachmentRoutes(api, context);
-      portalRoutes(api, context);
+      portalRoutes(api, context, signer);
+      previewRoutes(api, context, signer);
     },
     { prefix: API_PREFIX },
   );
+  runtimeRoutes(app, context);
 
   return {
     fastify: app,

@@ -32,7 +32,7 @@ export interface Config {
   setupToken: string | null;
   runtimeDir: string;
   storage: StorageConfig;
-  attachments: { maxBytes: number };
+  attachments: { maxBytes: number; previewTtlSeconds: number };
   publish: {
     publishRoot: string | null;
     wranglerBin: string | null;
@@ -150,7 +150,10 @@ export function loadConfig(env: Env = process.env): Config {
     setupToken: read.text('SETUP_TOKEN'),
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
     storage: { driver: 'local', dir: '' },
-    attachments: { maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }) },
+    attachments: {
+      maxBytes: read.integer('ATTACHMENT_MAX_BYTES', 8 * 1024 * 1024, { min: 1024, max: 50 * 1024 * 1024 }),
+      previewTtlSeconds: read.integer('PREVIEW_FILE_TTL_SECONDS', 600, { min: 30, max: 3600 }),
+    },
     publish: {
       publishRoot: read.text('PUBLISH_ROOT') ? resolve(read.text('PUBLISH_ROOT')!) : null,
       wranglerBin: read.text('WRANGLER_BIN'),
