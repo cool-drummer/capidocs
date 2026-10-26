@@ -22,7 +22,7 @@ function walk(items, visit, depth = 0) {
 }
 
 export function participantIcon(participant) {
-    return participant.icon ?? KIND_ICONS[participant.kind];
+    return participant.icon ?? (Object.hasOwn(KIND_ICONS, participant.kind) ? KIND_ICONS[participant.kind] : undefined);
 }
 
 export function layoutSequence(diagram, { measure = approximateMeasure } = {}) {

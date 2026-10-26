@@ -151,7 +151,7 @@ function liftEdges(edges, structure, containerOf) {
 
 function autoLayout(diagram, context) {
     const { structure, sizes, edges, measure, collapsed } = context;
-    const spacing = METRICS.spacing[diagram.density] ?? METRICS.spacing.compact;
+    const spacing = Object.hasOwn(METRICS.spacing, diagram.density) ? METRICS.spacing[diagram.density] : METRICS.spacing.compact;
     const gm = METRICS.group;
     const chipH = gm.chip.height;
     const children = new Map([[ROOT, []]]);

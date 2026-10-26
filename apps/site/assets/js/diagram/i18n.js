@@ -140,6 +140,17 @@ const MESSAGES = {
         'export.working': 'Preparando la descarga…',
         'export.done': 'La descarga está lista.',
         'storage.saved': 'Los diagramas importados se guardan solo en este navegador.',
+        'storage.savedSession': 'Guardados solo en esta pestaña. Se borran al cerrarla.',
+        'storage.savedLocal': 'Guardados en este navegador hasta el {date}.',
+        'storage.remember': 'Recordar en este navegador',
+        'storage.remembered': 'Se recordarán en este navegador durante {days} días.',
+        'import.remember': 'Recordar en este navegador durante {days} días',
+        'import.privacy': 'Los diagramas no salen de tu navegador. Si no marcas la casilla, se borran al cerrar la pestaña.',
+        'export.options': 'Opciones',
+        'export.includeData': 'Incluir datos editables en el SVG',
+        'recovery.title': 'No pudimos abrir los diagramas guardados',
+        'recovery.body': 'Los diagramas guardados en este navegador no se pudieron mostrar. Puedes borrarlos y volver a los diagramas de ejemplo.',
+        'recovery.clear': 'Borrar los datos guardados y recargar',
         'storage.remove': 'Quitar de este navegador',
         'storage.removed': 'Se quitaron los diagramas importados de este navegador.',
         'storage.localBadge': 'Importado',
@@ -300,6 +311,17 @@ const MESSAGES = {
         'export.working': 'Preparing the download…',
         'export.done': 'The download is ready.',
         'storage.saved': 'Imported diagrams are stored only in this browser.',
+        'storage.savedSession': 'Saved only in this tab. They are deleted when you close it.',
+        'storage.savedLocal': 'Saved in this browser until {date}.',
+        'storage.remember': 'Remember in this browser',
+        'storage.remembered': 'They will be remembered in this browser for {days} days.',
+        'import.remember': 'Remember in this browser for {days} days',
+        'import.privacy': 'Diagrams never leave your browser. Unless you tick the box, they are deleted when you close the tab.',
+        'export.options': 'Options',
+        'export.includeData': 'Include editable data in the SVG',
+        'recovery.title': 'The saved diagrams could not be opened',
+        'recovery.body': 'The diagrams saved in this browser could not be shown. You can delete them and go back to the sample diagrams.',
+        'recovery.clear': 'Delete the saved data and reload',
         'storage.remove': 'Remove from this browser',
         'storage.removed': 'Imported diagrams were removed from this browser.',
         'storage.localBadge': 'Imported',
@@ -325,18 +347,19 @@ export const SUPPORTED_LANGS = Object.keys(MESSAGES);
 
 export function resolveLang(preferred) {
     const code = String(preferred ?? '').toLowerCase().split('-')[0];
-    return MESSAGES[code] ? code : 'es';
+    return Object.hasOwn(MESSAGES, code) ? code : 'es';
 }
 
 export function createDiagramTranslator(lang) {
     const primary = MESSAGES[resolveLang(lang)];
     const fallback = MESSAGES.es;
-    const lookup = (key) => primary[key] ?? fallback[key] ?? MESSAGES.en[key];
+    const own = (table, key) => (Object.hasOwn(table, key) ? table[key] : undefined);
+    const lookup = (key) => own(primary, key) ?? own(fallback, key) ?? own(MESSAGES.en, key);
     return function t(key, params = {}) {
         let template;
         if (typeof params.count === 'number') template = lookup(`${key}_${params.count === 1 ? 'one' : 'other'}`);
         template = template ?? lookup(key) ?? key;
-        return template.replace(/\{(\w+)\}/g, (match, name) => (params[name] === undefined ? match : String(params[name])));
+        return template.replace(/\{(\w+)\}/g, (match, name) => (Object.hasOwn(params, name) && params[name] !== undefined ? String(params[name]) : match));
     };
 }
 
