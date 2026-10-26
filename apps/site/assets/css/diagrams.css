@@ -1495,6 +1495,10 @@ body {
     .dx-actions .dx-label {
         display: none;
     }
+
+    .dx-crumbs .dx-hide-narrow + li[aria-current]::before {
+        content: none;
+    }
 }
 
 @media (max-width: 600px) {

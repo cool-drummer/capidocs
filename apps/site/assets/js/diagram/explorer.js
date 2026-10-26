@@ -801,7 +801,7 @@ export function mountExplorer(root, options = {}) {
         } else {
             dialog.setAttribute('open', '');
         }
-        dialog.querySelector('[autofocus], textarea, button')?.focus();
+        (dialog.querySelector('[autofocus]') ?? dialog.querySelector('textarea, button'))?.focus();
     };
 
     const closeDialog = () => {
