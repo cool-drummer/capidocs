@@ -363,6 +363,34 @@ function PortalsPanel({ onPreview }: { onPreview: (portalId: string) => void }) 
   );
 }
 
+const SIDEBAR_KEY = 'capidocs.studio.sidebar';
+
+function readSidebarOpen(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) !== 'closed';
+  } catch {
+    return true;
+  }
+}
+
+function saveSidebarOpen(open: boolean): void {
+  try {
+    if (open) localStorage.removeItem(SIDEBAR_KEY);
+    else localStorage.setItem(SIDEBAR_KEY, 'closed');
+  } catch {
+    return;
+  }
+}
+
+function SidebarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v18" />
+    </svg>
+  );
+}
+
 export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const client = useQueryClient();
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
@@ -370,6 +398,13 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [pageId, setPageId] = useState<string | null>(null);
   const [locale, setLocale] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
+  const toggleSidebar = () => {
+    setSidebarOpen((open) => {
+      saveSidebarOpen(!open);
+      return !open;
+    });
+  };
   const [panel, setPanel] = useState<'none' | 'space' | 'portals' | 'team' | 'import' | 'access' | 'preview' | 'account'>('none');
   const [previewPortal, setPreviewPortal] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -414,6 +449,17 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
     <div className="shell">
       <header className="topbar">
         <div className="brand">
+          <button
+            type="button"
+            className="icon-button sidebar-toggle"
+            aria-label={sidebarOpen ? 'Ocultar el panel lateral' : 'Mostrar el panel lateral'}
+            title={sidebarOpen ? 'Ocultar el panel lateral' : 'Mostrar el panel lateral'}
+            aria-expanded={sidebarOpen}
+            aria-controls="studio-sidebar"
+            onClick={toggleSidebar}
+          >
+            <SidebarIcon />
+          </button>
           <span className="brand-mark" />
           <span className="brand-name">{me.data?.workspace.name ?? 'Studio'}</span>
         </div>
@@ -436,8 +482,8 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
-      <div className="layout">
-        <aside className="sidebar">
+      <div className={sidebarOpen ? 'layout' : 'layout layout-collapsed'}>
+        <aside className="sidebar" id="studio-sidebar" hidden={!sidebarOpen}>
           <div className="sidebar-head">
             <span className="sidebar-label">Espacios</span>
             <button type="button" className="icon-button" aria-label="Nuevo espacio" onClick={() => setPanel('space')}>

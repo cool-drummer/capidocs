@@ -90,6 +90,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .who { color: var(--muted); font-size: 0.86rem; }
 
 .layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); flex: 1; min-height: 0; }
+.layout-collapsed { grid-template-columns: minmax(0, 1fr); }
+.sidebar[hidden] { display: none; }
+.sidebar-toggle { background: none; color: var(--muted); }
 @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
 
 .sidebar {
