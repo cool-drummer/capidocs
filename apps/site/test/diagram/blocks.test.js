@@ -20,6 +20,7 @@ function render(diagram) {
 describe('diagram block', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -49,6 +50,21 @@ describe('diagram block', () => {
     host.querySelector('.diagram-block-open').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     expect(JSON.parse(localStorage.getItem(HANDOFF_KEY)).title).toBe(sample.title);
     expect(await mountDiagramBlocks(host)).toHaveLength(0);
+    viewer.destroy();
+  });
+
+  it('hands the set to the host when the host opens the explorer', async () => {
+    const openExplorer = vi.fn();
+    const host = render({ set: sample, diagram: 'checkout' });
+    const [viewer] = await mountDiagramBlocks(host, { openExplorer });
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    host.querySelector('.diagram-block-open').dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(openExplorer).toHaveBeenCalledTimes(1);
+    const [target] = openExplorer.mock.calls[0];
+    expect(target.diagram).toBe('checkout');
+    expect(target.set.title).toBe(sample.title);
+    expect(localStorage.getItem(HANDOFF_KEY)).toBeNull();
     viewer.destroy();
   });
 

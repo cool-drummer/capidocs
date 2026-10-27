@@ -48,7 +48,7 @@ function releaseDetached() {
     }
 }
 
-export async function mountDiagramBlocks(container, { t = (key, fallback) => fallback } = {}) {
+export async function mountDiagramBlocks(container, { t = (key, fallback) => fallback, openExplorer = null } = {}) {
     releaseDetached();
     const doc = container.ownerDocument;
     const blocks = [...container.querySelectorAll('[data-diagram-block]:not([data-mounted])')];
@@ -76,6 +76,13 @@ export async function mountDiagramBlocks(container, { t = (key, fallback) => fal
         const viewer = mountDiagram(canvas, { set, diagramId, theme: 'auto', wheel: 'ctrl', lang: doc.documentElement.lang || set.lang });
         mounted.add(viewer);
         viewers.push(viewer);
+        if (typeof openExplorer === 'function') {
+            block.querySelector('.diagram-block-open')?.addEventListener('click', (event) => {
+                event.preventDefault();
+                openExplorer({ set: serializeDiagramSet(set), diagram: viewer.diagram?.id ?? diagramId });
+            });
+            continue;
+        }
         const open = block.querySelector('[data-diagram-handoff]');
         open?.addEventListener('click', () => {
             try {

@@ -14,7 +14,7 @@ import { bindFeedback } from './feedback.js';
 import { renderLanguageSelect, renderVersionSelect } from './selectors.js';
 import { initAccess } from './access.js';
 
-export async function createCapidocs({ spec, assetBase = '', searchIndexUrl = 'search-index.json' }) {
+export async function createCapidocs({ spec, assetBase = '', searchIndexUrl = 'search-index.json', openExplorer = null }) {
     const site = spec.site_config || {};
     const t = createTranslator(spec);
     const resolveAsset = (path) => (assetBase && !/^(?:[a-z]+:|\/)/i.test(path) ? assetBase.replace(/\/?$/, '/') + path : path);
@@ -51,7 +51,7 @@ export async function createCapidocs({ spec, assetBase = '', searchIndexUrl = 's
             toc.refresh(route);
             if (container.querySelector('[data-diagram-block]')) {
                 import('./diagram/blocks.js')
-                    .then((module) => module.mountDiagramBlocks(container, { t }))
+                    .then((module) => module.mountDiagramBlocks(container, { t, openExplorer }))
                     .catch((error) => console.error('capidocs: diagram blocks failed', error));
             }
         }
