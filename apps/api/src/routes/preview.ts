@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { attachments } from '../db/schema.js';
 import { notFound } from '../lib/errors.js';
-import { previewFrame, previewFrameCsp, type UrlSigner } from '../lib/preview.js';
+import { previewExplorer, previewExplorerCsp, previewFrame, previewFrameCsp, type UrlSigner } from '../lib/preview.js';
 import { readStaticFile } from '../lib/static-files.js';
 import { STORAGE_KEY_PATTERN } from '../lib/storage.js';
 import { contentDisposition, servesInline } from '../modules/attachments.js';
@@ -28,6 +28,20 @@ export function previewRoutes(app: FastifyInstance, context: RouteContext, signe
       .headers({
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': previewFrameCsp(config.publicOrigin, nonce),
+        'X-Frame-Options': 'SAMEORIGIN',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-store',
+      })
+      .send(html);
+  });
+
+  app.get('/preview/explorer', async (_request, reply) => {
+    const { html, nonce } = previewExplorer();
+    return reply
+      .headers({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Security-Policy': previewExplorerCsp(config.publicOrigin, nonce),
         'X-Frame-Options': 'SAMEORIGIN',
         'Referrer-Policy': 'no-referrer',
         'X-Content-Type-Options': 'nosniff',

@@ -147,6 +147,38 @@ describe('preview frame', () => {
   });
 });
 
+describe('preview explorer', () => {
+  it('is sandboxed, framed only by the studio and runs only nonce scripts', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/preview/explorer' });
+    expect(response.statusCode).toBe(200);
+    const csp = String(response.headers['content-security-policy']);
+    expect(csp).toContain('sandbox allow-scripts allow-downloads');
+    expect(csp).not.toContain('allow-same-origin');
+    expect(csp).toContain('frame-ancestors https://studio.test');
+    expect(csp).toContain('connect-src https://studio.test/site/');
+    const scriptSrc = csp.split('; ').find((directive) => directive.startsWith('script-src'))!;
+    expect(scriptSrc).not.toContain('unsafe-inline');
+    const nonce = /'nonce-([^']+)'/.exec(scriptSrc)![1]!;
+    const scripts = response.body.match(/<script\b[^>]*>/g)!;
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const tag of scripts) expect(tag).toContain(`nonce="${nonce}"`);
+    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+  });
+
+  it('mounts only a validated set received from its parent on the agreed channel', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/preview/explorer' });
+    expect(response.body).toContain('event.source !== window.parent');
+    expect(response.body).toContain('data.channel !== channel');
+    expect(response.body).toContain('validateDiagramSet(data.set)');
+    expect(response.body).toContain('storages: null');
+  });
+
+  it('is what the preview frame asks for when a diagram block opens the explorer', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/preview/frame' });
+    expect(response.body).toContain("type: 'capidocs:open-explorer'");
+  });
+});
+
 describe('runtime assets', () => {
   it('serves the site runtime for the sandboxed frame', async () => {
     const response = await app.inject({ method: 'GET', url: '/site/assets/js/app.js' });

@@ -77,10 +77,81 @@ window.addEventListener('message', async (event) => {
   const data = event.data;
   if (!data || data.type !== 'capidocs:spec' || data.channel !== channel) return;
   rendered = true;
-  await createCapidocs({ spec: data.spec, assetBase: '/site', searchIndexUrl: '' });
+  await createCapidocs({
+    spec: data.spec,
+    assetBase: '/site',
+    searchIndexUrl: '',
+    openExplorer: (target) => window.parent.postMessage({ type: 'capidocs:open-explorer', channel, set: target.set, diagram: target.diagram }, '*'),
+  });
   window.parent.postMessage({ type: 'capidocs:ready', channel }, '*');
 });
 window.parent.postMessage({ type: 'capidocs:frame-ready', channel }, '*');
+</script>
+</body>
+</html>`;
+  return { html, nonce };
+}
+
+export function previewExplorerCsp(origin: string, nonce: string): string {
+  return [
+    "default-src 'none'",
+    `script-src 'nonce-${nonce}' ${origin}/site/`,
+    `style-src 'unsafe-inline' ${origin}/site/`,
+    `font-src ${origin}/site/ data:`,
+    "img-src data: blob:",
+    `connect-src ${origin}/site/`,
+    `frame-ancestors ${origin}`,
+    "base-uri 'none'",
+    "form-action 'none'",
+    'sandbox allow-scripts allow-downloads',
+  ].join('; ');
+}
+
+export function previewExplorer(): { html: string; nonce: string } {
+  const nonce = randomBytes(16).toString('base64');
+  const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Explorador de diagramas</title>
+<link rel="stylesheet" href="/site/assets/css/diagram-viewer.css" data-dg-styles>
+<link rel="stylesheet" href="/site/assets/css/diagrams.css">
+</head>
+<body>
+<div id="app" class="dx-app"><p class="dx-boot">Cargando diagramas…</p></div>
+<script type="module" nonce="${nonce}">
+import { validateDiagramSet } from '/site/assets/js/diagram/model.js';
+import { mountExplorer } from '/site/assets/js/diagram/explorer.js';
+import { svgToRaster } from '/site/assets/js/diagram/export/raster.js';
+import { buildPdf } from '/site/assets/js/diagram/export/pdf.js';
+import { downloadBlob } from '/site/assets/js/diagram/export/download.js';
+const channel = new URLSearchParams(location.search).get('channel') || '';
+let mounted = false;
+window.addEventListener('message', (event) => {
+  if (event.source !== window.parent || mounted) return;
+  const data = event.data;
+  if (!data || data.type !== 'capidocs:diagram-set' || data.channel !== channel) return;
+  mounted = true;
+  const root = document.getElementById('app');
+  const result = validateDiagramSet(data.set);
+  if (!result.ok) {
+    root.querySelector('.dx-boot').textContent = 'No se pudo abrir el diagrama.';
+    return;
+  }
+  document.documentElement.lang = result.set.lang || 'es';
+  if (typeof data.diagram === 'string' && data.diagram) location.hash = '#/d/' + encodeURIComponent(data.diagram);
+  root.textContent = '';
+  mountExplorer(root, {
+    set: result.set,
+    source: 'embedded',
+    storages: null,
+    features: { import: false, export: ['svg', 'png', 'jpg', 'pdf', 'json'], storage: false },
+    services: { svgToRaster, buildPdf, downloadBlob },
+  });
+});
+window.parent.postMessage({ type: 'capidocs:explorer-ready', channel }, '*');
 </script>
 </body>
 </html>`;
