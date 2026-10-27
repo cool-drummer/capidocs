@@ -18,7 +18,7 @@ const SETUP_LOCK = 7_310_221_905;
 export const passwordSchema = z.string().min(1).max(MAX_PASSWORD_LENGTH);
 export const personNameSchema = z.string().trim().min(2).max(120);
 const invalidCredentials = () => new ApiError(401, 'invalid_credentials', 'Correo o contraseña incorrectos.');
-const setupClosed = () => new ApiError(403, 'setup_closed', 'La configuración inicial no está disponible en este servidor.');
+const setupClosed = () => new ApiError(403, 'setup_closed', 'El código de configuración no es válido o este servidor ya no admite la configuración inicial.');
 
 export function authRoutes(app: FastifyInstance, context: RouteContext) {
   const { db, config, limiter } = context;

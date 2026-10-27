@@ -82,6 +82,7 @@ describe('initial setup', () => {
     const response = await new Client(setupApp).call('POST', '/auth/setup', body);
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('setup_closed');
+    expect(response.body.message).toBe('El código de configuración no es válido o este servidor ya no admite la configuración inicial.');
     await setupApp.close();
   });
 
