@@ -33,20 +33,22 @@ describe('diagram theme', () => {
     for (const name of COLORS) {
       for (const role of ['solid', 'text', 'tint', 'soft']) expect(vars[`--dg-${name}-${role}`], `${name} ${role}`).toMatch(/^#[0-9a-f]{6}$/);
     }
-    expect(vars['--ui-overlay-ink']).toBe('#fafafa');
+    expect(vars['--ui-overlay-ink']).toBe('#f4f4f1');
+    expect(vars['--dg-on-accent']).toBe('#0b0b0c');
+    expect(cssVariables(themeTokens('light'))['--dg-on-accent']).toBe('#ffffff');
   });
 
   it('applies the tokens through the CSSOM', () => {
     const element = document.createElement('div');
     applyTheme(element, 'dark');
     expect(element.dataset.dgTheme).toBe('dark');
-    expect(element.style.getPropertyValue('--dg-canvas')).toBe('#111113');
+    expect(element.style.getPropertyValue('--dg-canvas')).toBe('#0b0b0d');
     expect(element.getAttribute('style')).toContain('--dg-accent');
   });
 
   it('uses the brand accent when one is given', () => {
     expect(themeTokens('light', { light: '#123456', dark: '#abcdef' }).accent).toBe('#123456');
-    expect(themeTokens('dark').accent).toBe('#4bb3a1');
+    expect(themeTokens('dark').accent).toBe('#ecee8b');
   });
 });
 

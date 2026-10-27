@@ -118,7 +118,7 @@ describe('renderSvg', () => {
     const scene = layoutDiagram(sample.diagrams[0]);
     const svg = renderSvg(scene, { mode: 'export', theme: 'dark', set: sample, embedFontCss: '<style>@font-face{font-family:"Geist";src:url(data:font/woff2;base64,AAAA)}</style>' });
     const doc = parse(svg);
-    expect(doc.querySelector('svg > rect').getAttribute('fill')).toBe('#111113');
+    expect(doc.querySelector('svg > rect').getAttribute('fill')).toBe('#0b0b0d');
     expect(doc.querySelector('style').textContent).toContain('@font-face');
     expect(svg).not.toMatch(/<style><style/);
     expect(svg).not.toContain('var(--');

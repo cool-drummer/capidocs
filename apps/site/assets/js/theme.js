@@ -21,6 +21,16 @@ export function mix(hex, target, amount) {
     return toHex(a.map((v, i) => v + (b[i] - v) * amount));
 }
 
+export function onAccent(hex) {
+    const rgb = parseHex(hex);
+    if (!rgb) return '#ffffff';
+    const [r, g, b] = rgb.map((v) => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.35 ? '#0b0b0c' : '#ffffff';
+}
+
 function accentBlock(selector, accent, mode) {
     const hover = mode === 'dark' ? mix(accent, '#ffffff', 0.18) : mix(accent, '#000000', 0.18);
     const tint = mode === 'dark' ? 0.14 : 0.09;
@@ -32,6 +42,7 @@ function accentBlock(selector, accent, mode) {
         `    --brand-accent-light: ${rgba(accent, tint)};`,
         `    --brand-accent-border: ${rgba(accent, border)};`,
         `    --accent-solid: ${accent};`,
+        `    --on-accent: ${onAccent(accent)};`,
         `    --brand-primary: ${accent};`,
         `    --border-focus: ${accent};`,
         '}'

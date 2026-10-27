@@ -2,7 +2,9 @@ import { COLORS } from './model.js';
 
 export const THEMES = ['light', 'dark'];
 
-export const DEFAULT_ACCENT = { light: '#2f8f90', dark: '#4bb3a1' };
+export const DEFAULT_ACCENT = { light: '#5b5f12', dark: '#ecee8b' };
+
+const LIGHT_TINT = '#d4da35';
 
 const SCALE = {
     neutral: { 300: '#d4d4d8', 400: '#a1a1aa', 500: '#71717a', 600: '#52525b', 700: '#3f3f46', 800: '#27272a' },
@@ -21,18 +23,18 @@ const SCALE = {
 
 const SURFACES = {
     light: {
-        canvas: '#f4f4f5',
+        canvas: '#f5f5f2',
         surface: '#ffffff',
-        raised: '#fafafa',
-        hover: '#f6f6f7',
-        inset: '#f4f4f5',
-        ink: '#18181b',
+        raised: '#fafaf8',
+        hover: '#f5f5f1',
+        inset: '#f3f3ef',
+        ink: '#0b0b0c',
         muted: '#65656d',
         faint: '#a1a1aa',
         edge: '#a1a1aa',
         divider: '#e4e4e7',
         lifeline: '#d4d4d8',
-        labelBg: '#18181b',
+        labelBg: '#0b0b0c',
         labelText: '#fafafa',
         chip: '#ffffff',
         lane: '#e9e9ec',
@@ -42,22 +44,22 @@ const SURFACES = {
         dim: 0.28
     },
     dark: {
-        canvas: '#111113',
-        surface: '#1c1c20',
-        raised: '#232328',
-        hover: '#26262c',
-        inset: '#16161a',
-        ink: '#fafafa',
-        muted: '#a1a1aa',
-        faint: '#71717a',
-        edge: '#5b5b63',
-        divider: '#2c2c32',
-        lifeline: '#3f3f46',
-        labelBg: '#3f3f46',
-        labelText: '#fafafa',
-        chip: '#26262b',
-        lane: '#18181b',
-        laneHeader: '#1f1f23',
+        canvas: '#0b0b0d',
+        surface: '#18191d',
+        raised: '#1f2024',
+        hover: '#232428',
+        inset: '#121316',
+        ink: '#f4f4f1',
+        muted: '#a3a4ab',
+        faint: '#75767d',
+        edge: '#5d5e66',
+        divider: '#2a2b30',
+        lifeline: '#3d3e44',
+        labelBg: '#36363b',
+        labelText: '#f4f4f1',
+        chip: '#232428',
+        lane: '#131417',
+        laneHeader: '#1a1b1f',
         washOpacity: 0.1,
         laneOpacity: 0.1,
         dim: 0.3
@@ -67,41 +69,41 @@ const SURFACES = {
 const UI = {
     light: {
         page: '#ffffff',
-        panel: '#fafafa',
-        well: '#f4f4f5',
-        hover: '#f0f0f2',
-        active: '#e9e9ec',
-        strong: '#18181b',
+        panel: '#fafaf8',
+        well: '#f3f3ef',
+        hover: '#efefea',
+        active: '#e7e7e1',
+        strong: '#0b0b0c',
         onStrong: '#fafafa',
-        ink: '#18181b',
+        ink: '#0b0b0c',
         muted: '#65656d',
         strongHover: '#3f3f46',
         rule: '#ececef',
-        overlay: '#18181b',
+        overlay: '#0b0b0c',
         overlayInk: '#fafafa',
         overlayMuted: '#a1a1aa',
         overlayHover: '#2e2e33',
         dialog: '#ffffff',
-        veil: '#18181b',
+        veil: '#0b0b0c',
         veilOpacity: 0.42
     },
     dark: {
-        page: '#0c0c0e',
-        panel: '#121215',
-        well: '#18181b',
-        hover: '#1f1f23',
-        active: '#27272a',
-        strong: '#fafafa',
-        onStrong: '#18181b',
-        ink: '#fafafa',
-        muted: '#a1a1aa',
-        strongHover: '#d4d4d8',
-        rule: '#1f1f23',
-        overlay: '#2a2a30',
-        overlayInk: '#fafafa',
-        overlayMuted: '#a1a1aa',
-        overlayHover: '#36363d',
-        dialog: '#1c1c20',
+        page: '#08080a',
+        panel: '#111214',
+        well: '#18191d',
+        hover: '#1f2024',
+        active: '#2a2b30',
+        strong: '#f4f4f1',
+        onStrong: '#0b0b0c',
+        ink: '#f4f4f1',
+        muted: '#a3a4ab',
+        strongHover: '#d6d7d2',
+        rule: '#1c1d21',
+        overlay: '#2a2b30',
+        overlayInk: '#f4f4f1',
+        overlayMuted: '#a3a4ab',
+        overlayHover: '#36373c',
+        dialog: '#18191d',
         veil: '#000000',
         veilOpacity: 0.62
     }
@@ -151,6 +153,10 @@ function colorTokens(name, theme) {
 
 const cache = new Map();
 
+function tintSource(mode, accent) {
+    return mode === 'light' && accent === DEFAULT_ACCENT.light ? LIGHT_TINT : accent;
+}
+
 export function themeTokens(theme = 'light', accent = DEFAULT_ACCENT) {
     const mode = theme === 'dark' ? 'dark' : 'light';
     const requested = accent && Object.hasOwn(accent, mode) ? accent[mode] : null;
@@ -162,8 +168,9 @@ export function themeTokens(theme = 'light', accent = DEFAULT_ACCENT) {
     const tokens = {
         theme: mode,
         accent: accentHex,
-        accentTint: mixColor(SURFACES[mode].surface, accentHex, mode === 'dark' ? 0.2 : 0.14),
-        accentSoft: mixColor(SURFACES[mode].surface, accentHex, mode === 'dark' ? 0.34 : 0.26),
+        accentTint: mixColor(SURFACES[mode].surface, tintSource(mode, accentHex), mode === 'dark' ? 0.2 : 0.22),
+        accentSoft: mixColor(SURFACES[mode].surface, tintSource(mode, accentHex), mode === 'dark' ? 0.34 : 0.4),
+        onAccent: luminance(accentHex) > 0.35 ? '#0b0b0c' : '#ffffff',
         ...SURFACES[mode],
         ui: UI[mode],
         colors
@@ -191,6 +198,7 @@ export function cssVariables(tokens) {
         '--dg-accent': tokens.accent,
         '--dg-accent-tint': tokens.accentTint,
         '--dg-accent-soft': tokens.accentSoft,
+        '--dg-on-accent': tokens.onAccent,
         '--dg-canvas': tokens.canvas,
         '--dg-surface': tokens.surface,
         '--dg-raised': tokens.raised,

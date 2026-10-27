@@ -15,29 +15,30 @@
 }
 
 :root {
-    --brand-accent: #4bb3a1;
-    --brand-accent-hover: #6cc191;
-    --brand-accent-light: rgba(75, 179, 161, 0.14);
-    --brand-accent-border: rgba(75, 179, 161, 0.35);
-    --accent-solid: #4bb3a1;
+    --brand-accent: #ecee8b;
+    --brand-accent-hover: #f4f6a8;
+    --brand-accent-light: rgba(236, 238, 139, 0.12);
+    --brand-accent-border: rgba(236, 238, 139, 0.32);
+    --accent-solid: #ecee8b;
+    --on-accent: #0b0b0c;
 
-    --bg-primary: #0c0c0e;
-    --bg-secondary: #111114;
-    --bg-tertiary: #18181b;
-    --bg-elevated: #1d1d21;
-    --bg-code: #0a0a0c;
+    --bg-primary: #08080a;
+    --bg-secondary: #0f1013;
+    --bg-tertiary: #16171b;
+    --bg-elevated: #1c1d21;
+    --bg-code: #0b0b0d;
 
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
-    --text-inverse: #0c0c0e;
+    --text-primary: #f4f4f1;
+    --text-secondary: #a3a4ab;
+    --text-muted: #75767d;
+    --text-inverse: #0b0b0c;
 
-    --border-primary: #26262a;
-    --border-secondary: #1b1b1e;
-    --border-focus: #4bb3a1;
+    --border-primary: #26272b;
+    --border-secondary: #1a1b1f;
+    --border-focus: #ecee8b;
 
-    --brand-primary: #4bb3a1;
-    --brand-secondary: #a1a1aa;
+    --brand-primary: #ecee8b;
+    --brand-secondary: #a3a4ab;
 
 
     --color-success: #10b981;
@@ -100,27 +101,28 @@
 
 [data-theme="light"] {
     --bg-primary: #ffffff;
-    --bg-secondary: #fafafa;
-    --bg-tertiary: #f4f4f5;
+    --bg-secondary: #fafaf7;
+    --bg-tertiary: #f3f3ee;
     --bg-elevated: #ffffff;
-    --bg-code: #fafafa;
+    --bg-code: #fafaf7;
 
-    --text-primary: #18181b;
-    --text-secondary: #52525b;
-    --text-muted: #a1a1aa;
+    --text-primary: #0b0b0c;
+    --text-secondary: #4b4c52;
+    --text-muted: #8e8f96;
     --text-inverse: #ffffff;
 
-    --border-primary: #e4e4e7;
-    --border-secondary: #f0f0f1;
-    --border-focus: #2f8f90;
+    --border-primary: #e5e5df;
+    --border-secondary: #efefe9;
+    --border-focus: #5b5f12;
 
-    --brand-primary: #2f8f90;
-    --brand-secondary: #52525b;
-    --brand-accent: #2f8f90;
-    --brand-accent-hover: #26757a;
-    --brand-accent-light: rgba(47, 143, 144, 0.09);
-    --brand-accent-border: rgba(47, 143, 144, 0.30);
-    --accent-solid: #2f8f90;
+    --brand-primary: #5b5f12;
+    --brand-secondary: #4b4c52;
+    --brand-accent: #5b5f12;
+    --brand-accent-hover: #4d500f;
+    --brand-accent-light: rgba(206, 214, 40, 0.2);
+    --brand-accent-border: rgba(150, 156, 20, 0.32);
+    --accent-solid: #5b5f12;
+    --on-accent: #ffffff;
 
     --shadow-sm: 0 1px 2px 0 rgb(24 24 27 / 0.05);
     --shadow: 0 1px 3px 0 rgb(24 24 27 / 0.07), 0 1px 2px -1px rgb(24 24 27 / 0.05);
@@ -432,17 +434,13 @@ code {
     gap: var(--space-2);
     padding: 0.4375rem 1rem;
     background: var(--accent-solid);
-    color: #ffffff;
+    color: var(--on-accent);
     border-radius: 9999px;
     font-size: 0.8125rem;
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
     transition: var(--transition);
-}
-
-:root:not([data-theme="light"]) .navbar-cta {
-    color: #1c1917;
 }
 
 .navbar-cta:hover {
@@ -812,7 +810,7 @@ body.has-tabs .navbar-tabs {
 .critical-box::before {
     content: "\f071"; 
     background-color: var(--brand-accent);
-    color: #ffffff;
+    color: var(--on-accent);
 }
 
 
@@ -1437,7 +1435,7 @@ body.has-tabs .navbar-tabs {
     width: 3rem;
     height: 3rem;
     background-color: var(--brand-accent);
-    color: #ffffff;
+    color: var(--on-accent);
     border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
@@ -1913,7 +1911,7 @@ body.has-tabs .navbar-tabs {
 
 .btn-alert:hover {
     background-color: var(--brand-accent);
-    color: #ffffff;
+    color: var(--on-accent);
     border-color: var(--brand-accent);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sanitizeHtml } from '../assets/js/sanitize.js';
 import { escapeHtml } from '../assets/js/escape.js';
-import { brandCss, mix, rgba } from '../assets/js/theme.js';
+import { brandCss, mix, onAccent, rgba } from '../assets/js/theme.js';
 
 describe('sanitizeHtml', () => {
   const cases = [
@@ -74,6 +74,12 @@ describe('theme', () => {
     expect(css).toContain('--brand-accent: #4bb3a1;');
     expect(css).toContain('--brand-accent: #2f8f90;');
     expect(css).toContain('--font-sans: Inter, sans-serif;');
+  });
+
+  it('picks a readable text color for content on the accent', () => {
+    expect(onAccent('#ecee8b')).toBe('#0b0b0c');
+    expect(onAccent('#5b5f12')).toBe('#ffffff');
+    expect(brandCss({ accent: { light: '#5b5f12', dark: '#ecee8b' } })).toContain('--on-accent: #0b0b0c;');
   });
 
   it('returns nothing without a theme', () => {

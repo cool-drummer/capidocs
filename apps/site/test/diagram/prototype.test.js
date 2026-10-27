@@ -90,7 +90,7 @@ describe('prototype-named catalog entries', () => {
     expect(t('viewer.zoomIn')).toBe('Acercar');
     expect(t('toString')).toBe('toString');
     expect(t('steps.counter', { current: 1, total: 2, constructor: 3 })).toBe('1 de 2');
-    expect(themeTokens('light', JSON.parse('{"__proto__": {"light": "#000000"}}')).accent).toBe('#2f8f90');
+    expect(themeTokens('light', JSON.parse('{"__proto__": {"light": "#000000"}}')).accent).toBe('#5b5f12');
   });
 
   it('mounts a viewer on the same diagram and selects those nodes', () => {

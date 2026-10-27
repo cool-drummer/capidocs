@@ -33,12 +33,12 @@ function escapeHtml(value: string): string {
 export function renderHtml(message: MailMessage, brand: string): string {
   const paragraphs = message.body.map((line) => `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(line)}</p>`).join('');
   const action = message.action
-    ? `<p style="margin:24px 0"><a href="${escapeHtml(message.action.url)}" style="display:inline-block;background:#2f8f90;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">${escapeHtml(message.action.label)}</a></p>`
+    ? `<p style="margin:24px 0"><a href="${escapeHtml(message.action.url)}" style="display:inline-block;background:#5b5f12;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600">${escapeHtml(message.action.label)}</a></p>`
     : '';
   const footer = message.footer ? `<p style="margin:24px 0 0;color:#6d7277;font-size:13px;line-height:1.5">${escapeHtml(message.footer)}</p>` : '';
   return `<!doctype html><html lang="es"><body style="margin:0;background:#f7f8f8;padding:32px 16px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#18181b">
   <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px">
-    <p style="margin:0 0 24px;font-weight:600;color:#226d6e">${escapeHtml(brand)}</p>
+    <p style="margin:0 0 24px;font-weight:600;color:#4d500f">${escapeHtml(brand)}</p>
     <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">${escapeHtml(message.heading)}</h1>
     ${paragraphs}${action}${footer}
   </div>

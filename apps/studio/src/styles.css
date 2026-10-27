@@ -1,14 +1,16 @@
 :root {
-  --bg: #f7f8f8;
+  --bg: #f6f6f2;
   --surface: #ffffff;
-  --surface-2: #eef1f1;
-  --surface-3: #e4e8e8;
-  --ink: #18181b;
-  --ink-2: #45494d;
-  --muted: #6d7277;
-  --accent: #2f8f90;
-  --accent-ink: #226d6e;
-  --accent-soft: rgba(47, 143, 144, 0.12);
+  --surface-2: #efefe9;
+  --surface-3: #e5e5dd;
+  --ink: #0b0b0c;
+  --ink-2: #3a3b40;
+  --muted: #6b6c72;
+  --accent: #5b5f12;
+  --accent-ink: #4d500f;
+  --accent-hover: #4d500f;
+  --accent-soft: rgba(206, 214, 40, 0.24);
+  --on-accent: #ffffff;
   --danger: #be123c;
   --danger-soft: rgba(190, 18, 60, 0.1);
   --ok: #059669;
@@ -26,23 +28,25 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0c0d0e;
-    --surface: #151718;
-    --surface-2: #1c1f21;
-    --surface-3: #262a2d;
-    --ink: #f4f4f5;
-    --ink-2: #c9cdd1;
-    --muted: #9aa0a6;
-    --accent: #4bb3a1;
-    --accent-ink: #7ecdbf;
-    --accent-soft: rgba(75, 179, 161, 0.16);
+    --bg: #08080a;
+    --surface: #16171b;
+    --surface-2: #1e1f23;
+    --surface-3: #2a2b30;
+    --ink: #f4f4f1;
+    --ink-2: #cfd0cb;
+    --muted: #8e8f96;
+    --accent: #ecee8b;
+    --accent-ink: #ecee8b;
+    --accent-hover: #f4f6a8;
+    --accent-soft: rgba(236, 238, 139, 0.13);
+    --on-accent: #0b0b0c;
     --danger: #fda4af;
     --danger-soft: rgba(253, 164, 175, 0.14);
     --ok: #34d399;
     --ok-soft: rgba(52, 211, 153, 0.14);
     --warn-soft: rgba(245, 158, 11, 0.16);
     --warn-ink: #fbbf24;
-    --overlay: #30353a;
+    --overlay: #2c2d32;
     color-scheme: dark;
   }
 }
@@ -227,8 +231,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .button:hover { background: var(--accent-soft); color: var(--accent-ink); }
 .button:disabled { opacity: 0.55; cursor: default; }
-.button-primary { background: var(--accent); color: #fff; }
-.button-primary:hover { background: var(--accent-ink); color: #fff; }
+.button-primary { background: var(--accent); color: var(--on-accent); }
+.button-primary:hover { background: var(--accent-hover); color: var(--on-accent); }
 .button-quiet { background: none; color: var(--muted); }
 .button-quiet:hover { background: var(--surface-2); color: var(--ink); }
 .button-wide { width: 100%; justify-content: center; }
