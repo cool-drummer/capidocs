@@ -5,7 +5,7 @@ import { Field, TextInput } from '../components/fields';
 
 const PASSWORD_HINT = 'Al menos 12 caracteres. Una frase de varias palabras es fácil de recordar y difícil de adivinar.';
 
-function PasswordInput({ value, onChange, fresh = false }: { value: string; onChange: (value: string) => void; fresh?: boolean }) {
+function PasswordInput({ value, onChange, fresh = false, autoComplete }: { value: string; onChange: (value: string) => void; fresh?: boolean; autoComplete?: string }) {
   return (
     <input
       className="input"
@@ -13,7 +13,7 @@ function PasswordInput({ value, onChange, fresh = false }: { value: string; onCh
       value={value}
       maxLength={256}
       onChange={(event) => onChange(event.target.value)}
-      autoComplete={fresh ? 'new-password' : 'current-password'}
+      autoComplete={autoComplete ?? (fresh ? 'new-password' : 'current-password')}
     />
   );
 }
@@ -255,7 +255,7 @@ export function SetupScreen({ onDone, onCancel }: { onDone: () => void; onCancel
         <PasswordInput value={password} onChange={setPassword} fresh />
       </Field>
       <Field label="Código de configuración" hint="Lo entrega quien administra el servidor">
-        <PasswordInput value={setupToken} onChange={setSetupToken} />
+        <PasswordInput value={setupToken} onChange={setSetupToken} autoComplete="one-time-code" />
       </Field>
       {error ? <p className="status status-error">{error}</p> : null}
       <button type="submit" className="button button-primary button-wide" disabled={setup.isPending}>
