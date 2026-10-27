@@ -6,11 +6,18 @@ import { AccountPanel } from './account';
 import { PreviewPanel } from './preview';
 import { SpaceMembersPanel, TeamPanel } from './team';
 import { Field, Select, TextArea, TextInput } from '../components/fields';
+import { Icon, type IconName } from '../components/icons';
 
 const AUDIENCE_LABEL: Record<Space['audience'], string> = {
   public: 'Público',
   customers: 'Clientes',
   internal: 'Empleados',
+};
+
+const AUDIENCE_ICON: Record<Space['audience'], IconName> = {
+  public: 'globe',
+  customers: 'userCheck',
+  internal: 'lock',
 };
 
 function TreeItem({
@@ -32,19 +39,35 @@ function TreeItem({
     <>
       <div
         className={node.id === selectedId ? 'tree-item tree-item-active' : 'tree-item'}
-        style={{ paddingLeft: `${0.75 + depth * 0.9}rem` }}
+        style={{ paddingLeft: `${1.85 + depth * 0.85}rem` }}
       >
-        <button type="button" className="tree-link" onClick={() => onSelect(node.id)}>
+        <button
+          type="button"
+          className="tree-link"
+          aria-current={node.id === selectedId ? 'page' : undefined}
+          title={node.title || 'Sin título'}
+          onClick={() => onSelect(node.id)}
+        >
+          {node.kind === 'hero' ? (
+            <span className="tree-kind" aria-label="Portada">
+              <Icon name="home" size={14} />
+            </span>
+          ) : null}
           <span className="tree-title">{node.title || 'Sin título'}</span>
-          {node.kind === 'hero' ? <span className="chip chip-small">portada</span> : null}
           {node.hasDraft ? <span className="dot" aria-label="Con cambios sin publicar" /> : null}
         </button>
         <div className="tree-actions">
-          <button type="button" className="icon-button" aria-label="Subir" onClick={() => onMove(node.id, node.parentPageId, 0)}>
-            ↑
+          <button type="button" className="icon-button" aria-label="Subir" title="Subir" onClick={() => onMove(node.id, node.parentPageId, 0)}>
+            <Icon name="arrowUp" size={14} />
           </button>
-          <button type="button" className="icon-button icon-button-danger" aria-label="Eliminar" onClick={() => onDelete(node.id)}>
-            ✕
+          <button
+            type="button"
+            className="icon-button icon-button-danger"
+            aria-label="Eliminar"
+            title="Eliminar"
+            onClick={() => onDelete(node.id)}
+          >
+            <Icon name="trash" size={14} />
           </button>
         </div>
       </div>
@@ -382,15 +405,6 @@ function saveSidebarOpen(open: boolean): void {
   }
 }
 
-function SidebarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M9 3v18" />
-    </svg>
-  );
-}
-
 export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const client = useQueryClient();
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
@@ -398,6 +412,7 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [pageId, setPageId] = useState<string | null>(null);
   const [locale, setLocale] = useState<string | null>(null);
+  const [openSpaceId, setOpenSpaceId] = useState<string | null | undefined>(undefined);
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
   const toggleSidebar = () => {
     setSidebarOpen((open) => {
@@ -412,6 +427,17 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
 
   const activeSpace = spaces.data?.spaces.find((space) => space.id === spaceId) ?? spaces.data?.spaces[0] ?? null;
   const activeLocale = locale ?? me.data?.workspace.defaultLocale ?? 'es';
+  const expandedSpaceId = openSpaceId === undefined ? (activeSpace?.id ?? null) : openSpaceId;
+
+  const chooseSpace = (id: string) => {
+    if (id === activeSpace?.id) {
+      setOpenSpaceId(expandedSpaceId === id ? null : id);
+      return;
+    }
+    setSpaceId(id);
+    setPageId(null);
+    setOpenSpaceId(id);
+  };
 
   const tree = useQuery({
     queryKey: ['tree', activeSpace?.id, activeLocale],
@@ -458,7 +484,7 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
             aria-controls="studio-sidebar"
             onClick={toggleSidebar}
           >
-            <SidebarIcon />
+            <Icon name="panel" />
           </button>
           <span className="brand-mark" />
           <span className="brand-name">{me.data?.workspace.name ?? 'Studio'}</span>
@@ -486,56 +512,71 @@ export function WorkspaceScreen({ onLogout }: { onLogout: () => void }) {
         <aside className="sidebar" id="studio-sidebar" hidden={!sidebarOpen}>
           <div className="sidebar-head">
             <span className="sidebar-label">Espacios</span>
-            <button type="button" className="icon-button" aria-label="Nuevo espacio" onClick={() => setPanel('space')}>
-              +
+            <button type="button" className="icon-button" aria-label="Nuevo espacio" title="Nuevo espacio" onClick={() => setPanel('space')}>
+              <Icon name="plus" size={14} />
             </button>
           </div>
-          {(spaces.data?.spaces ?? []).map((space) => (
-            <button
-              key={space.id}
-              type="button"
-              className={space.id === activeSpace?.id ? 'space-item space-item-active' : 'space-item'}
-              onClick={() => {
-                setSpaceId(space.id);
-                setPageId(null);
-              }}
-            >
-              <span>{space.name}</span>
-              <span className="chip chip-small">{AUDIENCE_LABEL[space.audience]}</span>
-            </button>
-          ))}
-          {spaces.data && !spaces.data.spaces.length ? <p className="placeholder">Aún no tienes espacios.</p> : null}
-
-          {activeSpace ? (
-            <>
-              <div className="sidebar-head sidebar-head-spaced">
-                <span className="sidebar-label">Páginas</span>
-                <div className="tree-actions">
-                  <button type="button" className="icon-button" aria-label="Quién entra a este espacio" onClick={() => setPanel('access')}>
-                    ⚿
-                  </button>
-                  <button type="button" className="icon-button" aria-label="Nueva portada" onClick={() => createPage.mutate('hero')}>
-                    ★
-                  </button>
-                  <button type="button" className="icon-button" aria-label="Nueva página" onClick={() => createPage.mutate('page')}>
-                    +
-                  </button>
+          <nav className="space-list" aria-label="Espacios y páginas">
+            {(spaces.data?.spaces ?? []).map((space) => {
+              const active = space.id === activeSpace?.id;
+              const expanded = active && expandedSpaceId === space.id;
+              return (
+                <div key={space.id} className="space-group">
+                  <div className={active ? 'space-row space-row-active' : 'space-row'}>
+                    <button
+                      type="button"
+                      className="space-toggle"
+                      aria-expanded={expanded}
+                      aria-controls={`space-pages-${space.id}`}
+                      onClick={() => chooseSpace(space.id)}
+                    >
+                      <Icon name="chevron" size={14} className={expanded ? 'chevron chevron-open' : 'chevron'} />
+                      <span className="space-name">{space.name}</span>
+                      <span className="space-audience" title={AUDIENCE_LABEL[space.audience]} aria-label={AUDIENCE_LABEL[space.audience]}>
+                        <Icon name={AUDIENCE_ICON[space.audience]} size={13} />
+                      </span>
+                    </button>
+                    {active ? (
+                      <div className="space-actions">
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label="Quién entra a este espacio"
+                          title="Quién entra a este espacio"
+                          onClick={() => setPanel('access')}
+                        >
+                          <Icon name="users" size={14} />
+                        </button>
+                        <button type="button" className="icon-button" aria-label="Nueva portada" title="Nueva portada" onClick={() => createPage.mutate('hero')}>
+                          <Icon name="home" size={14} />
+                        </button>
+                        <button type="button" className="icon-button" aria-label="Nueva página" title="Nueva página" onClick={() => createPage.mutate('page')}>
+                          <Icon name="plus" size={14} />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  {expanded ? (
+                    <div className="space-pages" id={`space-pages-${space.id}`}>
+                      {(tree.data?.tree ?? []).map((node) => (
+                        <TreeItem
+                          key={node.id}
+                          node={node}
+                          depth={0}
+                          selectedId={pageId}
+                          onSelect={setPageId}
+                          onMove={(id, parentPageId, index) => move.mutate({ id, parentPageId, index })}
+                          onDelete={(id) => remove.mutate(id)}
+                        />
+                      ))}
+                      {tree.data && !tree.data.tree.length ? <p className="space-empty">Este espacio no tiene páginas.</p> : null}
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-              {(tree.data?.tree ?? []).map((node) => (
-                <TreeItem
-                  key={node.id}
-                  node={node}
-                  depth={0}
-                  selectedId={pageId}
-                  onSelect={setPageId}
-                  onMove={(id, parentPageId, index) => move.mutate({ id, parentPageId, index })}
-                  onDelete={(id) => remove.mutate(id)}
-                />
-              ))}
-              {tree.data && !tree.data.tree.length ? <p className="placeholder">Este espacio no tiene páginas.</p> : null}
-            </>
-          ) : null}
+              );
+            })}
+          </nav>
+          {spaces.data && !spaces.data.spaces.length ? <p className="placeholder">Aún no tienes espacios.</p> : null}
         </aside>
 
         <main className="main">

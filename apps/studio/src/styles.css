@@ -109,25 +109,35 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0.5rem; }
-.sidebar-head-spaced { margin-top: 1.1rem; }
 .sidebar-label { font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 
-.space-item {
+.space-list { display: flex; flex-direction: column; gap: 0.1rem; }
+.space-group { display: flex; flex-direction: column; }
+.space-row { display: flex; align-items: center; gap: 0.2rem; border-radius: var(--radius); padding-right: 0.25rem; }
+.space-row:hover { background: var(--surface-2); }
+.space-toggle {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: 100%;
-  text-align: left;
+  gap: 0.45rem;
+  min-width: 0;
   background: none;
   border: 0;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius);
+  padding: 0.45rem 0.5rem;
+  text-align: left;
   cursor: pointer;
   color: var(--ink-2);
 }
-.space-item:hover { background: var(--surface-2); }
-.space-item-active { background: var(--accent-soft); color: var(--accent-ink); font-weight: 500; }
+.space-row-active .space-toggle { color: var(--ink); font-weight: 500; }
+.space-name { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+.chevron { flex: none; color: var(--muted); transition: transform 120ms ease; }
+.chevron-open { transform: rotate(90deg); }
+.space-audience { flex: none; display: grid; place-items: center; color: var(--muted); }
+.space-actions { display: flex; gap: 0.15rem; opacity: 0; }
+.space-row:hover .space-actions, .space-row:focus-within .space-actions { opacity: 1; }
+.space-pages { display: flex; flex-direction: column; gap: 0.05rem; padding: 0.1rem 0 0.5rem; }
+.space-empty { margin: 0; padding: 0.35rem 0.6rem 0.35rem 1.85rem; color: var(--muted); font-size: 0.84rem; }
+@media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
 
 .tree-item { display: flex; align-items: center; gap: 0.3rem; border-radius: var(--radius); padding-right: 0.3rem; }
 .tree-item:hover { background: var(--surface-2); }
@@ -136,19 +146,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tree-link {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.4rem;
   min-width: 0;
   background: none;
   border: 0;
-  padding: 0.4rem 0;
+  padding: 0.38rem 0;
   text-align: left;
   cursor: pointer;
   color: var(--ink-2);
 }
-.tree-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-kind { flex: none; display: grid; place-items: center; color: var(--muted); padding-top: 0.12rem; }
+.tree-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; font-size: 0.9rem; }
 .tree-actions { display: flex; gap: 0.15rem; opacity: 0; }
-.tree-item:hover .tree-actions, .sidebar-head .tree-actions { opacity: 1; }
+.tree-item:hover .tree-actions, .tree-item:focus-within .tree-actions { opacity: 1; }
 .dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--warn-ink); flex: none; }
 
 .main { padding: 1.4rem clamp(1rem, 3vw, 2rem) 4rem; overflow-y: auto; min-width: 0; }
