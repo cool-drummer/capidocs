@@ -525,6 +525,11 @@ they are joined with newlines automatically, so you never write `\n`.
 }
 ```
 
+### Private Portals
+`site_config.access` can show an email gate (`"mode": "gate"`) or send readers to a sign-in page (`"mode": "accounts"`). Both run in the browser of a static site: they keep casual visitors out, but the files themselves stay public, so anyone who requests `config/api-spec.json` directly can read them. Do not rely on them for confidential content.
+
+For private documentation, serve the portal from the studio instead. Each portal has a list of authorized readers (full addresses such as `ana@example.com` or whole domains such as `@example.com`) and a private address, `/read/<portal-slug>`. A reader types their email, receives a six-digit code that expires in ten minutes, and gets a session for that portal only. The content is built per request and never published as files; removing an address ends its sessions at once.
+
 ## 🚀 Deployment
 
 ### Static Hosting (Recommended)

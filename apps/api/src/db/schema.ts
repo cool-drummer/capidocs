@@ -323,3 +323,51 @@ export const passwordResets = pgTable(
   },
   (table) => [index('password_resets_user_idx').on(table.userId)],
 );
+
+export const portalReaders = pgTable(
+  'portal_readers',
+  {
+    id: id(),
+    portalId: uuid('portal_id')
+      .notNull()
+      .references(() => portals.id, { onDelete: 'cascade' }),
+    pattern: varchar('pattern', { length: 320 }).notNull(),
+    addedById: uuid('added_by_id'),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('portal_readers_portal_pattern_idx').on(table.portalId, table.pattern)],
+);
+
+export const readerCodes = pgTable(
+  'reader_codes',
+  {
+    id: id(),
+    portalId: uuid('portal_id')
+      .notNull()
+      .references(() => portals.id, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 320 }).notNull(),
+    codeHash: text('code_hash').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (table) => [index('reader_codes_portal_email_idx').on(table.portalId, table.email)],
+);
+
+export const readerSessions = pgTable(
+  'reader_sessions',
+  {
+    id: id(),
+    portalId: uuid('portal_id')
+      .notNull()
+      .references(() => portals.id, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 320 }).notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('reader_sessions_portal_email_idx').on(table.portalId, table.email)],
+);

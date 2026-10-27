@@ -221,6 +221,36 @@ const STATEMENTS = [
      requested_ip varchar(64),
      created_at timestamptz NOT NULL DEFAULT now())`,
   `CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets(user_id)`,
+
+  `CREATE TABLE IF NOT EXISTS portal_readers (
+     id uuid PRIMARY KEY DEFAULT gen_uuid_v7(),
+     portal_id uuid NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+     pattern varchar(320) NOT NULL,
+     added_by_id uuid,
+     created_at timestamptz NOT NULL DEFAULT now())`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS portal_readers_portal_pattern_idx ON portal_readers(portal_id, pattern)`,
+
+  `CREATE TABLE IF NOT EXISTS reader_codes (
+     id uuid PRIMARY KEY DEFAULT gen_uuid_v7(),
+     portal_id uuid NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+     email varchar(320) NOT NULL,
+     code_hash text NOT NULL,
+     attempts integer NOT NULL DEFAULT 0,
+     expires_at timestamptz NOT NULL,
+     used_at timestamptz,
+     created_at timestamptz NOT NULL DEFAULT now())`,
+  `CREATE INDEX IF NOT EXISTS reader_codes_portal_email_idx ON reader_codes(portal_id, email)`,
+
+  `CREATE TABLE IF NOT EXISTS reader_sessions (
+     id uuid PRIMARY KEY DEFAULT gen_uuid_v7(),
+     portal_id uuid NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+     email varchar(320) NOT NULL,
+     token_hash text NOT NULL UNIQUE,
+     expires_at timestamptz NOT NULL,
+     revoked_at timestamptz,
+     last_seen_at timestamptz NOT NULL DEFAULT now(),
+     created_at timestamptz NOT NULL DEFAULT now())`,
+  `CREATE INDEX IF NOT EXISTS reader_sessions_portal_email_idx ON reader_sessions(portal_id, email)`,
 ];
 
 const MIGRATION_LOCK = 7_310_221_904;

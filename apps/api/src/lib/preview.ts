@@ -39,6 +39,20 @@ export function previewFrameCsp(origin: string, nonce: string): string {
   ].join('; ');
 }
 
+export const SITE_BODY = `<nav class="navbar"><div class="container navbar-content">
+  <a href="#home" class="navbar-brand"><i class="fas fa-book navbar-brand-icon"></i><span></span><span class="brand-badge"></span></a>
+  <div class="navbar-tabs" id="navbar-tabs"></div>
+  <div class="navbar-nav" id="navbar-nav"><button class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema"><i class="fas fa-moon" id="theme-icon"></i></button></div>
+  <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
+</div></nav>
+<div class="main-layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content" id="main-content"></main>
+  <aside class="toc-sidebar" id="toc-sidebar"><div class="toc-header"><h6>En esta página</h6></div><nav class="toc-nav"><ul class="toc-list" id="toc-list"></ul></nav></aside>
+</div>
+<footer class="footer"><div class="footer-content"><h3 class="footer-title"></h3><p class="footer-subtitle"></p></div></footer>`;
+
 export function previewFrame(base: string): { html: string; nonce: string } {
   const nonce = randomBytes(16).toString('base64');
   const html = `<!doctype html>
@@ -52,19 +66,7 @@ export function previewFrame(base: string): { html: string; nonce: string } {
 <link rel="stylesheet" href="${base}/assets/css/capidocs.css">
 </head>
 <body>
-<nav class="navbar"><div class="container navbar-content">
-  <a href="#home" class="navbar-brand"><i class="fas fa-book navbar-brand-icon"></i><span></span><span class="brand-badge"></span></a>
-  <div class="navbar-tabs" id="navbar-tabs"></div>
-  <div class="navbar-nav" id="navbar-nav"><button class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema"><i class="fas fa-moon" id="theme-icon"></i></button></div>
-  <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
-</div></nav>
-<div class="main-layout">
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
-  <aside class="sidebar" id="sidebar"></aside>
-  <main class="main-content" id="main-content"></main>
-  <aside class="toc-sidebar" id="toc-sidebar"><div class="toc-header"><h6>En esta página</h6></div><nav class="toc-nav"><ul class="toc-list" id="toc-list"></ul></nav></aside>
-</div>
-<footer class="footer"><div class="footer-content"><h3 class="footer-title"></h3><p class="footer-subtitle"></p></div></footer>
+${SITE_BODY}
 <script nonce="${nonce}">window.Prism = window.Prism || {}; window.Prism.manual = true;</script>
 <script nonce="${nonce}" src="${base}/assets/vendor/prism/prism-core.min.js"></script>
 <script nonce="${nonce}" src="${base}/assets/vendor/prism/plugins/autoloader/prism-autoloader.min.js"></script>

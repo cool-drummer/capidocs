@@ -35,6 +35,7 @@ export interface Config {
   session: { idleMinutes: number; absoluteHours: number };
   passwordResetTtlMinutes: number;
   invitationTtlHours: number;
+  readers: { codeTtlMinutes: number; maxCodeAttempts: number; idleHours: number; absoluteDays: number };
   setupToken: string | null;
   runtimeDir: string;
   studioDir: string;
@@ -48,6 +49,7 @@ export interface Config {
     forgotPerEmail: RateRuleConfig;
     invitations: RateRuleConfig;
     uploads: RateRuleConfig;
+    readerCodePerEmail: RateRuleConfig;
   };
   publish: {
     publishRoot: string | null;
@@ -163,6 +165,12 @@ export function loadConfig(env: Env = process.env): Config {
     },
     passwordResetTtlMinutes: read.integer('PASSWORD_RESET_TTL_MINUTES', 30, { min: 5, max: 1440 }),
     invitationTtlHours: read.integer('INVITATION_TTL_HOURS', 168, { min: 1, max: 720 }),
+    readers: {
+      codeTtlMinutes: read.integer('READER_CODE_TTL_MINUTES', 10, { min: 2, max: 60 }),
+      maxCodeAttempts: read.integer('READER_CODE_MAX_ATTEMPTS', 5, { min: 1, max: 20 }),
+      idleHours: read.integer('READER_SESSION_IDLE_HOURS', 72, { min: 1, max: 720 }),
+      absoluteDays: read.integer('READER_SESSION_DAYS', 30, { min: 1, max: 365 }),
+    },
     setupToken: read.text('SETUP_TOKEN'),
     runtimeDir: resolve(read.text('CAPIDOCS_RUNTIME_DIR') ?? 'apps/site'),
     studioDir: resolve(read.text('STUDIO_DIST_DIR') ?? 'apps/studio/dist'),
@@ -191,6 +199,11 @@ export function loadConfig(env: Env = process.env): Config {
       forgotPerEmail: { name: 'forgot-email', max: read.integer('RATE_LIMIT_RESET_PER_EMAIL_HOUR', 3, { min: 1, max: 100_000 }), windowMs: 3_600_000 },
       invitations: { name: 'invitations', max: read.integer('RATE_LIMIT_INVITATIONS_PER_HOUR', 20, { min: 1, max: 100_000 }), windowMs: 3_600_000 },
       uploads: { name: 'uploads', max: read.integer('RATE_LIMIT_UPLOADS_PER_10_MINUTES', 30, { min: 1, max: 100_000 }), windowMs: 600_000 },
+      readerCodePerEmail: {
+        name: 'reader-code-email',
+        max: read.integer('RATE_LIMIT_READER_CODES_PER_EMAIL_HOUR', 5, { min: 1, max: 100_000 }),
+        windowMs: 3_600_000,
+      },
     },
     publish: {
       publishRoot: read.text('PUBLISH_ROOT') ? resolve(read.text('PUBLISH_ROOT')!) : null,

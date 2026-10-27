@@ -24,6 +24,7 @@ const RELAXED_LIMITS = {
   RATE_LIMIT_RESET_PER_EMAIL_HOUR: '100000',
   RATE_LIMIT_INVITATIONS_PER_HOUR: '100000',
   RATE_LIMIT_UPLOADS_PER_10_MINUTES: '100000',
+  RATE_LIMIT_READER_CODES_PER_EMAIL_HOUR: '100000',
 };
 
 export function testConfig(databaseUrl: string, env: Record<string, string> = {}): Config {

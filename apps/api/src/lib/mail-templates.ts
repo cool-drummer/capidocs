@@ -13,6 +13,16 @@ export const roleLabel = (role: string): string => ROLE_LABEL[role] ?? 'miembro'
 const IGNORE_IF_NOT_YOU = 'Si no fuiste tú, cambia tu contraseña de inmediato y avisa a quien administra el espacio de trabajo.';
 
 export const templates = {
+  readerCode: (options: { portal: string; code: string; expiresInMinutes: number }): Template => ({
+    subject: `Tu código para leer ${options.portal}: ${options.code}`,
+    heading: `Tu código es ${options.code}`,
+    body: [
+      `Escríbelo en la página de ${options.portal} para entrar a la documentación.`,
+      `Vence en ${options.expiresInMinutes} minutos y solo funciona una vez.`,
+    ],
+    footer: 'Si no pediste este código, puedes ignorar este correo: nadie entra sin él.',
+  }),
+
   invitation: (options: { workspace: string; inviter: string; role: string; url: string; expiresInDays: number }): Template => ({
     subject: `Te invitaron a ${options.workspace}`,
     heading: `Te invitaron a ${options.workspace}`,

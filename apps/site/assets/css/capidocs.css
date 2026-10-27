@@ -5671,7 +5671,6 @@ html.docs-gate-locked { overflow: hidden; }
     max-width: 26rem;
     background: var(--bg-secondary);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xl);
     padding: 2.25rem 2rem;
 }
 .docs-gate-brand { margin-bottom: 1.75rem; }
@@ -5713,3 +5712,11 @@ html.docs-gate-locked { overflow: hidden; }
 .docs-gate-form button:hover { background: var(--brand-accent-hover); }
 .docs-gate-form button:disabled { opacity: 0.6; cursor: default; }
 .docs-gate-foot { margin: 1.5rem 0 0; font-size: 0.82rem; color: var(--text-muted); }
+.docs-gate-form .docs-gate-link {
+    margin-top: 0.5rem;
+    background: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+.docs-gate-form .docs-gate-link:hover { background: var(--bg-tertiary); color: var(--text-primary); }

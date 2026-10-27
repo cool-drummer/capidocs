@@ -18,6 +18,7 @@ import { createRouteContext } from './routes/context.js';
 import { memberRoutes } from './routes/members.js';
 import { portalRoutes } from './routes/portals.js';
 import { previewRoutes, runtimeRoutes } from './routes/preview.js';
+import { readerAdminRoutes, readerPageRoutes, readerRoutes } from './routes/readers.js';
 import { studioRoutes } from './routes/studio.js';
 import { securityHeaders } from './lib/security-headers.js';
 import { loggerOptions, type LogDestination } from './lib/logging.js';
@@ -76,6 +77,7 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
     });
 
   const signer = createUrlSigner(randomBytes(32), config.attachments.previewTtlSeconds);
+  const readerSecret = randomBytes(32);
   const limiter = new RateLimiter();
   const context = createRouteContext({
     config,
@@ -107,10 +109,13 @@ export async function createApp(config: Config, overrides: AppOverrides = {}): P
       attachmentRoutes(api, context);
       portalRoutes(api, context, signer);
       previewRoutes(api, context, signer);
+      readerAdminRoutes(api, context);
+      readerRoutes(api, context, signer, readerSecret);
     },
     { prefix: API_PREFIX },
   );
   runtimeRoutes(app, context);
+  readerPageRoutes(app, context);
   studioRoutes(app, { studioDir: config.studioDir, secure: config.secureCookies });
 
   return {
