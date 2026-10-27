@@ -160,6 +160,98 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+function ReadersPanel({ portalId }: { portalId: string }) {
+  const client = useQueryClient();
+  const readers = useQuery({ queryKey: ['readers', portalId], queryFn: () => api.readers(portalId) });
+  const [pattern, setPattern] = useState('');
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const refresh = () => void client.invalidateQueries({ queryKey: ['readers', portalId] });
+
+  const add = useMutation({
+    mutationFn: () => api.addReader(portalId, pattern),
+    onSuccess: () => {
+      setPattern('');
+      setError('');
+      refresh();
+    },
+    onError: (err) => setError(friendlyError(err)),
+  });
+
+  const remove = useMutation({
+    mutationFn: (readerId: string) => api.removeReader(portalId, readerId),
+    onSuccess: refresh,
+    onError: (err) => setError(friendlyError(err)),
+  });
+
+  const copy = async () => {
+    if (!readers.data) return;
+    try {
+      await navigator.clipboard.writeText(readers.data.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('No pudimos copiar la dirección. Selecciónala y cópiala a mano.');
+    }
+  };
+
+  const list = readers.data?.readers ?? [];
+  return (
+    <div className="portal-target">
+      <p className="status">
+        Solo quien esté en esta lista puede leer el portal: entra con su correo y un código de 6 dígitos que le enviamos. Si quitas a alguien, su
+        acceso termina en ese momento.
+      </p>
+      {readers.data ? (
+        <div className="reader-link">
+          <code className="reader-url">{readers.data.url}</code>
+          <button type="button" className="button button-quiet" onClick={() => void copy()}>
+            {copied ? 'Copiada' : 'Copiar'}
+          </button>
+        </div>
+      ) : null}
+      <form
+        className="reader-add"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setError('');
+          if (pattern.trim()) add.mutate();
+        }}
+      >
+        <TextInput value={pattern} onChange={setPattern} placeholder="ana@empresa.com o @empresa.com" />
+        <button type="submit" className="button button-primary" disabled={add.isPending || !pattern.trim()}>
+          Autorizar
+        </button>
+      </form>
+      {error ? <p className="status status-error">{error}</p> : null}
+      {list.length ? (
+        <div className="reader-list">
+          {list.map((reader) => (
+            <div key={reader.id} className="member-row">
+              <span className="reader-pattern">
+                {reader.pattern}
+                {reader.pattern.startsWith('@') ? <span className="status"> · todo el dominio</span> : null}
+              </span>
+              <button
+                type="button"
+                className="icon-button icon-button-danger"
+                aria-label={`Quitar ${reader.pattern}`}
+                title="Quitar"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(reader.id)}
+              >
+                <Icon name="trash" size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : readers.data ? (
+        <p className="status">Todavía nadie puede leer este portal.</p>
+      ) : null}
+    </div>
+  );
+}
+
 function PortalRow({
   portal,
   onPublish,
@@ -179,6 +271,7 @@ function PortalRow({
   const [repository, setRepository] = useState(target.repository ?? '');
   const [subdirectory, setSubdirectory] = useState(target.subdirectory ?? 'docs');
   const [open, setOpen] = useState(false);
+  const [readersOpen, setReadersOpen] = useState(false);
   const [error, setError] = useState('');
 
   const deployTarget = () => {
@@ -209,6 +302,9 @@ function PortalRow({
           <button type="button" className="button button-quiet" onClick={onPreview}>
             Vista previa
           </button>
+          <button type="button" className="button button-quiet" aria-expanded={readersOpen} onClick={() => setReadersOpen((value) => !value)}>
+            Lectores
+          </button>
           <button type="button" className="button button-quiet" onClick={() => setOpen((value) => !value)}>
             Destino
           </button>
@@ -217,6 +313,7 @@ function PortalRow({
           </button>
         </div>
       </div>
+      {readersOpen ? <ReadersPanel portalId={portal.id} /> : null}
       {open ? (
         <div className="portal-target">
           <Field label="Dónde se publica">

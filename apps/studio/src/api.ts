@@ -35,6 +35,12 @@ export interface Portal {
   deployTarget: Record<string, unknown>;
 }
 
+export interface PortalReader {
+  id: string;
+  pattern: string;
+  createdAt: string;
+}
+
 export interface TreeNode {
   id: string;
   slugId: string;
@@ -230,6 +236,11 @@ export const api = {
       'POST',
       `/portals/${portalId}/publish`,
     ),
+  readers: (portalId: string) => request<{ readers: PortalReader[]; url: string }>('GET', `/portals/${portalId}/readers`),
+  addReader: (portalId: string, pattern: string) =>
+    request<{ reader: PortalReader | null }>('POST', `/portals/${portalId}/readers`, { pattern }),
+  removeReader: (portalId: string, readerId: string) =>
+    request<{ ok: boolean }>('DELETE', `/portals/${portalId}/readers/${readerId}`),
   previewPortal: (portalId: string) =>
     request<{ specs: { locale: string; spec: unknown }[] }>('GET', `/portals/${portalId}/preview`),
   importPortal: (spec: unknown, name?: string) =>

@@ -309,6 +309,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .portal-card { display: flex; flex-direction: column; gap: 0.5rem; }
 .portal-target { --field: var(--surface); background: var(--surface-2); border-radius: var(--radius); padding: 0.75rem 0.85rem; display: grid; gap: 0.6rem; }
+.reader-link { display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border-radius: var(--radius); padding: 0.35rem 0.35rem 0.35rem 0.75rem; }
+.reader-url { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.82rem; color: var(--ink); }
+.reader-add { display: flex; gap: 0.5rem; }
+.reader-add .input { flex: 1; min-width: 0; }
+.reader-list { display: grid; gap: 0.3rem; }
+.reader-list .member-row { background: var(--surface); }
+.reader-pattern { min-width: 0; overflow-wrap: anywhere; }
 
 .member-row { --field: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--surface-2); border-radius: var(--radius); padding: 0.6rem 0.8rem; }
 .member-name { font-weight: 500; }
