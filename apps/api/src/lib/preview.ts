@@ -39,7 +39,7 @@ export function previewFrameCsp(origin: string, nonce: string): string {
   ].join('; ');
 }
 
-export function previewFrame(): { html: string; nonce: string } {
+export function previewFrame(base: string): { html: string; nonce: string } {
   const nonce = randomBytes(16).toString('base64');
   const html = `<!doctype html>
 <html lang="es">
@@ -48,8 +48,8 @@ export function previewFrame(): { html: string; nonce: string } {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Vista previa</title>
-<link rel="stylesheet" href="/site/assets/vendor/fontawesome/css/all.min.css">
-<link rel="stylesheet" href="/site/assets/css/capidocs.css">
+<link rel="stylesheet" href="${base}/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="${base}/assets/css/capidocs.css">
 </head>
 <body>
 <nav class="navbar"><div class="container navbar-content">
@@ -66,10 +66,10 @@ export function previewFrame(): { html: string; nonce: string } {
 </div>
 <footer class="footer"><div class="footer-content"><h3 class="footer-title"></h3><p class="footer-subtitle"></p></div></footer>
 <script nonce="${nonce}">window.Prism = window.Prism || {}; window.Prism.manual = true;</script>
-<script nonce="${nonce}" src="/site/assets/vendor/prism/prism-core.min.js"></script>
-<script nonce="${nonce}" src="/site/assets/vendor/prism/plugins/autoloader/prism-autoloader.min.js"></script>
+<script nonce="${nonce}" src="${base}/assets/vendor/prism/prism-core.min.js"></script>
+<script nonce="${nonce}" src="${base}/assets/vendor/prism/plugins/autoloader/prism-autoloader.min.js"></script>
 <script type="module" nonce="${nonce}">
-import { createCapidocs } from '/site/assets/js/app.js';
+import { createCapidocs } from '${base}/assets/js/app.js';
 const channel = new URLSearchParams(location.search).get('channel') || '';
 let rendered = false;
 window.addEventListener('message', async (event) => {
@@ -79,7 +79,7 @@ window.addEventListener('message', async (event) => {
   rendered = true;
   await createCapidocs({
     spec: data.spec,
-    assetBase: '/site',
+    assetBase: '${base}',
     searchIndexUrl: '',
     openExplorer: (target) => window.parent.postMessage({ type: 'capidocs:open-explorer', channel, set: target.set, diagram: target.diagram }, '*'),
   });
@@ -107,7 +107,7 @@ export function previewExplorerCsp(origin: string, nonce: string): string {
   ].join('; ');
 }
 
-export function previewExplorer(): { html: string; nonce: string } {
+export function previewExplorer(base: string): { html: string; nonce: string } {
   const nonce = randomBytes(16).toString('base64');
   const html = `<!doctype html>
 <html lang="es">
@@ -116,17 +116,17 @@ export function previewExplorer(): { html: string; nonce: string } {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Explorador de diagramas</title>
-<link rel="stylesheet" href="/site/assets/css/diagram-viewer.css" data-dg-styles>
-<link rel="stylesheet" href="/site/assets/css/diagrams.css">
+<link rel="stylesheet" href="${base}/assets/css/diagram-viewer.css" data-dg-styles>
+<link rel="stylesheet" href="${base}/assets/css/diagrams.css">
 </head>
 <body>
 <div id="app" class="dx-app"><p class="dx-boot">Cargando diagramas…</p></div>
 <script type="module" nonce="${nonce}">
-import { validateDiagramSet } from '/site/assets/js/diagram/model.js';
-import { mountExplorer } from '/site/assets/js/diagram/explorer.js';
-import { svgToRaster } from '/site/assets/js/diagram/export/raster.js';
-import { buildPdf } from '/site/assets/js/diagram/export/pdf.js';
-import { downloadBlob } from '/site/assets/js/diagram/export/download.js';
+import { validateDiagramSet } from '${base}/assets/js/diagram/model.js';
+import { mountExplorer } from '${base}/assets/js/diagram/explorer.js';
+import { svgToRaster } from '${base}/assets/js/diagram/export/raster.js';
+import { buildPdf } from '${base}/assets/js/diagram/export/pdf.js';
+import { downloadBlob } from '${base}/assets/js/diagram/export/download.js';
 const channel = new URLSearchParams(location.search).get('channel') || '';
 let mounted = false;
 window.addEventListener('message', (event) => {

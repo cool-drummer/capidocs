@@ -1,5 +1,6 @@
-import { readFile, stat } from 'node:fs/promises';
-import { extname, resolve, sep } from 'node:path';
+import { createHash } from 'node:crypto';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { extname, join, resolve, sep } from 'node:path';
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -54,4 +55,34 @@ export async function readStaticFile(root: string, relativePath: string, allowed
   } catch {
     return null;
   }
+}
+
+const versions = new Map<string, Promise<string>>();
+
+async function computeVersion(root: string, prefixes: string[]): Promise<string> {
+  const hash = createHash('sha256');
+  for (const prefix of [...prefixes].sort()) {
+    let entries: string[];
+    try {
+      entries = (await readdir(join(root, prefix), { recursive: true })).map(String).sort();
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const path = join(root, prefix, entry);
+      if (!(await stat(path)).isFile()) continue;
+      hash.update(`${prefix}/${entry}\0`).update(await readFile(path));
+    }
+  }
+  return hash.digest('hex').slice(0, 12);
+}
+
+export function runtimeVersion(root: string, prefixes: string[]): Promise<string> {
+  const key = `${resolve(root)}|${prefixes.join(',')}`;
+  let version = versions.get(key);
+  if (!version) {
+    version = computeVersion(resolve(root), prefixes);
+    versions.set(key, version);
+  }
+  return version;
 }

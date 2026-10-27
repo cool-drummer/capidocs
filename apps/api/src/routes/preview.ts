@@ -4,26 +4,31 @@ import { eq } from 'drizzle-orm';
 import { attachments } from '../db/schema.js';
 import { notFound } from '../lib/errors.js';
 import { previewExplorer, previewExplorerCsp, previewFrame, previewFrameCsp, type UrlSigner } from '../lib/preview.js';
-import { readStaticFile } from '../lib/static-files.js';
+import { readStaticFile, runtimeVersion } from '../lib/static-files.js';
 import { STORAGE_KEY_PATTERN } from '../lib/storage.js';
 import { contentDisposition, servesInline } from '../modules/attachments.js';
 import type { RouteContext } from './context.js';
 
 const RUNTIME_PREFIXES = ['assets', 'logos'];
 
+const VERSIONED_PATH = /^v([0-9a-f]{12})\/(.+)$/;
+
 export const RUNTIME_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Cross-Origin-Resource-Policy': 'cross-origin',
   'X-Content-Type-Options': 'nosniff',
   'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
-  'Cache-Control': 'public, max-age=3600',
 } as const;
+
+export async function runtimeBase(runtimeDir: string): Promise<string> {
+  return `/site/v${await runtimeVersion(runtimeDir, RUNTIME_PREFIXES)}`;
+}
 
 export function previewRoutes(app: FastifyInstance, context: RouteContext, signer: UrlSigner) {
   const { db, store, config } = context;
 
   app.get('/preview/frame', async (_request, reply) => {
-    const { html, nonce } = previewFrame();
+    const { html, nonce } = previewFrame(await runtimeBase(context.runtimeDir));
     return reply
       .headers({
         'Content-Type': 'text/html; charset=utf-8',
@@ -37,7 +42,7 @@ export function previewRoutes(app: FastifyInstance, context: RouteContext, signe
   });
 
   app.get('/preview/explorer', async (_request, reply) => {
-    const { html, nonce } = previewExplorer();
+    const { html, nonce } = previewExplorer(await runtimeBase(context.runtimeDir));
     return reply
       .headers({
         'Content-Type': 'text/html; charset=utf-8',
@@ -75,9 +80,15 @@ export function previewRoutes(app: FastifyInstance, context: RouteContext, signe
 
 export function runtimeRoutes(app: FastifyInstance, context: RouteContext) {
   app.get('/site/*', async (request, reply) => {
-    const path = (request.params as { '*': string })['*'];
-    const file = await readStaticFile(context.runtimeDir, path, RUNTIME_PREFIXES);
+    const requested = (request.params as { '*': string })['*'];
+    const versioned = VERSIONED_PATH.exec(requested);
+    const file = await readStaticFile(context.runtimeDir, versioned ? versioned[2]! : requested, RUNTIME_PREFIXES);
     if (!file) throw notFound();
-    return reply.headers(RUNTIME_HEADERS).header('Content-Type', file.contentType).send(file.bytes);
+    const current = versioned !== null && versioned[1] === (await runtimeVersion(context.runtimeDir, RUNTIME_PREFIXES));
+    return reply
+      .headers(RUNTIME_HEADERS)
+      .header('Content-Type', file.contentType)
+      .header('Cache-Control', current ? 'public, max-age=31536000, immutable' : 'no-cache')
+      .send(file.bytes);
   });
 }

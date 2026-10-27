@@ -188,6 +188,28 @@ describe('runtime assets', () => {
     expect(response.headers['x-content-type-options']).toBe('nosniff');
   });
 
+  it('pins the frame and the explorer to the current runtime version', async () => {
+    for (const url of ['/api/preview/frame', '/api/preview/explorer']) {
+      const page = await app.inject({ method: 'GET', url });
+      const bases = new Set([...page.body.matchAll(/\/site\/(v[0-9a-f]{12})\//g)].map((match) => match[1]));
+      expect(bases.size).toBe(1);
+      expect(page.body).not.toMatch(/["']\/site\/assets\//);
+      const [base] = [...bases];
+      const asset = await app.inject({ method: 'GET', url: `/site/${base}/assets/js/diagram/model.js` });
+      expect(asset.statusCode).toBe(200);
+      expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    }
+  });
+
+  it('revalidates runtime files requested without the current version', async () => {
+    for (const url of ['/site/assets/js/app.js', '/site/v000000000000/assets/js/app.js']) {
+      const response = await app.inject({ method: 'GET', url });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-cache');
+    }
+    expect((await app.inject({ method: 'GET', url: '/site/v000000000000/package.json' })).statusCode).toBe(404);
+  });
+
   it('never serves anything outside the runtime folders', async () => {
     for (const url of [
       '/site/package.json',
@@ -206,9 +228,9 @@ describe('runtime assets', () => {
 
 describe('preview runtime', () => {
   it('loads every script, style and font from the studio itself', () => {
-    const { html, nonce } = previewFrame();
+    const { html, nonce } = previewFrame('/site/v0123456789ab');
     expect(html).not.toMatch(/https?:\/\//);
-    expect(html).toContain('/site/assets/vendor/prism/prism-core.min.js');
+    expect(html).toContain('/site/v0123456789ab/assets/vendor/prism/prism-core.min.js');
     const csp = previewFrameCsp('https://studio.example.com', nonce);
     expect(csp).not.toContain('cdnjs');
     expect(csp).toContain(`script-src 'nonce-${nonce}' https://studio.example.com/site/;`);
