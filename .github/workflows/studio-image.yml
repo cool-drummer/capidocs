@@ -13,6 +13,11 @@ on:
       - .dockerignore
       - .github/workflows/studio-image.yml
   workflow_dispatch:
+    inputs:
+      no_cache:
+        description: Rebuild every layer to pick up patched base packages
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -92,5 +97,7 @@ jobs:
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          pull: true
+          no-cache: ${{ inputs.no_cache == true }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
